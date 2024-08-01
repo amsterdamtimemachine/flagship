@@ -104,7 +104,7 @@ declare module '$env/static/private' {
 	export const ALACRITTY_WINDOW_ID: string;
 	export const npm_node_execpath: string;
 	export const npm_config_engine_strict: string;
-	export const OLDPWD: string;
+	export const NODE_ENV: string;
 }
 
 /**
@@ -117,7 +117,7 @@ declare module '$env/static/private' {
  * ```
  */
 declare module '$env/static/public' {
-	
+	export const PUBLIC_MAPBOX_API_KEY: string;
 }
 
 /**
@@ -214,7 +214,7 @@ declare module '$env/dynamic/private' {
 		ALACRITTY_WINDOW_ID: string;
 		npm_node_execpath: string;
 		npm_config_engine_strict: string;
-		OLDPWD: string;
+		NODE_ENV: string;
 		[key: `PUBLIC_${string}`]: undefined;
 		[key: `${string}`]: string | undefined;
 	}
@@ -234,6 +234,7 @@ declare module '$env/dynamic/private' {
  */
 declare module '$env/dynamic/public' {
 	export const env: {
+		PUBLIC_MAPBOX_API_KEY: string;
 		[key: `PUBLIC_${string}`]: string | undefined;
 	}
 }

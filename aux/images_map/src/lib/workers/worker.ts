@@ -1,3 +1,5 @@
+// import Worker from '$lib/workers/worker.ts?worker';
+
 import type { ImageData, GeoImage } from '$types/image';
 import { transformToGeoImages } from '$utils/image';
 

@@ -1,7 +1,11 @@
 <script lang="ts">
+  import { PUBLIC_MAPBOX_API_KEY } from '$env/static/public';
   import { onMount } from 'svelte';
   import type { Point } from '$types/geometry';
-  import maplibre, { type Map, type LngLatLike } from 'maplibre-gl';
+  import mapboxgl, { type Map, type LngLatLike } from 'mapbox-gl';
+  
+  // You need to replace this with your actual Mapbox access token
+  mapboxgl.accessToken = PUBLIC_MAPBOX_API_KEY;
   
   export let points: Point[] = []; 
   export let center: LngLatLike = [4.9, 52.37]; 
@@ -13,28 +17,9 @@
   onMount(() => {
     if (!mapContainer) return;
 
-    map = new maplibre.Map({
+    map = new mapboxgl.Map({
       container: mapContainer,
-      style: {
-        version: 8,
-        sources: {
-          'osm': {
-            type: 'raster',
-            tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          }
-        },
-        layers: [
-          {
-            id: 'osm-tiles',
-            type: 'raster',
-            source: 'osm',
-            minzoom: 0,
-            maxzoom: 19
-          }
-        ]
-      },
+      style: 'mapbox://styles/mapbox/streets-v11', // This style includes detailed street data
       center: center,
       zoom: zoom
     });
@@ -84,7 +69,7 @@
     width: 100%;
     height: 100vh;
   }
-  :global(.maplibregl-canvas) {
+  :global(.mapboxgl-canvas) {
     width: 100% !important;
     height: 100% !important;
   }
