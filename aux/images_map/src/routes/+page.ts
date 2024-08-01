@@ -1,15 +1,10 @@
 // src/routes/user/[id]/+page.ts
-import { fetchApi } from '$lib/api';
+import { fetchApi } from '$api';
+import { type ImageResponse } from '$types/image';
 import type { PageLoad } from './$types';
 
-interface UserData {
-  id: number;
-  name: string;
-  email: string;
-}
-
-export const load: PageLoad = async ({ params, fetch }) => {
+export const load: PageLoad = async ({ fetch }) => {
   return {
-    images: await fetchApi<any>(`https://api.lod.uba.uva.nl/queries/LeonvanWissen/SAA-Beeldbank/5/run?`, fetch)
+    images: await fetchApi<ImageResponse>(`https://api.lod.uba.uva.nl/queries/LeonvanWissen/SAA-Beeldbank/5/run?`, fetch)
   };
 };

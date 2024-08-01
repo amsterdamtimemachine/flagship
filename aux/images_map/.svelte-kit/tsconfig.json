@@ -7,11 +7,20 @@
 			"$components/*": [
 				"../src/lib/components/*"
 			],
+			"$types": [
+				"../src/lib/types"
+			],
+			"$types/*": [
+				"../src/lib/types/*"
+			],
 			"$api": [
 				"../src/lib/api.ts"
 			],
 			"$utils": [
-				"../src/lib/utils.ts"
+				"../src/lib/utils"
+			],
+			"$utils/*": [
+				"../src/lib/utils/*"
 			],
 			"$constants": [
 				"../src/lib/constants.ts"
