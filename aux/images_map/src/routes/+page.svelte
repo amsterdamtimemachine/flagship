@@ -9,6 +9,7 @@
 
   onMount(() => {
     geoImages = transformToGeoImages(data.images);
+    console.log(geoImages);
   });
 </script>
 

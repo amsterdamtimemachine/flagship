@@ -1,4 +1,4 @@
-import type { Vec2 } from '$types/geometry';
+import type { Point } from '$types/geometry';
 
 export type GeoWKT = {
   "@type": "geo:wktLiteral";
@@ -55,5 +55,5 @@ export type ImageResponse = {
 
 export type GeoImage = {
   url: string;
-  location: Vec2 | null;
+  location: Point | null;
 };

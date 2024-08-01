@@ -1,4 +1,4 @@
-export type Vec2 = {
+export type Point = {
   x: number;
   y: number;
 };

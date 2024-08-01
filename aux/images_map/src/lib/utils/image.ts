@@ -1,4 +1,4 @@
-import type { Vec2 } from '$types/geometry';
+import type { Point } from '$types/geometry';
 import type { ImageData, GeoImage } from '$types/image';
 
 export function transformToGeoImages(data: ImageData): GeoImage[] {
@@ -7,7 +7,7 @@ export function transformToGeoImages(data: ImageData): GeoImage[] {
     const locations = Array.isArray(photo.contentLocation) ? photo.contentLocation : [photo.contentLocation];
 
     return images.map((img, index) => {
-      let location: Vec2 | null = null;
+      let location: Point | null = null;
       const place = locations[index];
 
       if (place && place['geo:hasGeometry']?.[0]) {
