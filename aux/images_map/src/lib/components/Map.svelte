@@ -1,32 +1,30 @@
 <script lang="ts">
   import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
   import { onMount } from 'svelte';
-  import maplibregl, { Map, NavigationControl } from 'maplibre-gl';
-  import 'maplibre-gl/dist/maplibre-gl.css';
   import type { Point } from '$types/geometry';
+  import maplibre, { type Map, type LngLatLike } from 'maplibre-gl';
   
   export let points: Point[] = []; 
-  export let center: [number, number] = [4.9, 52.37]; 
+  export let center: LngLatLike = [4.9, 52.37]; 
   export let zoom: number = 6; 
   
-  let map: Map;
+  let map: Map | undefined;
   let mapContainer: HTMLElement;
 
+  const MAPTILER_KEY = 'smdqJRATk5bxz2F8hvF4'; // Be careful with exposing this key
   const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
 
   onMount(() => {
     if (!mapContainer) return;
-    
-    map = new Map({
+    map = new maplibre.Map({
       container: mapContainer,
-      style: STYLE_URL,
+      style: STYLE_URL, // Use your custom style URL here
       center: center,
       zoom: zoom
     });
 
-    map.addControl(new NavigationControl());
-
     map.on('load', () => {
+      if (!map) return;
       // Add points source and layer
       map.addSource('points', {
         type: 'geojson',
@@ -42,20 +40,21 @@
           }))
         }
       });
-
       map.addLayer({
         id: 'points',
         type: 'circle',
         source: 'points',
         paint: {
-          'circle-radius': 4,
-          'circle-color': '#ff0000'
+          'circle-radius': 2,
+          'circle-color': '#000000'
         }
       });
     });
 
     return () => {
-      map.remove();
+      if (map) {
+        map.remove();
+      }
     };
   });
 </script>
