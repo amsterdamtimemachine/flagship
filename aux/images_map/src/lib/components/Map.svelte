@@ -1,17 +1,17 @@
 <script lang="ts">
   import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
   import { onMount } from 'svelte';
-  import type { Point } from '$types/geometry';
+  import type { Point } from '$types/geo';
   import maplibre, { type Map, type LngLatLike } from 'maplibre-gl';
   
   export let points: Point[] = []; 
+  export let density: any = {};
   export let center: LngLatLike = [4.9, 52.37]; 
   export let zoom: number = 6; 
   
   let map: Map | undefined;
   let mapContainer: HTMLElement;
 
-  const MAPTILER_KEY = 'smdqJRATk5bxz2F8hvF4'; // Be careful with exposing this key
   const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
 
   onMount(() => {
@@ -40,6 +40,12 @@
           }))
         }
       });
+
+    map.addSource('density', {
+      type: 'geojson',
+      data: density
+    });
+
       map.addLayer({
         id: 'points',
         type: 'circle',
@@ -49,6 +55,17 @@
           'circle-color': '#000000'
         }
       });
+
+map.addLayer({
+  id: 'density-layer',
+  type: 'fill',
+  source: 'density',
+  paint: {
+    'fill-color': '#007cbf',
+    'fill-opacity': ['get', 'opacity']
+  }
+});
+
     });
 
     return () => {

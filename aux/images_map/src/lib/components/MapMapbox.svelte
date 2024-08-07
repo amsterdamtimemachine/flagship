@@ -1,10 +1,9 @@
 <script lang="ts">
   import { PUBLIC_MAPBOX_API_KEY } from '$env/static/public';
   import { onMount } from 'svelte';
-  import type { Point } from '$types/geometry';
+  import type { Point } from '$types/geo';
   import mapboxgl, { type Map, type LngLatLike } from 'mapbox-gl';
   
-  mapboxgl.accessToken = PUBLIC_MAPBOX_API_KEY;
   
   export let points: Point[] = []; 
   export let center: LngLatLike = [4.9, 52.37]; 

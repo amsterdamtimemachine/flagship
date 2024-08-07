@@ -16,6 +16,7 @@
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^3.0.0",
 		"@types/eslint": "^9.6.0",
+		"@types/geojson": "^7946.0.14",
 		"eslint": "^9.0.0",
 		"eslint-config-prettier": "^9.1.0",
 		"eslint-plugin-svelte": "^2.36.0",
@@ -30,6 +31,7 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"mapbox-gl": "^3.5.2"
+		"mapbox-gl": "^3.5.2",
+		"maplibre-gl": "^4.5.1"
 	}
 }

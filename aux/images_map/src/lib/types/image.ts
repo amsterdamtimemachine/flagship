@@ -1,4 +1,4 @@
-import type { Point } from '$types/geometry';
+import type { Point } from '$types/geo';
 
 export type GeoWKT = {
   "@type": "geo:wktLiteral";

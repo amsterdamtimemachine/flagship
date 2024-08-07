@@ -1,4 +1,4 @@
-import type { Point } from '$types/geometry';
+import type { Point } from '$types/geo';
 import type { Photograph, GeoImage } from '$types/image';
 
 export function transformToGeoImages(data: Photograph[]): GeoImage[] {
@@ -22,7 +22,6 @@ export function transformToGeoImages(data: Photograph[]): GeoImage[] {
         }
       }
     }
-    console.log(index, point);
     return {
       url: image.thumbnailUrl,
       location: point
