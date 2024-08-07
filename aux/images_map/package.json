@@ -30,7 +30,6 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"@maptiler/sdk": "^2.2.1",
 		"mapbox-gl": "^3.5.2"
 	}
 }
