@@ -1,4 +1,6 @@
 <script lang="ts">
+
+  import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
   import { onMount } from 'svelte';
   import type { Point } from '$types/geometry';
   import maplibre, { type Map, type LngLatLike } from 'maplibre-gl';
@@ -10,38 +12,19 @@
   let map: Map | undefined;
   let mapContainer: HTMLElement;
 
+  const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
+
   onMount(() => {
     if (!mapContainer) return;
-
     map = new maplibre.Map({
       container: mapContainer,
-      style: {
-        version: 8,
-        sources: {
-          'osm': {
-            type: 'raster',
-            tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          }
-        },
-        layers: [
-          {
-            id: 'osm-tiles',
-            type: 'raster',
-            source: 'osm',
-            minzoom: 0,
-            maxzoom: 19
-          }
-        ]
-      },
+      style: STYLE_URL, // Use your custom style URL here
       center: center,
       zoom: zoom
     });
 
     map.on('load', () => {
       if (!map) return;
-
       // Add points source and layer
       map.addSource('points', {
         type: 'geojson',
@@ -57,7 +40,6 @@
           }))
         }
       });
-
       map.addLayer({
         id: 'points',
         type: 'circle',

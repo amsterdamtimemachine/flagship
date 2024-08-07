@@ -1,40 +1,31 @@
 <script lang="ts">
-  import { PUBLIC_MAPBOX_API_KEY } from '$env/static/public';
+  import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
   import { onMount } from 'svelte';
+  import * as maptilersdk from '@maptiler/sdk';
+  import '@maptiler/sdk/dist/maptiler-sdk.css';
   import type { Point } from '$types/geometry';
-  import mapboxgl, { type Map, type LngLatLike } from 'mapbox-gl';
-  
-  mapboxgl.accessToken = PUBLIC_MAPBOX_API_KEY;
   
   export let points: Point[] = []; 
-  export let center: LngLatLike = [4.9, 52.37]; 
+  export let center: [number, number] = [4.9, 52.37]; 
   export let zoom: number = 6; 
   
-  let map: Map | undefined;
+  let map: maptilersdk.Map;
   let mapContainer: HTMLElement;
+  const MAP_STYLE_URL = "https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=smdqJRATk5bxz2F8hvF4"
+
+  maptilersdk.config.apiKey = PUBLIC_MAPTILER_API_KEY;
 
   onMount(() => {
     if (!mapContainer) return;
-    map = new mapboxgl.Map({
+    
+    map = new maptilersdk.Map({
       container: mapContainer,
-      style: 'mapbox://styles/mapbox/streets-v11',
+      style: MAP_STYLE_URL,
       center: center,
       zoom: zoom
     });
 
     map.on('load', () => {
-      if (!map) return;
-
-      // Remove all text labels
-        const style = map.getStyle();
-        if (style && style.layers) {
-          for (const layer of style.layers) {
-            if (layer.type === 'symbol') {
-              map.removeLayer(layer.id);
-            }
-          }
-        }
-
       // Add points source and layer
       map.addSource('points', {
         type: 'geojson',
@@ -56,16 +47,14 @@
         type: 'circle',
         source: 'points',
         paint: {
-          'circle-radius': 2,
+          'circle-radius': 1,
           'circle-color': '#000000'
         }
       });
     });
 
     return () => {
-      if (map) {
-        map.remove();
-      }
+      map.remove();
     };
   });
 </script>
@@ -76,9 +65,5 @@
   .map-container {
     width: 100%;
     height: 100vh;
-  }
-  :global(.mapboxgl-canvas) {
-    width: 100% !important;
-    height: 100% !important;
   }
 </style>

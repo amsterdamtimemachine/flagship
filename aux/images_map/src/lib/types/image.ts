@@ -31,7 +31,12 @@ export type Photograph = {
   name: string;
 };
 
-export type Context = {
+export type GeoImage = {
+  url: string;
+  location: Point | null;
+};
+
+export type ImageContext = {
   schema: string;
   geo: string;
   Photograph: string;
@@ -44,16 +49,10 @@ export type Context = {
   contentLocation: string;
 };
 
-export type ImageData = {
-  "@context": Context;
+export type ImageResponse = {
+  "@context": ImageContext;
   "@graph": Photograph[];
 };
 
-export type ImageResponse = {
-  images: ImageData;
-};
 
-export type GeoImage = {
-  url: string;
-  location: Point | null;
-};
+
