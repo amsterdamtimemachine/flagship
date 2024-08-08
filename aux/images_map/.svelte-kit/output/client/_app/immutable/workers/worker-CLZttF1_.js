@@ -1,1 +1,25 @@
-(function(){"use strict";function o(t){return t["@graph"].flatMap(e=>{const c=Array.isArray(e.image)?e.image:[e.image],i=Array.isArray(e.contentLocation)?e.contentLocation:[e.contentLocation];return c.map((m,l)=>{var r;let s=null;const a=i[l];if(a&&((r=a["geo:hasGeometry"])!=null&&r[0])){const n=a["geo:hasGeometry"][0]["geo:asWKT"]["@value"].match(/POINT\((-?\d+\.?\d*)\s+(-?\d+\.?\d*)\)/);n&&(s={x:Number(n[1]),y:Number(n[2])})}return{url:m.thumbnailUrl,location:s}})})}self.onmessage=t=>{const e=o(t.data);self.postMessage(e)}})();
+(function () {
+	'use strict';
+	function o(t) {
+		return t['@graph'].flatMap((e) => {
+			const c = Array.isArray(e.image) ? e.image : [e.image],
+				i = Array.isArray(e.contentLocation) ? e.contentLocation : [e.contentLocation];
+			return c.map((m, l) => {
+				var r;
+				let s = null;
+				const a = i[l];
+				if (a && (r = a['geo:hasGeometry']) != null && r[0]) {
+					const n = a['geo:hasGeometry'][0]['geo:asWKT']['@value'].match(
+						/POINT\((-?\d+\.?\d*)\s+(-?\d+\.?\d*)\)/
+					);
+					n && (s = { x: Number(n[1]), y: Number(n[2]) });
+				}
+				return { url: m.thumbnailUrl, location: s };
+			});
+		});
+	}
+	self.onmessage = (t) => {
+		const e = o(t.data);
+		self.postMessage(e);
+	};
+})();

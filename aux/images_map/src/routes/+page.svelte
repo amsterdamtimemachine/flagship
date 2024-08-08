@@ -1,31 +1,31 @@
 <script lang="ts">
- import { onMount } from 'svelte';
- import Map from '$components/Map.svelte';
- import MapMapbox from '$components/MapMapbox.svelte';
- import { transformToGeoImages } from '$utils/image';
- import { generateDensityMapData } from '$utils/geo';
- import type { ImageResponse, Photograph, GeoImage } from '$types/image';
- import type { Point } from '$types/geo';
- 
- export let data: { images: ImageResponse };
- let geoImages: GeoImage[] = [];
- let points: Point[] = [];
- let density: any = {};
- const latLongMin =  {x: 4.86763, y: 52.3892206};
- const latLongMax =  {x:4.92136, y: 52.3413175};
- 
- onMount(() => {
-   let photographs = data.images['@graph'];
-   geoImages = transformToGeoImages(photographs);
-   points = geoImages
-     .map((image) => image.location)
-     .filter((location): location is Point => location !== null);
+	import { onMount } from 'svelte';
+	import Map from '$components/Map.svelte';
+	import MapMapbox from '$components/MapMapbox.svelte';
+	import { transformToGeoImages } from '$utils/image';
+	import { generateDensityMapData } from '$utils/geo';
+	import type { ImageResponse, Photograph, GeoImage } from '$types/image';
+	import type { Point } from '$types/geo';
 
-    density = generateDensityMapData(points, latLongMin, latLongMax, 50)
+	export let data: { images: ImageResponse };
+	let geoImages: GeoImage[] = [];
+	let points: Point[] = [];
+	let density: any = {};
+	const latLongMin = { x: 4.8911476, y: 52.409226 };
+	const latLongMax = { x: 4.9095154, y: 52.3103678 };
 
- });
+	onMount(() => {
+		let photographs = data.images['@graph'];
+		console.log("photographs amt: ", photographs.length);
+		geoImages = transformToGeoImages(photographs);
+		points = geoImages
+			.map((image) => image.location)
+			.filter((location): location is Point => location !== null);
+
+		density = generateDensityMapData(points, latLongMin, latLongMax, 50);
+	});
 </script>
-<div>
-  <Map {points} {density}/>
-</div>
 
+<div>
+	<Map {points} {density} />
+</div>

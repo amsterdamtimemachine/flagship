@@ -1,13 +1,8 @@
-import type{ Point } from '$types/geo';
-import type { 
-  Feature, 
-  FeatureCollection, 
-  Polygon,
-  Position
-} from 'geojson';
+import type { Point } from '$types/geo';
+import type { Feature, FeatureCollection, Polygon, Position } from 'geojson';
 
 interface Cell {
-  count: number;
+	count: number;
 }
 
 export function generateDensityMapData(
@@ -17,20 +12,25 @@ export function generateDensityMapData(
   numCells: number
 ): FeatureCollection<Polygon, { count: number; opacity: number }> {
   const width = latLongMax.x - latLongMin.x;
-  const height = latLongMin.y - latLongMax.y; // Corrected: y-axis is inverted in geo-coordinates
-  const cellWidth = width / numCells;
-  const cellHeight = height / numCells;
+  const height = latLongMin.y - latLongMax.y; // y-axis is inverted in geo-coordinates
+  
+  // Calculate cell size based on the smaller dimension to ensure square cells
+  const cellSize = Math.min(width, height) / numCells;
+  
+  // Recalculate the number of cells in each dimension
+  const numCellsX = Math.ceil(width / cellSize);
+  const numCellsY = Math.ceil(height / cellSize);
 
   // Initialize grid
-  const grid: Cell[][] = Array(numCells).fill(null).map(() => 
-    Array(numCells).fill(null).map(() => ({ count: 0 }))
+  const grid: Cell[][] = Array(numCellsY).fill(null).map(() => 
+    Array(numCellsX).fill(null).map(() => ({ count: 0 }))
   );
 
   // Count points in each cell
   points.forEach(point => {
-    const cellX = Math.floor((point.x - latLongMin.x) / cellWidth);
-    const cellY = Math.floor((latLongMin.y - point.y) / cellHeight); // Corrected: y-axis inversion
-    if (cellX >= 0 && cellX < numCells && cellY >= 0 && cellY < numCells) {
+    const cellX = Math.floor((point.x - latLongMin.x) / cellSize);
+    const cellY = Math.floor((latLongMin.y - point.y) / cellSize);
+    if (cellX >= 0 && cellX < numCellsX && cellY >= 0 && cellY < numCellsY) {
       grid[cellY][cellX].count++;
     }
   });
@@ -41,13 +41,13 @@ export function generateDensityMapData(
   // Generate GeoJSON
   const features: Feature<Polygon, { count: number; opacity: number }>[] = [];
 
-  for (let y = 0; y < numCells; y++) {
-    for (let x = 0; x < numCells; x++) {
+  for (let y = 0; y < numCellsY; y++) {
+    for (let x = 0; x < numCellsX; x++) {
       const cell = grid[y][x];
-      const x1 = latLongMin.x + x * cellWidth;
-      const y1 = latLongMin.y - y * cellHeight; // Corrected: y-axis inversion
-      const x2 = x1 + cellWidth;
-      const y2 = y1 - cellHeight; // Corrected: y-axis inversion
+      const x1 = latLongMin.x + x * cellSize;
+      const y1 = latLongMin.y - y * cellSize;
+      const x2 = x1 + cellSize;
+      const y2 = y1 - cellSize;
 
       const coordinates: Position[][] = [[
         [x1, y1],
@@ -65,7 +65,7 @@ export function generateDensityMapData(
         },
         properties: {
           count: cell.count,
-          opacity: maxCount > 0 ? cell.count / maxCount : 0 // Avoid division by zero
+          opacity: maxCount > 0 ? cell.count / maxCount : 0
         }
       });
     }
