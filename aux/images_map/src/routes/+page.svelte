@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import Map from '$components/Map.svelte';
 	import MapMapbox from '$components/MapMapbox.svelte';
+	import MapKeyboardAccessible from '$components/MapKeyboardAccessible.svelte';	
+	import MapGLGridContainer from '$components/MapGLGridContainer.svelte';
 	import { transformToGeoImages } from '$utils/image';
 	import { generateDensityMapData } from '$utils/geo';
 	import type { ImageResponse, Photograph, GeoImage } from '$types/image';
@@ -15,17 +17,17 @@
 	const latLongMax = { x: 4.9095154, y: 52.3103678 };
 
 	onMount(() => {
-		let photographs = data.images['@graph'];
-		console.log("photographs amt: ", photographs.length);
-		geoImages = transformToGeoImages(photographs);
-		points = geoImages
-			.map((image) => image.location)
-			.filter((location): location is Point => location !== null);
+	//	let photographs = data.images['@graph'];
+	//	console.log("photographs amt: ", photographs.length);
+	//	geoImages = transformToGeoImages(photographs);
+	//	points = geoImages
+	//		.map((image) => image.location)
+	//		.filter((location): location is Point => location !== null);
 
-		density = generateDensityMapData(points, latLongMin, latLongMax, 50);
+	//	density = generateDensityMapData(points, latLongMin, latLongMax, 50);
 	});
 </script>
 
 <div>
-	<Map {points} {density} />
+	<MapGLGridContainer/>
 </div>

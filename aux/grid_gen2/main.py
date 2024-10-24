@@ -2,11 +2,28 @@ import xml.etree.ElementTree as ET
 from perlin_noise import PerlinNoise
 import math
 
-# Constants
+# Constants and Parameters
 USE_CLASSIFIED_SCALE = True  # Set to False for continuous scale
 NUM_CLASSES = 5  # Number of classes for classified scale
 
-def create_grid_map_svg(width, height, cell_size, base_color, outline_color, noise_scale, min_size=0.1, max_size=1.0, padding=2, draw_outline=True):
+# Grid parameters
+WIDTH, HEIGHT = 1280, 720 
+CELL_SIZE = 30  # Size of each square cell
+
+# Color parameters
+BASE_COLOR = "#0702FF"  # Hex color code
+OUTLINE_COLOR = "#D3D3D3"  # Hex color code
+
+# Noise and size parameters
+NOISE_SCALE = 5  # Controls the scale of the Perlin noise
+MIN_SIZE = 0.1  # Minimum size of inner square (as a fraction of cell size)
+MAX_SIZE = 1.0  # Maximum size of inner square (as a fraction of cell size)
+PADDING = 2  # Padding around inner squares (in pixels)
+
+# Visualization options
+DRAW_OUTLINE = True  # Set to False to remove all cell outlines
+
+def create_grid_map_svg(width, height, cell_size, base_color, outline_color, noise_scale, min_size, max_size, padding, draw_outline):
     # Calculate the number of rows and columns based on cell size
     cols = width // cell_size
     rows = height // cell_size
@@ -80,57 +97,34 @@ def create_grid_map_svg(width, height, cell_size, base_color, outline_color, noi
                     'height': str(inner_size),
                     'fill': base_color
                 })
-
-    # Create grid lines if draw_outline is True
-    if draw_outline:
-        for i in range(rows + 1):
-            y = i * cell_size
-            ET.SubElement(svg, 'line', {
-                'x1': '0',
-                'y1': str(y),
-                'x2': str(adjusted_width),
-                'y2': str(y),
-                'stroke': outline_color,
-                'stroke-width': '1'
-            })
-
-        for i in range(cols + 1):
-            x = i * cell_size
-            ET.SubElement(svg, 'line', {
-                'x1': str(x),
-                'y1': '0',
-                'x2': str(x),
-                'y2': str(adjusted_height),
-                'stroke': outline_color,
-                'stroke-width': '1'
-            })
+                
+                # Draw outline for this cell if DRAW_OUTLINE is True
+                if draw_outline:
+                    ET.SubElement(svg, 'rect', {
+                        'x': str(x),
+                        'y': str(y),
+                        'width': str(cell_size),
+                        'height': str(cell_size),
+                        'fill': 'none',
+                        'stroke': outline_color,
+                        'stroke-width': '1'
+                    })
 
     # Create the SVG tree and return as a string
     return ET.tostring(svg, encoding='unicode')
 
-# Set parameters
-width, height = 1280, 720 
-cell_size = 30  # Size of each square cell
-base_color = "#0702FF"  # Hex color code
-outline_color = "#D3D3D3"  # Hex color code
-noise_scale = 5  # Controls the scale of the Perlin noise
-min_size = 0.1  # Minimum size of inner square (as a fraction of cell size)
-max_size = 1.0  # Maximum size of inner square (as a fraction of cell size)
-padding = 2  # Padding around inner squares (in pixels)
-draw_outline = True  # Set to False to remove the grid lines
-
 # Create the grid map
-svg_content = create_grid_map_svg(width, height, cell_size, base_color, outline_color, noise_scale, min_size, max_size, padding, draw_outline)
+svg_content = create_grid_map_svg(WIDTH, HEIGHT, CELL_SIZE, BASE_COLOR, OUTLINE_COLOR, NOISE_SCALE, MIN_SIZE, MAX_SIZE, PADDING, DRAW_OUTLINE)
 
 # Save the SVG file
 scale_type = 'classified' if USE_CLASSIFIED_SCALE else 'continuous'
-outline_type = 'with_outline' if draw_outline else 'no_outline'
+outline_type = 'with_selective_outline' if DRAW_OUTLINE else 'no_outline'
 file_name = f'grid_map_{scale_type}_{outline_type}.svg'
 
 with open(file_name, 'w', encoding='utf-8') as f:
     f.write(svg_content)
 
 print(f"Grid map has been generated and saved as '{file_name}'")
-print(f"Grid dimensions: {width//cell_size}x{height//cell_size} cells")
+print(f"Grid dimensions: {WIDTH//CELL_SIZE}x{HEIGHT//CELL_SIZE} cells")
 print(f"Scale type: {'Classified' if USE_CLASSIFIED_SCALE else 'Continuous'}")
-print(f"Outline: {'Drawn' if draw_outline else 'Not drawn'}")
+print(f"Outline: {'Drawn for filled cells' if DRAW_OUTLINE else 'Not drawn'}")

@@ -61,7 +61,7 @@ export const load: PageLoad = async ({ fetch }) => {
 	`)
 	const url  = "https://api.lod.uba.uva.nl/datasets/ATM/ATM-KG/services/ATM-KG/sparql?query=" + q;
 
-	console.log(url);
+	//console.log(url);
 		
 	const images = await fetchApi<ImageResponse>(url, fetch);
 
