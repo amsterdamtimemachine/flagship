@@ -10,59 +10,190 @@
             coordinates: number[][];
             mouseX: number;
             mouseY: number;
+            value: number;
         };
         cellLeave: void;
         cellClick: {
             id: string;
             coordinates: number[][];
+            value: number;
         };
     }>();
 
-    const AMSTERDAM_BOUNDS = {
-        west: 4.8353577,
-        east: 4.9277115,
-        south: 52.3349108,
-        north: 52.4046176
+    interface CenterPoint {
+        lng: number;
+        lat: number;
+    }
+
+    interface GridOptions {
+        centerPoint: CenterPoint;
+        cellSize: number;
+        numCells: number;
+    }
+
+    interface CellData {
+        [key: string]: number;
+    }
+
+    // Configuration constants
+    const CENTER_POINT: CenterPoint = {
+        lng: 4.897184,
+        lat: 52.374477
     };
 
-    const PADDING = 0.02;
-    const MAX_BOUNDS = [
-        [AMSTERDAM_BOUNDS.west - PADDING, AMSTERDAM_BOUNDS.south - PADDING],
-        [AMSTERDAM_BOUNDS.east + PADDING, AMSTERDAM_BOUNDS.north + PADDING]
-    ];
+    const CELL_SIZE = 0.001;
+    const NUM_CELLS = 60;
+    const MIN_VALUE_THRESHOLD = 0.2;
 
     const MIN_ZOOM = 11;
     const MAX_ZOOM = 16;
     const DEFAULT_ZOOM = 13;
-    const CELL_SIZE = 0.001;
+    const PADDING = 0.1;
 
+    const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
+
+    // State variables
+    let currentData: CellData = {};
     let map: Map | undefined;
     let mapContainer: HTMLElement;
     let hoveredStateId: string | null = null;
 
-    const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
+    function getLatitudeAdjustmentFactor(latitude: number): number {
+        return 1 / Math.cos((latitude * Math.PI) / 180);
+    }
 
-    function generateGridFeatures() {
+    function calculateBounds(centerPoint: CenterPoint, cellSize: number, numCells: number) {
+        const latAdjustment = getLatitudeAdjustmentFactor(centerPoint.lat);
+        const totalSizeLng = cellSize * numCells;
+        const totalSizeLat = (cellSize / latAdjustment) * numCells;
+        
+        return {
+            west: centerPoint.lng - (totalSizeLng / 2),
+            east: centerPoint.lng + (totalSizeLng / 2),
+            south: centerPoint.lat - (totalSizeLat / 2),
+            north: centerPoint.lat + (totalSizeLat / 2)
+        };
+    }
+
+    const BOUNDS = calculateBounds(CENTER_POINT, CELL_SIZE, NUM_CELLS);
+    const MAX_BOUNDS = [
+        [BOUNDS.west - PADDING, BOUNDS.south - PADDING],
+        [BOUNDS.east + PADDING, BOUNDS.north + PADDING]
+    ];
+
+    function generateRandomData(): CellData {
+        const data: CellData = {};
+        for (let i = 0; i < NUM_CELLS; i++) {
+            for (let j = 0; j < NUM_CELLS; j++) {
+                const value = Math.random();
+                if (value > MIN_VALUE_THRESHOLD) {
+                    data[`cell-${i}-${j}`] = value;
+                }
+            }
+        }
+        return data;
+    }
+
+    export function updateData(newData: CellData) {
+        if (!map) return;
+        
+        currentData = newData;
+        const source = map.getSource('grid') as maplibre.GeoJSONSource;
+        if (source) {
+            source.setData(generateGridFeatures(newData));
+        }
+    }
+
+    function calculateInnerSquareCoordinates(
+        centerLng: number,
+        centerLat: number,
+        cellSizeLng: number,
+        cellSizeLat: number,
+        value: number
+    ): number[][] {
+        // Scale from 10% to 90% of cell size based on value
+        const scale = 0.1 + (value * 0.8);
+        const halfSizeLng = (cellSizeLng * scale) / 2;
+        const halfSizeLat = (cellSizeLat * scale) / 2;
+
+        return [
+            [centerLng - halfSizeLng, centerLat - halfSizeLat],
+            [centerLng + halfSizeLng, centerLat - halfSizeLat],
+            [centerLng + halfSizeLng, centerLat + halfSizeLat],
+            [centerLng - halfSizeLng, centerLat + halfSizeLat],
+            [centerLng - halfSizeLng, centerLat - halfSizeLat]
+        ];
+    }
+
+    function generateGridFeatures(data: CellData = {}) {
         const features = [];
         
-        for (let lng = AMSTERDAM_BOUNDS.west; lng <= AMSTERDAM_BOUNDS.east; lng += CELL_SIZE) {
-            for (let lat = AMSTERDAM_BOUNDS.south; lat <= AMSTERDAM_BOUNDS.north; lat += CELL_SIZE) {
-                features.push({
-                    type: 'Feature',
-                    properties: {
-                        id: `cell-${lng}-${lat}`
-                    },
-                    geometry: {
-                        type: 'Polygon',
-                        coordinates: [[
-                            [lng, lat],
-                            [lng + CELL_SIZE, lat],
-                            [lng + CELL_SIZE, lat + CELL_SIZE],
-                            [lng, lat + CELL_SIZE],
-                            [lng, lat]
-                        ]]
-                    }
-                });
+        const latAdjustment = getLatitudeAdjustmentFactor(CENTER_POINT.lat);
+        const latCellSize = CELL_SIZE / latAdjustment;
+        
+        const totalSizeLng = CELL_SIZE * NUM_CELLS;
+        const totalSizeLat = latCellSize * NUM_CELLS;
+        const startLng = CENTER_POINT.lng - (totalSizeLng / 2);
+        const startLat = CENTER_POINT.lat - (totalSizeLat / 2);
+        
+        // Generate only for cells with data
+        for (let i = 0; i < NUM_CELLS; i++) {
+            for (let j = 0; j < NUM_CELLS; j++) {
+                const cellId = `cell-${i}-${j}`;
+                const value = data[cellId];
+
+                // Only create features for cells with data above threshold
+                if (value !== undefined && value > MIN_VALUE_THRESHOLD) {
+                    const cellLng = startLng + (i * CELL_SIZE);
+                    const cellLat = startLat + (j * latCellSize);
+                    const centerLng = cellLng + (CELL_SIZE / 2);
+                    const centerLat = cellLat + (latCellSize / 2);
+
+                    // Add the outline
+                    features.push({
+                        type: 'Feature',
+                        properties: {
+                            id: `outline-${cellId}`,
+                            gridX: i,
+                            gridY: j,
+                            isOutline: true
+                        },
+                        geometry: {
+                            type: 'Polygon',
+                            coordinates: [[
+                                [cellLng, cellLat],
+                                [cellLng + CELL_SIZE, cellLat],
+                                [cellLng + CELL_SIZE, cellLat + latCellSize],
+                                [cellLng, cellLat + latCellSize],
+                                [cellLng, cellLat]
+                            ]]
+                        }
+                    });
+
+                    // Add the inner data square
+                    features.push({
+                        type: 'Feature',
+                        properties: {
+                            id: `data-${cellId}`,
+                            gridX: i,
+                            gridY: j,
+                            value: value,
+                            isData: true
+                        },
+                        geometry: {
+                            type: 'Polygon',
+                            coordinates: [
+                                calculateInnerSquareCoordinates(
+                                    centerLng,
+                                    centerLat,
+                                    CELL_SIZE,
+                                    latCellSize,
+                                    value
+                                )
+                            ]
+                        }
+                    });
+                }
             }
         }
 
@@ -75,12 +206,14 @@
     onMount(() => {
         if (!mapContainer) return;
         
+        currentData = generateRandomData();
+        
         map = new maplibre.Map({
             container: mapContainer,
             style: STYLE_URL,
             bounds: [
-                [AMSTERDAM_BOUNDS.west, AMSTERDAM_BOUNDS.south],
-                [AMSTERDAM_BOUNDS.east, AMSTERDAM_BOUNDS.north]
+                [BOUNDS.west, BOUNDS.south],
+                [BOUNDS.east, BOUNDS.north]
             ],
             maxBounds: MAX_BOUNDS,
             minZoom: MIN_ZOOM,
@@ -96,89 +229,68 @@
         map.on('load', () => {
             map.addSource('grid', {
                 type: 'geojson',
-                data: generateGridFeatures(),
+                data: generateGridFeatures(currentData),
                 promoteId: 'id'
             });
 
+            // Add outlines layer
             map.addLayer({
-                id: 'grid-cells',
-                type: 'fill',
-                source: 'grid',
-                paint: {
-                    'fill-color': '#0000ff',
-                    'fill-opacity': [
-                        'case',
-                        ['boolean', ['feature-state', 'hover'], false],
-                        0.3,
-                        0.1
-                    ]
-                }
-            });
-
-            map.addLayer({
-                id: 'grid-lines',
+                id: 'cell-outlines',
                 type: 'line',
                 source: 'grid',
+                filter: ['==', ['get', 'isOutline'], true],
                 paint: {
                     'line-color': '#4444ff',
-                    'line-width': 1,
-                    'line-opacity': 0.5
+                    'line-width': 0.5,
+                    'line-opacity': 0.3
                 }
             });
 
-            map.on('mousemove', 'grid-cells', (e) => {
+            // Add data squares layer
+            map.addLayer({
+                id: 'data-squares',
+                type: 'fill',
+                source: 'grid',
+                filter: ['==', ['get', 'isData'], true],
+                paint: {
+                    'fill-color': '#0000ff',
+                    'fill-opacity': 0.8
+                }
+            });
+
+            map.on('mousemove', 'data-squares', (e) => {
                 if (e.features && e.features.length > 0) {
                     const feature = e.features[0];
-
-                    if (hoveredStateId) {
-                        map.setFeatureState(
-                            { source: 'grid', id: hoveredStateId },
-                            { hover: false }
-                        );
-                    }
-
-                    hoveredStateId = feature.properties.id;
-
-                    map.setFeatureState(
-                        { source: 'grid', id: hoveredStateId },
-                        { hover: true }
-                    );
-
                     dispatch('cellHover', {
                         id: feature.properties.id,
                         coordinates: feature.geometry.coordinates,
                         mouseX: e.point.x,
-                        mouseY: e.point.y
+                        mouseY: e.point.y,
+                        value: feature.properties.value
                     });
                 }
             });
 
-            map.on('mouseleave', 'grid-cells', () => {
-                if (hoveredStateId) {
-                    map.setFeatureState(
-                        { source: 'grid', id: hoveredStateId },
-                        { hover: false }
-                    );
-                    hoveredStateId = null;
-                    dispatch('cellLeave');
-                }
+            map.on('mouseleave', 'data-squares', () => {
+                dispatch('cellLeave');
             });
 
-            map.on('click', 'grid-cells', (e) => {
+            map.on('click', 'data-squares', (e) => {
                 if (e.features && e.features.length > 0) {
                     const feature = e.features[0];
                     dispatch('cellClick', {
                         id: feature.properties.id,
-                        coordinates: feature.geometry.coordinates
+                        coordinates: feature.geometry.coordinates,
+                        value: feature.properties.value
                     });
                 }
             });
 
-            map.on('mouseenter', 'grid-cells', () => {
+            map.on('mouseenter', 'data-squares', () => {
                 map.getCanvas().style.cursor = 'pointer';
             });
 
-            map.on('mouseleave', 'grid-cells', () => {
+            map.on('mouseleave', 'data-squares', () => {
                 map.getCanvas().style.cursor = '';
             });
         });
