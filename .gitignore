@@ -1,5 +1,8 @@
 node_modules
 
+# Assets
+data/*
+
 # Output
 .output
 .vercel

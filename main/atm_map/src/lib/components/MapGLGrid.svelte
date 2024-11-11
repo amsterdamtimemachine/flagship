@@ -12,6 +12,7 @@
     };
     const CELL_SIZE = 0.001;
     const NUM_CELLS = 60;
+    const NUM_TIME_RANGES = 30;
     const MIN_VALUE_THRESHOLD = 0.2;
 
     const MIN_ZOOM = 11;
@@ -34,11 +35,14 @@
 
     function generateRandomData(): CellData {
         const data: CellData = {};
-        for (let i = 0; i < NUM_CELLS; i++) {
-            for (let j = 0; j < NUM_CELLS; j++) {
-                const value = Math.random();
-                if (value > MIN_VALUE_THRESHOLD) {
-                    data[`cell-${i}-${j}`] = value;
+
+        for(let t = 0; t < NUM_TIME_RANGES; t++) {
+            for (let i = 0; i < NUM_CELLS; i++) {
+                for (let j = 0; j < NUM_CELLS; j++) {
+                    const value = Math.random();
+                    if (value > MIN_VALUE_THRESHOLD) {
+                        data[`cell-${i}-${j}`] = value;
+                    }
                 }
             }
         }
