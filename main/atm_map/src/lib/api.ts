@@ -10,11 +10,11 @@ export async function fetchApi<T>(endpoint: string, fetchFn: FetchFunction = fet
 
 	try {
 		const response = await fetchFn(endpoint);
+		console.log(response);
 
 		if (!response.ok) {
 			throw new Error(`HTTP error! status: ${response.status}`);
 		}
-
 		return (await response.json()) as T;
 	} catch (err) {
 		const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';

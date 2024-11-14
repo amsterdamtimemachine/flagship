@@ -73,7 +73,3 @@ export type ImageContext = {
 	contentLocation: string;
 };
 
-export type ImageResponse = {
-	'@context': ImageContext;
-	'@graph': Photograph[];
-};
