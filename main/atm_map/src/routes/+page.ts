@@ -1,20 +1,17 @@
 import { fetchApi, postApi } from '$api';
+import type { HeatmapResponse, CellResponse } from '$types';
 import type { PageLoad } from './$types';
 
-interface ImageData {
- url: string;
- title: string;
- start_date: string;
- thumb: string;
- geom: string;
-}
-
-interface ImageResponse {
- [key: string]: ImageData;
-}
-
 export const load: PageLoad = async ({ fetch }) => {
- const response = await fetchApi<ImageResponse>('http://localhost:9000/api/images/20', fetch);
+
+
+	const heatmapUrl = 'http://localhost:9000/api/heatmap?startDate=1800-01-01&endDate=1970-12-31'	
+	const heatmapData = await fetchApi<HeatmapResponse>(heatmapUrl, fetch);
+	console.log(heatmapData);
+
+	const cellUrl = 'http://localhost:9000/api/cell/20_20'	
+	const cellData = await fetchApi<CellResponse>(cellUrl, fetch);
+	console.log("cell: ", cellData);
+
+	return { heatmapData };
 };
-
-

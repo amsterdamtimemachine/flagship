@@ -2,6 +2,7 @@ node_modules
 
 # Assets
 data/*
+dist/
 
 # Output
 .output
