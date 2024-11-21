@@ -33,12 +33,6 @@ async function loadData() {
         gridManager = new GridManager(GRID_CONFIG);
         gridManager.processData(transformedData);
         console.log("transformed: ", transformedData.length);
-        transformedData.forEach((item) => {
-            if(item.geom.some(({x, y}) => isNaN(x) || isNaN(y))) {
-                console.log("invalid geom");
-            }
-        })
-        console.log("transformed: ", transformedData.length);
         console.log(`File ${DATA_PATH} loaded and transformed`);
 
     } catch (error) {
@@ -82,19 +76,17 @@ app.get('/api/cell/:cellId', (req, res) => {
         if (!gridManager) {
             throw new Error('Server not initialized');
         }
-
         const { cellId } = req.params;
         const { startDate, endDate } = req.query;
         
-        const filteredData = startDate || endDate 
+        const filteredData = startDate || endDate // WIP! 
             ? filterByTimeRange(transformedData, startDate as string, endDate as string)
             : transformedData;
-
-        console.log(filteredData[0].id);
  
-        const cellData = gridManager.getCellEntities("20_20", transformedData);
+        const cellData = gridManager.getCellEntities(cellId, transformedData);
 
-        console.log("cell d from srvr: ", cellData.length);
+        res.json({cellData});
+
     } catch (error) {
         console.error('Error processing cell request:', error);
         res.status(500).json({ error: 'Internal server error' });
