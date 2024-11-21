@@ -37,6 +37,10 @@ export class GridManager {
         if (row >= 0 && row < this.config.height_n && col >= 0 && col < this.config.width_n) {
             return `${row}_${col}`;
         }
+       // else {
+       //   console.log("invalid: ", row, "    ", col);
+       //   console.log(point);
+       // }
         return null;
     }
 
@@ -67,9 +71,15 @@ export class GridManager {
             } else {
                 return;
             }
+
+            if(!point.x) {
+            //  console.log("invalid pt geom: ", item.geomType);
+            //  console.log(item);
+            }
             
             const cellId = this.getCellIdForPoint(point);
             if (cellId) {
+                //console.log(item.id, cellId);
                 this.entityGridIndices.set(item.id, cellId);
                 this.cellCounts.set(cellId, (this.cellCounts.get(cellId) || 0) + 1);
             }
@@ -85,6 +95,9 @@ export class GridManager {
     }
 
     public getCellEntities(cellId: string, data: GeoData[]): GeoData[] {
+      data.forEach(item => {
+        //console.log(item.id, " grid id: ", this.entityGridIndices.get(item.id));
+      });
         return data.filter(item => this.entityGridIndices.get(item.id) === cellId);
     }
 }

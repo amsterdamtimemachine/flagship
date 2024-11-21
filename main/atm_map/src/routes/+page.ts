@@ -7,11 +7,9 @@ export const load: PageLoad = async ({ fetch }) => {
 
 	const heatmapUrl = 'http://localhost:9000/api/heatmap?startDate=1800-01-01&endDate=1970-12-31'	
 	const heatmapData = await fetchApi<HeatmapResponse>(heatmapUrl, fetch);
-	console.log(heatmapData);
-
-	const cellUrl = 'http://localhost:9000/api/cell/20_20'	
+	const cellUrl = 'http://localhost:9000/api/cell/10_10?startDate=1800-01-01&endDate=1805-01-01'	
 	const cellData = await fetchApi<CellResponse>(cellUrl, fetch);
-	console.log("cell: ", cellData);
+	console.log("CELL BRUH: ", cellData);
 
 	return { heatmapData };
 };
