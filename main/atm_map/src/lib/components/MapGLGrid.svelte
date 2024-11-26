@@ -1,95 +1,93 @@
 <script lang="ts">
     import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
     import { onMount, onDestroy, createEventDispatcher } from 'svelte';
-    import { calculateBounds, generateGridFeatures } from '$utils/dataGenerator.ts';
-    import type { CellData } from '$types';
-    import maplibre, { type Map, type LngLatLike } from 'maplibre-gl';
+    import maplibre, { type Map } from 'maplibre-gl';
     import 'maplibre-gl/dist/maplibre-gl.css';
 
-    const CENTER_POINT: CenterPoint = {
-        lng: 4.897184,
-        lat: 52.374477
-    };
-    const CELL_SIZE = 0.001;
-    const NUM_CELLS = 60;
-    const NUM_TIME_RANGES = 30;
-    const MIN_VALUE_THRESHOLD = 0.2;
+    interface Cell {
+        cellId: string;
+        count: number;
+        bounds: {
+            minLon: number;
+            maxLon: number;
+            minLat: number;
+            maxLat: number;
+        };
+    }
 
-    const MIN_ZOOM = 11;
-    const MAX_ZOOM = 16;
+    interface MapBounds {
+        boundA: [number, number];
+        boundB: [number, number];
+    }
+
+    interface Dimensions {
+        width: number;
+        height: number;
+    }
+
+    export let cells: Cell[] = [];
+    export let bounds: MapBounds;
+    export let dimensions: Dimensions;
+
+    const MIN_ZOOM = 1;
+    const MAX_ZOOM = 50;
     const DEFAULT_ZOOM = 13;
-    const PADDING = 0.1;
+    const PADDING = 3.0;
 
     const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
 
-    let currentData: CellData = {};
     let map: Map | undefined;
     let mapContainer: HTMLElement;
-    let hoveredStateId: string | null = null;
 
-    const BOUNDS = calculateBounds(CENTER_POINT, CELL_SIZE, NUM_CELLS);
-    const MAX_BOUNDS = [
-        [BOUNDS.west - PADDING, BOUNDS.south - PADDING],
-        [BOUNDS.east + PADDING, BOUNDS.north + PADDING]
-    ];
+    function generateGridFeatures(cells: Cell[]) {
+        // Find the maximum count to normalize values
+        const maxCount = Math.max(...cells.map(cell => cell.count));
 
-    function generateRandomData(): CellData {
-        const data: CellData = {};
-
-        for(let t = 0; t < NUM_TIME_RANGES; t++) {
-            for (let i = 0; i < NUM_CELLS; i++) {
-                for (let j = 0; j < NUM_CELLS; j++) {
-                    const value = Math.random();
-                    if (value > MIN_VALUE_THRESHOLD) {
-                        data[`cell-${i}-${j}`] = value;
-                    }
-                }
+        const features = cells.map(cell => ({
+            type: 'Feature',
+            properties: {
+                id: cell.cellId,
+                value: cell.count / maxCount, // Normalize the count
+                isData: true,
+                count: cell.count
+            },
+            geometry: {
+                type: 'Polygon',
+                coordinates: [[
+                    [cell.bounds.minLon, cell.bounds.minLat],
+                    [cell.bounds.maxLon, cell.bounds.minLat],
+                    [cell.bounds.maxLon, cell.bounds.maxLat],
+                    [cell.bounds.minLon, cell.bounds.maxLat],
+                    [cell.bounds.minLon, cell.bounds.minLat]
+                ]]
             }
-        }
-        return data;
+        }));
+
+        return {
+            type: 'FeatureCollection',
+            features: features
+        };
     }
 
-    export function updateData(newData: CellData) {
-        if (!map) return;
-        
-        currentData = newData;
-        const source = map.getSource('grid') as maplibre.GeoJSONSource;
-        if (source) {
-            source.setData(generateGridFeatures(newData));
-        }
-    }
-
-    const dispatch = createEventDispatcher<{
-        cellHover: {
-            id: string;
-            coordinates: number[][];
-            mouseX: number;
-            mouseY: number;
-            value: number;
-        };
-        cellLeave: void;
-        cellClick: {
-            id: string;
-            coordinates: number[][];
-            value: number;
-        };
-    }>();
-
-
+    const dispatch = createEventDispatcher();
 
     onMount(() => {
         if (!mapContainer) return;
         
-        currentData = generateRandomData();
+        const [west, north] = bounds.boundA;
+        const [east, south] = bounds.boundB;
+        
+        console.log('Initializing map with bounds:', { west, north, east, south });
+        console.log('Number of cells:', cells.length);
         
         map = new maplibre.Map({
             container: mapContainer,
             style: STYLE_URL,
-            bounds: [
-                [BOUNDS.west, BOUNDS.south],
-                [BOUNDS.east, BOUNDS.north]
+            bounds: [[west, south], [east, north]],
+            maxBounds: [
+                [west - PADDING, south - PADDING],
+                [east + PADDING, north + PADDING]
             ],
-            maxBounds: MAX_BOUNDS,
             minZoom: MIN_ZOOM,
             maxZoom: MAX_ZOOM,
             zoom: DEFAULT_ZOOM,
@@ -101,33 +99,30 @@
         });
 
         map.on('load', () => {
+            console.log('Map loaded, adding features');
+            
+            const geojson = generateGridFeatures(cells);
+            console.log('Generated features:', geojson.features.length);
+
             map.addSource('grid', {
                 type: 'geojson',
-                data: generateGridFeatures(CELL_SIZE, NUM_CELLS, MIN_VALUE_THRESHOLD, CENTER_POINT, currentData),
-                promoteId: 'id'
+                data: geojson
             });
 
-            // Add outlines layer
-            map.addLayer({
-                id: 'cell-outlines',
-                type: 'line',
-                source: 'grid',
-                filter: ['==', ['get', 'isOutline'], true],
-                paint: {
-                    'line-color': '#4444ff',
-                    'line-width': 0.5,
-                    'line-opacity': 0.3
-                }
-            });
-
-            // Add data squares layer
+            // Add data squares layer with heat gradient
             map.addLayer({
                 id: 'data-squares',
                 type: 'fill',
                 source: 'grid',
-                filter: ['==', ['get', 'isData'], true],
                 paint: {
-                    'fill-color': '#0000ff',
+                    'fill-color': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'value'],
+                        0, '#deebf7',
+                        0.5, '#3182bd',
+                        1, '#08519c'
+                    ],
                     'fill-opacity': 0.8
                 }
             });
@@ -140,7 +135,8 @@
                         coordinates: feature.geometry.coordinates,
                         mouseX: e.point.x,
                         mouseY: e.point.y,
-                        value: feature.properties.value
+                        value: feature.properties.value,
+                        count: feature.properties.count
                     });
                 }
             });
@@ -155,7 +151,8 @@
                     dispatch('cellClick', {
                         id: feature.properties.id,
                         coordinates: feature.geometry.coordinates,
-                        value: feature.properties.value
+                        value: feature.properties.value,
+                        count: feature.properties.count
                     });
                 }
             });

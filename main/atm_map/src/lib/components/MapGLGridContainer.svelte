@@ -1,21 +1,28 @@
 <script lang="ts">
-    import MapGLGrid from '$components/MapGLGrid.svelte';
-    
+    interface ModalData {
+        id: string;
+        coordinates: number[][];  // Array of [longitude, latitude] pairs
+        position: { x: number; y: number };
+        value?: number;
+        count?: number;
+    }
+
     let showModal = false;
-    let modalData = {
+    let modalData: ModalData = {
         id: '',
-        coordinates: [] as number[][],
+        coordinates: [],
         position: { x: 0, y: 0 }
     };
 
     function handleCellHover(event: CustomEvent) {
-        const { id, coordinates, mouseX, mouseY } = event.detail;
-        
+        const { id, coordinates, mouseX, mouseY, value, count } = event.detail;
         showModal = true;
         modalData = {
             id,
             coordinates,
-            position: { x: mouseX, y: mouseY }
+            position: { x: mouseX, y: mouseY },
+            value,
+            count
         };
     }
 
@@ -24,18 +31,18 @@
     }
 
     function handleCellClick(event: CustomEvent) {
-        const { id, coordinates } = event.detail;
-        console.log('Cell clicked:', id, coordinates);
+        const { id, coordinates, value, count } = event.detail;
+        console.log('Cell clicked:', { id, coordinates, value, count });
     }
 </script>
 
-<div class="relative">
-    <MapGLGrid
-        on:cellHover={handleCellHover}
-        on:cellLeave={handleCellLeave}
-        on:cellClick={handleCellClick}
+<div class="relative w-full h-full">
+    <slot 
+        {handleCellHover}
+        {handleCellLeave}
+        {handleCellClick}
     />
-
+    
     {#if showModal}
         <div
             class="absolute pointer-events-none bg-white rounded-lg shadow-lg p-4 z-50 transition-opacity duration-150"
@@ -45,7 +52,15 @@
             <p class="text-sm">
                 ID: {modalData.id}
                 <br>
-                Coordinates: {JSON.stringify(modalData.coordinates[0])}
+                {#if modalData.count !== undefined}
+                    Count: {modalData.count}
+                    <br>
+                {/if}
+                {#if modalData.value !== undefined}
+                    Intensity: {(modalData.value * 100).toFixed(1)}%
+                    <br>
+                {/if}
+                Coordinates: {modalData.coordinates[0] ? modalData.coordinates[0].map(coord => `${coord[0].toFixed(4)}, ${coord[1].toFixed(4)}`).join(' | ') : ''}
             </p>
         </div>
     {/if}

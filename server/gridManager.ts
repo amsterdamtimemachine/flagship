@@ -35,7 +35,7 @@ export class GridManager {
         const row = Math.floor((point.y - minLat) / this.cellHeight);
 
         if (row >= 0 && row < this.config.height_n && col >= 0 && col < this.config.width_n) {
-            return `${row}_${col}`;
+            return `${col}_${row}`;
         }
         return null;
     }

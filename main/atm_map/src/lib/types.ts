@@ -20,6 +20,7 @@ export interface GeoData {
     centroid?: Point;
 }
 
+
 export interface HeatmapResponse {
    cells: {
        cellId: string;
@@ -41,4 +42,4 @@ export interface HeatmapResponse {
    };
 }
 
-export type CellResponse = GeoData[]; // Array of entities in the cell
+export type CellResponse = { cellData: GeoData[] }; 
