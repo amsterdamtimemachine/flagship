@@ -39,22 +39,22 @@
     let map: Map | undefined;
     let mapContainer: HTMLElement;
 
-    function getLatitudeAdjustmentFactor(latitude: number): number {
-        return 1 / Math.cos((latitude * Math.PI) / 180);
-    }
+   // function getLatitudeAdjustmentFactor(latitude: number): number {
+   //     return 1 / Math.cos((latitude * Math.PI) / 180);
+   // }
 
     function calculateSquareCoordinates(cell: Cell, scale: number = 1): number[][] {
         const centerLat = (cell.bounds.minLat + cell.bounds.maxLat) / 2;
-        const latAdjustment = getLatitudeAdjustmentFactor(centerLat);
+        //const latAdjustment = getLatitudeAdjustmentFactor(centerLat);
         
         const cellWidth = cell.bounds.maxLon - cell.bounds.minLon;
-        const cellHeight = (cell.bounds.maxLat - cell.bounds.minLat) * latAdjustment;
+        const cellHeight = (cell.bounds.maxLat - cell.bounds.minLat); // * latAdjustment;
         
         const centerLng = cell.bounds.minLon + (cellWidth / 2);
         
         const halfSize = (Math.min(cellWidth, cellHeight) * scale) / 2;
         const halfSizeLng = halfSize;
-        const halfSizeLat = halfSize / latAdjustment;
+        const halfSizeLat = halfSize; // / latAdjustment;
 
         return [
             [centerLng - halfSizeLng, centerLat - halfSizeLat],

@@ -13,8 +13,8 @@ const PORT = 9000;
 const CORS_PORT = 5175;
 const DATA_PATH = '../../data/beeldbank_50000.json'; 
 const GRID_CONFIG: GridConfig = {
-    width_n: 200,
-    height_n: 200,
+    width_n: 1500,
+    height_n: 1500,
     boundA: [4.73, 52.7], 
     boundB: [5.3, 51.9]
 };
