@@ -3,16 +3,18 @@
   "private": true,
   "workspaces": [
     "frontend",
-    "backend"
+    "backend/server",
+    "backend/preprocessor",
+    "packages/shared-types"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"  \"npm run dev:packages/shared-types\"",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && concurrently \"npx tsc --watch\" \"nodemon dist/server.js\""
+    "dev:backend/server": "cd backend/server/ && concurrently \"npx tsc --watch\" \"nodemon dist/server.js\"",
+    "dev:packages/shared-types": "cd packages/shared-types && npm run dev-w-yalc" 
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
     "nodemon": "^3.0.2"
   }
 }
-

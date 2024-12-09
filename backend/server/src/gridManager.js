@@ -1,0 +1,84 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.GridManager = void 0;
+class GridManager {
+    constructor(config) {
+        this.config = config;
+        this.cellCounts = new Map();
+        this.entityGridIndices = new Map();
+        this.minLon = Math.min(config.boundA[0], config.boundB[0]);
+        this.maxLon = Math.max(config.boundA[0], config.boundB[0]);
+        this.minLat = Math.min(config.boundA[1], config.boundB[1]);
+        this.maxLat = Math.max(config.boundA[1], config.boundB[1]);
+        const latSpan = Math.abs(config.boundA[1] - config.boundB[1]);
+        const lonSpan = Math.abs(config.boundA[0] - config.boundB[0]);
+        const centerLat = (config.boundA[1] + config.boundB[1]) / 2;
+        //const adjustmentFactor = this.getLatitudeAdjustmentFactor(centerLat);
+        this.cellHeight = latSpan / config.height_n;
+        this.cellWidth = (lonSpan / config.width_n); //* adjustmentFactor;
+    }
+    getLatitudeAdjustmentFactor(latitude) {
+        return 1 / Math.cos((latitude * Math.PI) / 180);
+    }
+    getCellIdForPoint(point) {
+        const minLon = Math.min(this.config.boundA[0], this.config.boundB[0]);
+        const minLat = Math.min(this.config.boundA[1], this.config.boundB[1]);
+        const col = Math.floor((point.x - minLon) / this.cellWidth);
+        const row = Math.floor((point.y - minLat) / this.cellHeight);
+        if (row >= 0 && row < this.config.height_n && col >= 0 && col < this.config.width_n) {
+            return `${row}_${col}`;
+        }
+        return null;
+    }
+    // private getCellBounds(cellId: string): CellBounds {
+    //     const [row, col] = cellId.split('_').map(Number);
+    //     const minLon = Math.min(this.config.boundA[0], this.config.boundB[0]);
+    //     const minLat = Math.min(this.config.boundA[1], this.config.boundB[1]);
+    //     return {
+    //         minLon: minLon + (col * this.cellWidth),
+    //         maxLon: minLon + ((col + 1) * this.cellWidth),
+    //         minLat: minLat + (row * this.cellHeight),
+    //         maxLat: minLat + ((row + 1) * this.cellHeight)
+    //     };
+    // }
+    getCellBounds(cellId) {
+        const [row, col] = cellId.split('_').map(Number);
+        const minLon = this.minLon + (col / this.config.width_n) * (this.maxLon - this.minLon);
+        const maxLon = this.minLon + ((col + 1) / this.config.width_n) * (this.maxLon - this.minLon);
+        const minLat = this.minLat + (row / this.config.height_n) * (this.maxLat - this.minLat);
+        const maxLat = this.minLat + ((row + 1) / this.config.height_n) * (this.maxLat - this.minLat);
+        return { minLon, maxLon, minLat, maxLat };
+    }
+    processData(data) {
+        this.cellCounts.clear();
+        this.entityGridIndices.clear();
+        data.forEach(item => {
+            let point;
+            if (item.geomType === 'point') {
+                point = item.geom[0];
+            }
+            else if (item.centroid) {
+                point = item.centroid;
+            }
+            else {
+                return;
+            }
+            const cellId = this.getCellIdForPoint(point);
+            if (cellId) {
+                this.entityGridIndices.set(item.id, cellId);
+                this.cellCounts.set(cellId, (this.cellCounts.get(cellId) || 0) + 1);
+            }
+        });
+    }
+    getHeatmapData() {
+        return Array.from(this.cellCounts.entries()).map(([cellId, count]) => ({
+            cellId,
+            count,
+            bounds: this.getCellBounds(cellId)
+        }));
+    }
+    getCellEntities(cellId, data) {
+        return data.filter(item => this.entityGridIndices.get(item.id) === cellId);
+    }
+}
+exports.GridManager = GridManager;
