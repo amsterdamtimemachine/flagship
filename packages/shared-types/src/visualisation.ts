@@ -1,6 +1,6 @@
 export interface GridConfig {
-    width_n: number;
-    height_n: number;
+    colsAmount: number;
+    rowsAmount: number;
     boundA: [number, number];  
     boundB: [number, number]; 
 }
@@ -26,3 +26,11 @@ export interface GridCellCount {
     count: number;
     bounds: GridCellBounds;
 }
+
+
+export interface Grid {
+    cellCounts: Map<string, number>;
+    entityGridIndices: Map<string, string>;
+    dimensions: GridDimensions;
+}
+
