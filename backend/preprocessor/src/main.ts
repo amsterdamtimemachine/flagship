@@ -1,4 +1,5 @@
 import { extractGeoFeaturesFromGeoJsonFolder, gridifyGeoFeatures } from './processing';
+import { saveProcessedFeaturesToIntermediary, saveProcessedFeaturesToIntermediary2, type ExtractFeaturesOptions } from './processingStream'; 
 import { serializeToBinary } from './serialisation'
 import type { GridConfig } from '@atm/shared-types';
 
@@ -11,15 +12,22 @@ const GRID_CONFIG: GridConfig = {
 
 async function preprocessData() {
     console.log("STARTING");
-    const options = { dropNulls: true, convertMetersToLatLon: true };
-    const features = await extractGeoFeaturesFromGeoJsonFolder('/home/m/Downloads/reprojections/3857', options);
-    const gridifiedFeatures = gridifyGeoFeatures(features, GRID_CONFIG);
+    const options : ExtractFeaturesOptions = { dropNulls: true, convertMetersToLatLon: true };
+    //const features = await extractGeoFeaturesFromGeoJsonFolder('/home/m/Downloads/reprojections/3857', options);
+    //const gridifiedFeatures = gridifyGeoFeatures(features, GRID_CONFIG);
+   await saveProcessedFeaturesToIntermediary2(
+       '/home/m/Downloads/reprojections/3857',
+       './temp/processed_features.ndjson',
+       { dropNulls: true, convertMetersToLatLon: true }
+   );
 
-    await serializeToBinary(
-        features, 
-        gridifiedFeatures, 
-        './data/grid.bin'
-    );
+   console.log("done!");
+
+    //await serializeToBinary(
+    //    features, 
+    //    gridifiedFeatures, 
+    //    './data/grid.bin'
+    //);
 }
 
 preprocessData();

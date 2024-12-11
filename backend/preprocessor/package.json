@@ -10,7 +10,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@atm/shared-types": "file:.yalc/@atm/shared-types"
+    "@atm/shared-types": "file:.yalc/@atm/shared-types",
+    "@types/jsonstream": "^0.8.33",
+    "jsonstream": "^1.0.3"
   },
   "devDependencies": {
     "@types/bun": "^1.1.14",
