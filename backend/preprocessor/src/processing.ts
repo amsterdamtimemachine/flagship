@@ -12,7 +12,7 @@ import { Point2D,
          GridCellCount,
          GridCellBounds } from '@atm/shared-types';
 
-const calculateGridDimensions = (config: GridConfig): GridDimensions => {
+const getGridDimensionsFromConfig = (config: GridConfig): GridDimensions => {
     const minLon = Math.min(config.boundA[0], config.boundB[0]);
     const maxLon = Math.max(config.boundA[0], config.boundB[0]);
     const minLat = Math.min(config.boundA[1], config.boundB[1]);
@@ -22,6 +22,8 @@ const calculateGridDimensions = (config: GridConfig): GridDimensions => {
     const lonSpan = Math.abs(config.boundA[0] - config.boundB[0]);
     
     return {
+        colsAmount: config.colsAmount,
+        rowsAmount: config.rowsAmount,
         cellWidth: lonSpan / config.colsAmount,
         cellHeight: latSpan / config.rowsAmount,
         minLon,
@@ -33,13 +35,12 @@ const calculateGridDimensions = (config: GridConfig): GridDimensions => {
 
 const getCellIdForPoint = (
     point: Point2D,
-    dimensions: GridDimensions,
-    config: GridConfig
+    gridDimensions: GridDimensions,
 ): string | null => {
-    const col = Math.floor((point.x - dimensions.minLon) / dimensions.cellWidth);
-    const row = Math.floor((point.y - dimensions.minLat) / dimensions.cellHeight);
+    const col = Math.floor((point.x - gridDimensions.minLon) / gridDimensions.cellWidth);
+    const row = Math.floor((point.y - gridDimensions.minLat) / gridDimensions.cellHeight);
 
-    if (row >= 0 && row < config.rowsAmount && col >= 0 && col < config.colsAmount) {
+    if (row >= 0 && row < gridDimensions.rowsAmount && col >= 0 && col < gridDimensions.colsAmount) {
         return `${row}_${col}`;
     }
     return null;
@@ -119,7 +120,7 @@ function calculateMultiLineCentroid(coordinates: [number, number][][]): Point2D 
 }
 
 const gridifyGeoFeatures = (features: GeoFeature[], config: GridConfig): Grid => {
-    const dimensions = calculateGridDimensions(config);
+    const dimensions =getGridDimensionsFromConfig(config);
     const cellCounts = new Map<string, number>();
     const entityGridIndices = new Map<string, string>();
 
@@ -136,7 +137,7 @@ const gridifyGeoFeatures = (features: GeoFeature[], config: GridConfig): Grid =>
         }
 
         if (!point) return;
-        const cellId = getCellIdForPoint(point, dimensions, config);
+        const cellId = getCellIdForPoint(point, dimensions);
         if (!cellId) return;
 
         entityGridIndices.set(feature.properties.url, cellId);
@@ -271,7 +272,7 @@ async function extractGeoFeaturesFromGeoJsonFolder(
 }
 
 export {
-    gridifyGeoFeatures,
-    extractGeoFeaturesFromGeoJsonFolder
+getGridDimensionsFromConfig,
+getCellIdForPoint,
 }
 

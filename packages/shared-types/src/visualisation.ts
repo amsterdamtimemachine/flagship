@@ -6,6 +6,8 @@ export interface GridConfig {
 }
 
 export interface GridDimensions {
+    colsAmount: number;
+    rowsAmount: number;
     cellWidth: number;
     cellHeight: number;
     minLon: number;

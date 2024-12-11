@@ -1,6 +1,9 @@
 import { readdir, mkdir } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import { dirname } from 'node:path';
 import { join } from 'node:path';
+import JSONStream from 'jsonstream';
+
 import { 
    Point2D, 
    PointFeature,
@@ -9,8 +12,15 @@ import {
    PolygonFeature,
    GeoFeature,
    Grid,
-   GridConfig
+   GridConfig,
+   GridDimensions
 } from '@atm/shared-types';
+
+
+import {
+    getCellIdForPoint
+} from './processing';
+
 
 interface ExtractFeaturesOptions {
    dropNulls: boolean;
@@ -139,148 +149,10 @@ function processFeature(feature: any, options: ExtractFeaturesOptions): GeoFeatu
 }
 
 
-async function processGeoJsonStream(
-   folderPath: string,
-   options: ExtractFeaturesOptions,
-   onFeatureProcessed: (feature: GeoFeature) => void
-) {
-   const files = await readdir(folderPath);
-   const geoJsonFiles = files.filter(f => f.endsWith('.geojson'));
-   
-   for (const file of geoJsonFiles) {
-       const fileStream = Bun.file(join(folderPath, file)).stream();
-       const data = await Bun.readableStreamToJSON(fileStream);
-       
-       for (const feature of data.features) {
-           switch (feature.geometry.type) {
-               case "Point": {
-                   const [x, y] = feature.geometry.coordinates;
-                   if (options.dropNulls && (isNaN(x) || isNaN(y))) continue;
-                   
-                   const coordinates = options.convertMetersToLatLon 
-                       ? coordsMetersToLatLon(x, y)
-                       : [x, y];
-
-                   onFeatureProcessed({
-                       ...feature,
-                       geometry: {
-                           ...feature.geometry,
-                           coordinates
-                       }
-                   } as PointFeature);
-                   break;
-               }
-                   
-               case "MultiLineString": {
-                   const validCoordinates = feature.geometry.coordinates
-                       .map((line: [number, number][]) => 
-                           line.filter(([x, y]) => !options.dropNulls || (!isNaN(x) && !isNaN(y)))
-                       ).filter((line: [number, number][]) => line.length > 0);
-                   
-                   if (options.dropNulls && validCoordinates.length === 0) continue;
-
-                   const convertedCoordinates = options.convertMetersToLatLon
-                       ? validCoordinates.map(line => 
-                           line.map(([x, y]) => coordsMetersToLatLon(x, y))
-                         )
-                       : validCoordinates;
-                   
-                   onFeatureProcessed({
-                       ...feature,
-                       geometry: {
-                           ...feature.geometry,
-                           coordinates: convertedCoordinates,
-                           centroid: calculateMultiLineCentroid(convertedCoordinates)
-                       }
-                   } as MultiLineStringFeature);
-                   break;
-               }
-               
-               case "LineString": {
-                   const validCoordinates = feature.geometry.coordinates
-                       .filter(([x, y]) => !options.dropNulls || (!isNaN(x) && !isNaN(y)));
-                   
-                   if (options.dropNulls && validCoordinates.length === 0) continue;
-
-                   const convertedCoordinates = options.convertMetersToLatLon
-                       ? validCoordinates.map(([x, y]) => coordsMetersToLatLon(x, y))
-                       : validCoordinates;
-                   
-                   onFeatureProcessed({
-                       ...feature,
-                       geometry: {
-                           ...feature.geometry,
-                           coordinates: convertedCoordinates,
-                           centroid: calculateCentroid(convertedCoordinates)
-                       }
-                   } as LineStringFeature);
-                   break;
-               }
-               
-               case "Polygon": {
-                   const validCoordinates = feature.geometry.coordinates
-                       .map((ring: [number, number][]) => 
-                           ring.filter(([x, y]) => !options.dropNulls || (!isNaN(x) && !isNaN(y)))
-                       ).filter((ring: [number, number][]) => ring.length > 0);
-                   
-                   if (options.dropNulls && validCoordinates.length === 0) continue;
-
-                   const convertedCoordinates = options.convertMetersToLatLon
-                       ? validCoordinates.map(ring => 
-                           ring.map(([x, y]) => coordsMetersToLatLon(x, y))
-                         )
-                       : validCoordinates;
-                   
-                   const coordinates2D = convertedCoordinates[0];
-                   
-                   onFeatureProcessed({
-                       ...feature,
-                       geometry: {
-                           ...feature.geometry,
-                           coordinates: convertedCoordinates,
-                           centroid: calculateCentroid(coordinates2D)
-                       }
-                   } as PolygonFeature);
-                   break;
-               }
-           }
-       }
-   }
-}
 
 
 
 async function saveProcessedFeaturesToIntermediary(
-  folderPath: string,
-  intermediaryPath: string,
-  options: ExtractFeaturesOptions
-) {
-  // Ensure directory exists
-  const dir = dirname(intermediaryPath);
-  await mkdir(dir, { recursive: true });
-  
-  const writeStream = Bun.file(intermediaryPath).writer();
-  
-  try {
-      await processGeoJsonStream(
-          folderPath,
-          options,
-          (feature: GeoFeature) => {
-              writeStream.write(JSON.stringify(feature) + '\n');
-          }
-      );
-  } catch (error) {
-      console.error('Error during processing:', error);
-      throw error;
-  } finally {
-      await writeStream.end();
-  }
-}// Usage:
-
-import JSONStream from 'jsonstream';
-import { createReadStream } from 'node:fs';
-
-async function saveProcessedFeaturesToIntermediary2(
    folderPath: string,
    intermediaryPath: string,
    options: ExtractFeaturesOptions
@@ -291,6 +163,10 @@ async function saveProcessedFeaturesToIntermediary2(
    const writer = Bun.file(intermediaryPath).writer();
    
    try {
+       // Start array
+       writer.write('[\n');
+       let isFirst = true;
+
        const files = await readdir(folderPath);
        const geoJsonFiles = files.filter(f => f.endsWith('.geojson'));
 
@@ -302,16 +178,23 @@ async function saveProcessedFeaturesToIntermediary2(
                readStream
                    .pipe(parser)
                    .on('data', (feature: any) => {
-                       // Process each feature
                        const processed = processFeature(feature, options);
                        if (processed) {
-                           writer.write(JSON.stringify(processed) + '\n');
+                           // Add comma between features, but not before first one
+                           if (!isFirst) {
+                               writer.write(',\n');
+                           }
+                           isFirst = false;
+                           writer.write(JSON.stringify(processed));
                        }
                    })
                    .on('error', reject)
                    .on('end', resolve);
            });
        }
+       
+       // Close array
+       writer.write('\n]');
    } catch (error) {
        console.error('Error during processing:', error);
        throw error;
@@ -319,8 +202,141 @@ async function saveProcessedFeaturesToIntermediary2(
        writer.end();
    }
 }
+
+interface FirstPassResult {
+    cellCounts: Map<string, number>;
+    entityGridIndices: Map<string, string>; 
+}
+
+async function firstPassGridProcessing(
+    ndjsonPath: string,
+    gridDimensions: GridDimensions
+): Promise<FirstPassResult> {
+    const cellCounts = new Map<string, number>();
+    const entityGridIndices = new Map<string, string>();
+    
+    const readStream = createReadStream(ndjsonPath);
+    const parser = JSONStream.parse('*');
+    
+    await new Promise((resolve, reject) => {
+        readStream
+            .pipe(parser)
+            .on('data', (feature: GeoFeature) => {
+                let point: Point2D | undefined;
+                if (feature.geometry.type === "Point") {
+                    point = {
+                        x: feature.geometry.coordinates[0],
+                        y: feature.geometry.coordinates[1]
+                    };
+                } else {
+                    point = feature.geometry.centroid;
+                }
+
+                if (!point) return;
+                
+                const cellId = getCellIdForPoint(point, gridDimensions, );
+                if (!cellId) return;
+
+                // Store cell mapping
+                entityGridIndices.set(feature.properties.url, cellId);
+                
+                // Update count
+                cellCounts.set(
+                    cellId, 
+                    (cellCounts.get(cellId) || 0) + 1
+                );
+            })
+            .on('error', reject)
+            .on('end', resolve);
+    });
+
+    return {
+        cellCounts,
+        entityGridIndices
+    };
+}
+
+interface BinaryWriteOptions {
+    headerSize: number;
+    gridDimensions: GridDimensions;
+}
+
+async function secondPassWriteBinary(
+   ndjsonPath: string,
+   outputPath: string,
+   firstPassResult: FirstPassResult,
+   options: BinaryWriteOptions
+) {
+   const writer = Bun.file(outputPath).writer();
+   
+   // Write grid metadata first
+   const gridMetadata = {
+       cellCounts: Array.from(firstPassResult.cellCounts.entries()),
+       entityGridIndices: Array.from(firstPassResult.entityGridIndices.entries()),
+       dimensions: options.gridDimensions,
+       header: {
+           gridDataSize: 0,  // We'll calculate this in a moment
+           totalFeatures: firstPassResult.cellCounts.size
+       }
+   };
+   
+   // Calculate and set grid data size
+   const gridMetadataString = JSON.stringify(gridMetadata);
+   gridMetadata.header.gridDataSize = new TextEncoder().encode(gridMetadataString).length;
+
+   // Write the final metadata with correct size
+   const finalMetadataBytes = new TextEncoder().encode(JSON.stringify(gridMetadata));
+   writer.write(finalMetadataBytes);
+
+   // Write features
+   const readStream = createReadStream(ndjsonPath);
+   const parser = JSONStream.parse('*');
+   
+   await new Promise((resolve, reject) => {
+       readStream
+           .pipe(parser)
+           .on('data', (feature: GeoFeature) => {
+               writer.write(JSON.stringify(feature) + '\n');
+           })
+           .on('error', reject)
+           .on('end', resolve);
+   });
+
+   await writer.end();
+}
+
+
+async function processToBinaryGrid(
+    ndjsonPath: string,
+    outputPath: string,
+    gridDimensions: GridDimensions
+) {
+    // First pass: get grid structure
+    console.log('Starting first pass...');
+    const firstPassResult = await firstPassGridProcessing(
+        ndjsonPath, 
+        gridDimensions,
+    );
+    
+    // Calculate dimensions once
+
+    // Second pass: write binary with grid structure
+    console.log('Starting second pass...');
+    await secondPassWriteBinary(
+        ndjsonPath,
+        outputPath,
+        firstPassResult,
+        {
+            headerSize: 64,
+            gridDimensions,
+        }
+    );
+    console.log('Processing complete');
+}
+
+
 export {
    saveProcessedFeaturesToIntermediary,
-    saveProcessedFeaturesToIntermediary2,
+   processToBinaryGrid,
    type ExtractFeaturesOptions
 };
