@@ -1,0 +1,38 @@
+export interface GridConfig {
+    colsAmount: number;
+    rowsAmount: number;
+    boundA: [number, number];  
+    boundB: [number, number]; 
+}
+
+export interface GridDimensions {
+    colsAmount: number;
+    rowsAmount: number;
+    cellWidth: number;
+    cellHeight: number;
+    minLon: number;
+    maxLon: number;
+    minLat: number;
+    maxLat: number;
+}
+
+export interface GridCellBounds {
+    minLon: number;
+    maxLon: number;
+    minLat: number;
+    maxLat: number;
+}
+
+export interface GridCellCount {
+    cellId: string;
+    count: number;
+    bounds: GridCellBounds;
+}
+
+
+export interface Grid {
+    cellCounts: Map<string, number>;
+    entityGridIndices: Map<string, string>;
+    dimensions: GridDimensions;
+}
+

@@ -1,0 +1,9 @@
+{
+  "version": "v1",
+  "packages": {
+    "@atm/shared-types": {
+      "signature": "e1e85cc2d9bdf4965cd6e6b11d8545f5",
+      "file": true
+    }
+  }
+}

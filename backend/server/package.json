@@ -1,5 +1,5 @@
 {
-  "name": "server",
+  "name": "@atm/server",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -14,9 +14,6 @@
     "express": "^4.21.1"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/node": "^22.9.0",
     "typescript": "^5.6.3"
   }
 }

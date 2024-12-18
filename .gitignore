@@ -1,9 +1,13 @@
 node_modules
 experiments
+backend/preprocessor/temp/
 
 # Assets
 data/*
 dist/
+public/*
+.bin
+.csv
 
 # Output
 .output
