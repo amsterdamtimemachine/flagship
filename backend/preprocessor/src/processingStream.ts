@@ -304,67 +304,68 @@ interface BinaryWriteOptions {
 }
 
 async function secondPassProcessJsonFeaturesToGrid(
-   processedJsonPath: string,
-   binaryPath: string,
-   firstPassResult: FirstPassResult,
-   options: BinaryWriteOptions
+  processedJsonPath: string,
+  binaryPath: string,
+  firstPassResult: FirstPassResult,
+  options: BinaryWriteOptions
 ) {
-    /**
-    * Second pass to create final binary file containing both grid metadata and features.
-    * File structure:
-    * 1. Header with grid metadata (cell counts, indices, dimensions)
-    * 2. Feature data
-    * 
-    * @param processedJsonPath - Path to processed JSON file
-    * @param binaryPath - Output path for binary file
-    * @param firstPassResult - Grid indices from first pass
-    * @param options - Binary writing options
-    */
-
-    const dir = dirname(binaryPath);
-    await mkdir(dir, { recursive: true });
-    
-    // Create empty file
-    await Bun.write(binaryPath, '');
-
-   const binaryWriter = Bun.file(binaryPath).writer();
+   /**
+   * Second pass to create final binary file containing both grid metadata and features.
+   * File structure:
+   * 1. Metadata size (4 bytes)
+   * 2. Grid metadata (JSON)
+   * 3. Feature data
+   * 
+   * @param processedJsonPath - Path to processed JSON file
+   * @param binaryPath - Output path for binary file
+   * @param firstPassResult - Grid indices from first pass
+   * @param options - Binary writing options
+   */
+   const dir = dirname(binaryPath);
+   await mkdir(dir, { recursive: true });
    
-   // Write grid metadata first
+   // Create empty file
+   await Bun.write(binaryPath, '');
+   const binaryWriter = Bun.file(binaryPath).writer();
+  
+   // Create metadata
    const gridMetadata = {
        cellCounts: Array.from(firstPassResult.cellCounts.entries()),
        entityGridIndices: Array.from(firstPassResult.entityGridIndices.entries()),
        dimensions: options.gridDimensions,
        header: {
-           gridDataSize: 0,  
            totalFeatures: firstPassResult.cellCounts.size
        }
    };
+  
+   // Serialize metadata
+   const metadataBytes = new TextEncoder().encode(JSON.stringify(gridMetadata));
    
-   // Calculate and set grid data size
-   const gridMetadataString = JSON.stringify(gridMetadata);
-   gridMetadata.header.gridDataSize = new TextEncoder().encode(gridMetadataString).length;
+   // Write metadata size as first 4 bytes
+   const metadataSizeBuffer = new Uint32Array([metadataBytes.length]);
+   binaryWriter.write(metadataSizeBuffer);
+   
+   // Write metadata
+   binaryWriter.write(metadataBytes);
 
-   // Write the final metadata with correct size
-   const finalMetadataBytes = new TextEncoder().encode(JSON.stringify(gridMetadata));
-   binaryWriter.write(finalMetadataBytes);
-
+   // Write features
    const jsonReadStream = createReadStream(processedJsonPath);
    const jsonParser = JSONStream.parse('*'); 
-    try {
-        await new Promise((resolve, reject) => {
-            jsonReadStream
-                .pipe(jsonParser)
-                .on('data', (feature: GeoFeature) => {
-                    binaryWriter.write(JSON.stringify(feature) + '\n');
-                })
-                .on('error', reject)
-                .on('end', resolve);
-        });
-    } finally {
-        await binaryWriter.end();
-        jsonParser.end();
-        //jsonReadStream.destroy();
-    }
+
+   try {
+       await new Promise((resolve, reject) => {
+           jsonReadStream
+               .pipe(jsonParser)
+               .on('data', (feature: GeoFeature) => {
+                   binaryWriter.write(JSON.stringify(feature) + '\n');
+               })
+               .on('error', reject)
+               .on('end', resolve);
+       });
+   } finally {
+       await binaryWriter.end();
+       jsonParser.end();
+   }
 }
 
 export {

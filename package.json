@@ -1,6 +1,9 @@
 {
   "name": "ATM flagship prototype",
   "private": true,
+  "engines": {
+    "bun": "latest"
+  },
   "workspaces": [
     "frontend",
     "backend/server",
@@ -8,13 +11,12 @@
     "packages/shared-types"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"  \"npm run dev:packages/shared-types\"",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend/server": "cd backend/server/ && concurrently \"npx tsc --watch\" \"nodemon dist/server.js\"",
-    "dev:packages/shared-types": "cd packages/shared-types && npm run dev-w-yalc" 
+    "dev": "concurrently \"bun run dev:frontend\" \"bun run dev:backend\" \"bun run dev:packages/shared-types\"",
+    "dev:frontend": "cd frontend && bun run dev",
+    "dev:backend/server": "cd backend/server/ && bun run --watch src/server.ts",
+    "dev:packages/shared-types": "cd packages/shared-types && bun run dev-w-yalc" 
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
-    "nodemon": "^3.0.2"
+    "concurrently": "^8.2.2"
   }
 }
