@@ -28,7 +28,7 @@ async function preprocessData() {
 
   console.log("starting bin processing");
 
-  const gridDimensions = getGridDimensionsFromConfig(GRID_CONFIG);
+  const gridDimensions =getGridDimensionsFromConfig(GRID_CONFIG);
   const gridBinaryFilePath = '/atm/public/grid2.bin'
 
    await processFeaturesToGrid(
@@ -39,5 +39,5 @@ async function preprocessData() {
     console.log("finished processing");
 }
 
-preprocessData();
+await preprocessData();
 

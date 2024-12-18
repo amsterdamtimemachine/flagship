@@ -288,7 +288,8 @@ async function firstPassProcessJsonFeaturesToGrid(
                 .on('end', resolve);
         });
     } finally {
-        jsonReadStream.destroy();
+        //await jsonReadStream.destroy();
+        jsonParser.end();
     }
 
     return {
