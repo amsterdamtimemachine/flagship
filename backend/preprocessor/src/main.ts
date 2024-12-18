@@ -1,8 +1,7 @@
 import { getGridDimensionsFromConfig } from './processing';
-import { saveProcessedFeaturesToIntermediary, 
-    type ExtractFeaturesOptions, 
-    processToBinaryGrid } from './processingStream'; 
-//import { serializeToBinary } from './serialisation'
+import { processGeoJsonFolderToFeatures, 
+         type GeoJsonProcessingOptions,
+         processFeaturesToGrid } from './processingStream'; 
 import type { GridConfig } from '@atm/shared-types';
 
 const GRID_CONFIG: GridConfig = {
@@ -12,34 +11,33 @@ const GRID_CONFIG: GridConfig = {
     boundB: [5.3, 51.9]
 };
 
+const PROCESS_FOLDER = false;
+
 async function preprocessData() {
-    console.log("STARTING with features");
-    const options : ExtractFeaturesOptions = { dropNulls: true, convertMetersToLatLon: true };
-    //const features = await extractGeoFeaturesFromGeoJsonFolder('/home/m/Downloads/reprojections/3857', options);
-    //const gridifiedFeatures = gridifyGeoFeatures(features, GRID_CONFIG);
-  // await saveProcessedFeaturesToIntermediary(
-  //     '/home/m/Downloads/reprojections/3857',
-  //     './temp/processed_features.ndjson',
-  //     { dropNulls: true, convertMetersToLatLon: true }
-  // );
+   const geoJsonFeaturesFolder = '/home/m/Downloads/reprojections/3857';
+   const processedJsonPath = './temp/processed_features.json';
+
+   if (PROCESS_FOLDER) {
+       const options : GeoJsonProcessingOptions = { dropNulls: true, convertMetersToLatLon: true };
+       await processGeoJsonFolderToFeatures(
+           geoJsonFeaturesFolder,
+           processedJsonPath,
+           options
+       );
+  }
+
+  console.log("starting bin processing");
 
   const gridDimensions = getGridDimensionsFromConfig(GRID_CONFIG);
+  const gridBinaryFilePath = '/atm/public/grid2.bin'
 
-
-   await processToBinaryGrid(
-    './temp/processed_features.ndjson',
-    './temp/b.bin',
+   await processFeaturesToGrid(
+    processedJsonPath,
+    gridBinaryFilePath,
     gridDimensions)
 
-
-
-    //await serializeToBinary(
-    //    features, 
-    //    gridifiedFeatures, 
-    //    './data/grid.bin'
-    //);
+    console.log("finished processing");
 }
 
 preprocessData();
 
-//export { processGeoFolder };

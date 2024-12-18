@@ -4,66 +4,114 @@ import { dirname } from 'node:path';
 import { join } from 'node:path';
 import JSONStream from 'jsonstream';
 
-import { 
+import type { 
    Point2D, 
    PointFeature,
    MultiLineStringFeature,
    LineStringFeature,
    PolygonFeature,
    GeoFeature,
-   Grid,
-   GridConfig,
    GridDimensions
 } from '@atm/shared-types';
 
+import { 
+    type Coordinate,
+    coordsMetersToLatLon, 
+    calculateCentroid, 
+    calculateMultiLineCentroid,
+} from './geom';
 
 import {
     getCellIdForPoint
 } from './processing';
 
 
-interface ExtractFeaturesOptions {
-   dropNulls: boolean;
-   convertMetersToLatLon: boolean;
+type GeoJsonProcessingOptions = {
+       dropNulls: boolean;
+       convertMetersToLatLon: boolean;
 }
 
-function coordsMetersToLatLon(x: number, y: number): [number, number] {
-   const halfEarthCircumference = 20037508.34; 
-   const lon = (x / halfEarthCircumference) * 180;
-   let lat = (y / halfEarthCircumference) * 180;
-   lat = (Math.atan(Math.exp(lat * Math.PI / 180)) * 360 / Math.PI) - 90;
-   return [lon, lat];
+async function processGeoJsonFolderToFeatures(
+  geoJsonFeaturesFolderPath: string,
+  processedJsonPath: string,
+  options: GeoJsonProcessingOptions
+) {
+/**
+* Processes multiple GeoJSON files from a directory and combines them into a single JSON array file.
+* Uses streaming to handle large files. Each feature is processed through processFeature() 
+**/ 
+  const dir = dirname(processedJsonPath);
+  await mkdir(dir, { recursive: true });
+  
+  const writer = Bun.file(processedJsonPath).writer();
+  
+  try {
+      writer.write('[\n');
+      let isFirst = true;
+      const files = await readdir(geoJsonFeaturesFolderPath);
+      const geoJsonFiles = files.filter(f => f.endsWith('.geojson'));
+      
+      for (const file of geoJsonFiles) {
+          const jsonReadStream = createReadStream(join(geoJsonFeaturesFolderPath, file));
+          const jsonParser = JSONStream.parse('features.*');
+          
+          try {
+              await new Promise((resolve, reject) => {
+                  jsonReadStream
+                      .pipe(jsonParser)
+                      .on('data', (feature: any) => {
+                          const processed = processFeature(feature, options);
+                          if (processed) {
+                              if (!isFirst) {
+                                  writer.write(',\n');
+                              }
+                              isFirst = false;
+                              writer.write(JSON.stringify(processed));
+                          }
+                      })
+                      .on('error', reject)
+                      .on('end', resolve);
+              });
+          } finally {
+              //readStream.destroy();
+              jsonParser.end();
+          }
+      }
+      
+      writer.write('\n]');
+  } catch (error) {
+      console.error('Error during geo json processing:', error);
+      throw error;
+  } finally {
+      await writer.end();
+  }
 }
 
-function calculateCentroid(coordinates: [number, number][]): Point2D {
-   const sum = coordinates.reduce(
-       (acc, [x, y]) => ({
-           x: acc.x + x,
-           y: acc.y + y
-       }),
-       { x: 0, y: 0 }
-   );
-   
-   return {
-       x: sum.x / coordinates.length,
-       y: sum.y / coordinates.length
-   };
-}
-
-function calculateMultiLineCentroid(coordinates: [number, number][][]): Point2D {
-   const allPoints = coordinates.flat();
-   return calculateCentroid(allPoints);
-}
-
-type Coordinate = [number, number];
-function processFeature(feature: any, options: ExtractFeaturesOptions): GeoFeature | null { 
+function processFeature(feature: any, options: GeoJsonProcessingOptions): GeoFeature | null { 
+    /**
+    * Processes a GeoJSON feature by validating coordinates, optionally converting from meters to lat/lon,
+    * and computing centroids for non-point geometries.
+    * 
+    * @param feature - Raw GeoJSON feature with geometry type of Point, MultiLineString, LineString, or Polygon
+    * @param options - Processing options:
+    *   - dropNulls: If true, filters out invalid/NaN coordinates
+    *   - convertMetersToLatLon: If true, converts meters to lat/lon coordinates
+    * 
+    * @returns Processed GeoFeature:
+    * 
+    * Handles different geometry types:
+    * - Point: Simple coordinate validation/conversion
+    * - MultiLineString: Processes multiple line arrays, computes centroid from all points
+    * - LineString: Processes single line array, computes centroid
+    * - Polygon: Processes ring arrays, computes centroid from outer ring
+    */
         switch (feature.geometry.type) {
                case "Point": {
                    const [x, y] = feature.geometry.coordinates;
                    if (options.dropNulls && (isNaN(x) || isNaN(y))) return null;
                    
                    const coordinates = options.convertMetersToLatLon 
-                       ? coordsMetersToLatLon(x, y)
+                       ? coordsMetersToLatLon([x, y])
                        : [x, y];
 
                    return {
@@ -85,7 +133,7 @@ function processFeature(feature: any, options: ExtractFeaturesOptions): GeoFeatu
 
                    const convertedCoordinates = options.convertMetersToLatLon
                        ? validCoordinates.map((line: Coordinate []) => 
-                           line.map(([x, y]) => coordsMetersToLatLon(x, y))
+                           line.map((coordinate2D) => coordsMetersToLatLon(coordinate2D))
                          )
                        : validCoordinates;
                    
@@ -106,7 +154,7 @@ function processFeature(feature: any, options: ExtractFeaturesOptions): GeoFeatu
                    if (options.dropNulls && validCoordinates.length === 0) return null;
 
                    const convertedCoordinates = options.convertMetersToLatLon
-                       ? validCoordinates.map(([x, y]) => coordsMetersToLatLon(x, y))
+                       ? validCoordinates.map((coordinate2D) => coordsMetersToLatLon(coordinate2D))
                        : validCoordinates;
                    
                    return {
@@ -129,7 +177,7 @@ function processFeature(feature: any, options: ExtractFeaturesOptions): GeoFeatu
 
                    const convertedCoordinates = options.convertMetersToLatLon
                        ? validCoordinates.map((ring: Coordinate[]) => 
-                           ring.map(([x, y]) => coordsMetersToLatLon(x, y))
+                           ring.map((coordinate2D) => coordsMetersToLatLon(coordinate2D))
                          )
                        : validCoordinates;
                    
@@ -148,107 +196,100 @@ function processFeature(feature: any, options: ExtractFeaturesOptions): GeoFeatu
            return null;
 }
 
+async function processFeaturesToGrid(
+    /**
+    * Main function for creating the final binary grid file.
+    * Process:
+    * 1. First pass: Create grid structure and indices
+    * 2. Second pass: Write binary file with metadata and features
 
-
-
-
-async function saveProcessedFeaturesToIntermediary(
-   folderPath: string,
-   intermediaryPath: string,
-   options: ExtractFeaturesOptions
+    * @param processedJsonPath - Path to processed JSON from processGeoJsonFolderToFeatures
+    * @param outputBinaryPath - Path for final binary output
+    * @param gridDimensions - Grid configuration
+    */
+    processedJsonPath: string,
+    outputBinaryPath: string,
+    gridDimensions: GridDimensions
 ) {
-   const dir = dirname(intermediaryPath);
-   await mkdir(dir, { recursive: true });
-   
-   const writer = Bun.file(intermediaryPath).writer();
-   
-   try {
-       // Start array
-       writer.write('[\n');
-       let isFirst = true;
-
-       const files = await readdir(folderPath);
-       const geoJsonFiles = files.filter(f => f.endsWith('.geojson'));
-
-       for (const file of geoJsonFiles) {
-           const readStream = createReadStream(join(folderPath, file));
-           const parser = JSONStream.parse('features.*');
-           
-           await new Promise((resolve, reject) => {
-               readStream
-                   .pipe(parser)
-                   .on('data', (feature: any) => {
-                       const processed = processFeature(feature, options);
-                       if (processed) {
-                           // Add comma between features, but not before first one
-                           if (!isFirst) {
-                               writer.write(',\n');
-                           }
-                           isFirst = false;
-                           writer.write(JSON.stringify(processed));
-                       }
-                   })
-                   .on('error', reject)
-                   .on('end', resolve);
-           });
-       }
-       
-       // Close array
-       writer.write('\n]');
-   } catch (error) {
-       console.error('Error during processing:', error);
-       throw error;
-   } finally {
-       writer.end();
-   }
+    const firstPassResult = await firstPassProcessJsonFeaturesToGrid(
+        processedJsonPath, 
+        gridDimensions,
+    );
+    
+    await secondPassProcessJsonFeaturesToGrid(
+        processedJsonPath,
+        outputBinaryPath,
+        firstPassResult,
+        {
+            headerSize: 64,
+            gridDimensions,
+        }
+    );
 }
 
 interface FirstPassResult {
-    cellCounts: Map<string, number>;
-    entityGridIndices: Map<string, string>; 
+   /** Map of cellId to number of features in that cell */
+   cellCounts: Map<string, number>;
+   /** Map of feature URL to its containing cellId */
+   entityGridIndices: Map<string, string>; 
 }
 
-async function firstPassGridProcessing(
-    ndjsonPath: string,
+async function firstPassProcessJsonFeaturesToGrid(
+    processedJsonPath: string,
     gridDimensions: GridDimensions
 ): Promise<FirstPassResult> {
+    /**
+    * First pass through the processed JSON to build grid indices.
+    * Streams through features to:
+    * 1. Determine which cell each feature belongs to based on its point or centroid
+    * 2. Count features per cell
+    * 3. Create mapping of feature URLs to cells
+
+    * @param processedJsonPath - Path to processed JSON file from processGeoJsonFolderToFeatures
+    * @param gridDimensions - Grid configuration including cell sizes and bounds
+    * @returns FirstPassResult containing cell counts and feature-to-cell mappings
+    */
+
     const cellCounts = new Map<string, number>();
     const entityGridIndices = new Map<string, string>();
     
-    const readStream = createReadStream(ndjsonPath);
-    const parser = JSONStream.parse('*');
-    
-    await new Promise((resolve, reject) => {
-        readStream
-            .pipe(parser)
-            .on('data', (feature: GeoFeature) => {
-                let point: Point2D | undefined;
-                if (feature.geometry.type === "Point") {
-                    point = {
-                        x: feature.geometry.coordinates[0],
-                        y: feature.geometry.coordinates[1]
-                    };
-                } else {
-                    point = feature.geometry.centroid;
-                }
+    const jsonReadStream = createReadStream(processedJsonPath);
+    const jsonParser = JSONStream.parse('*');
+    try {
+        await new Promise((resolve, reject) => {
+            jsonReadStream
+                .pipe(jsonParser)
+                .on('data', (feature: GeoFeature) => {
+                    let point: Point2D | undefined;
+                    if (feature.geometry.type === "Point") {
+                        point = {
+                            x: feature.geometry.coordinates[0],
+                            y: feature.geometry.coordinates[1]
+                        };
+                    } else {
+                        point = feature.geometry.centroid;
+                    }
 
-                if (!point) return;
-                
-                const cellId = getCellIdForPoint(point, gridDimensions, );
-                if (!cellId) return;
+                    if (!point) return;
+                    
+                    const cellId = getCellIdForPoint(point, gridDimensions, );
+                    if (!cellId) return;
 
-                // Store cell mapping
-                entityGridIndices.set(feature.properties.url, cellId);
-                
-                // Update count
-                cellCounts.set(
-                    cellId, 
-                    (cellCounts.get(cellId) || 0) + 1
-                );
-            })
-            .on('error', reject)
-            .on('end', resolve);
-    });
+                    // Store cell mapping
+                    entityGridIndices.set(feature.properties.url, cellId);
+                    
+                    // Update count
+                    cellCounts.set(
+                        cellId, 
+                        (cellCounts.get(cellId) || 0) + 1
+                    );
+                })
+                .on('error', reject)
+                .on('end', resolve);
+        });
+    } finally {
+        jsonReadStream.destroy();
+    }
 
     return {
         cellCounts,
@@ -261,13 +302,31 @@ interface BinaryWriteOptions {
     gridDimensions: GridDimensions;
 }
 
-async function secondPassWriteBinary(
-   ndjsonPath: string,
-   outputPath: string,
+async function secondPassProcessJsonFeaturesToGrid(
+   processedJsonPath: string,
+   binaryPath: string,
    firstPassResult: FirstPassResult,
    options: BinaryWriteOptions
 ) {
-   const writer = Bun.file(outputPath).writer();
+    /**
+    * Second pass to create final binary file containing both grid metadata and features.
+    * File structure:
+    * 1. Header with grid metadata (cell counts, indices, dimensions)
+    * 2. Feature data
+    * 
+    * @param processedJsonPath - Path to processed JSON file
+    * @param binaryPath - Output path for binary file
+    * @param firstPassResult - Grid indices from first pass
+    * @param options - Binary writing options
+    */
+
+    const dir = dirname(binaryPath);
+    await mkdir(dir, { recursive: true });
+    
+    // Create empty file
+    await Bun.write(binaryPath, '');
+
+   const binaryWriter = Bun.file(binaryPath).writer();
    
    // Write grid metadata first
    const gridMetadata = {
@@ -275,7 +334,7 @@ async function secondPassWriteBinary(
        entityGridIndices: Array.from(firstPassResult.entityGridIndices.entries()),
        dimensions: options.gridDimensions,
        header: {
-           gridDataSize: 0,  // We'll calculate this in a moment
+           gridDataSize: 0,  
            totalFeatures: firstPassResult.cellCounts.size
        }
    };
@@ -286,57 +345,29 @@ async function secondPassWriteBinary(
 
    // Write the final metadata with correct size
    const finalMetadataBytes = new TextEncoder().encode(JSON.stringify(gridMetadata));
-   writer.write(finalMetadataBytes);
+   binaryWriter.write(finalMetadataBytes);
 
-   // Write features
-   const readStream = createReadStream(ndjsonPath);
-   const parser = JSONStream.parse('*');
-   
-   await new Promise((resolve, reject) => {
-       readStream
-           .pipe(parser)
-           .on('data', (feature: GeoFeature) => {
-               writer.write(JSON.stringify(feature) + '\n');
-           })
-           .on('error', reject)
-           .on('end', resolve);
-   });
-
-   await writer.end();
+   const jsonReadStream = createReadStream(processedJsonPath);
+   const jsonParser = JSONStream.parse('*'); 
+    try {
+        await new Promise((resolve, reject) => {
+            jsonReadStream
+                .pipe(jsonParser)
+                .on('data', (feature: GeoFeature) => {
+                    binaryWriter.write(JSON.stringify(feature) + '\n');
+                })
+                .on('error', reject)
+                .on('end', resolve);
+        });
+    } finally {
+        await binaryWriter.end();
+        jsonParser.end();
+        //jsonReadStream.destroy();
+    }
 }
-
-
-async function processToBinaryGrid(
-    ndjsonPath: string,
-    outputPath: string,
-    gridDimensions: GridDimensions
-) {
-    // First pass: get grid structure
-    console.log('Starting first pass...');
-    const firstPassResult = await firstPassGridProcessing(
-        ndjsonPath, 
-        gridDimensions,
-    );
-    
-    // Calculate dimensions once
-
-    // Second pass: write binary with grid structure
-    console.log('Starting second pass...');
-    await secondPassWriteBinary(
-        ndjsonPath,
-        outputPath,
-        firstPassResult,
-        {
-            headerSize: 64,
-            gridDimensions,
-        }
-    );
-    console.log('Processing complete');
-}
-
 
 export {
-   saveProcessedFeaturesToIntermediary,
-   processToBinaryGrid,
-   type ExtractFeaturesOptions
+   GeoJsonProcessingOptions,
+   processGeoJsonFolderToFeatures,
+   processFeaturesToGrid,
 };
