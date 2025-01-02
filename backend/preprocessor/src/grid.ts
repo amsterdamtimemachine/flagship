@@ -270,20 +270,15 @@ async function firstPassProcessJsonFeaturesToGrid(
     processedJsonPath: string,
     gridDimensions: GridDimensions
 ): Promise<FirstPassResult> {
-    /**
-    * First pass through the processed JSON to build grid indices.
-    * Streams through features to:
-    * 1. Determine which cell each feature belongs to based on its point or centroid
-    * 2. Count features per cell
-    * 3. Create mapping of feature URLs to cells
-
-    * @param processedJsonPath - Path to processed JSON file from processGeoJsonFolderToFeatures
-    * @param gridDimensions - Grid configuration including cell sizes and bounds
-    * @returns FirstPassResult containing cell counts and feature-to-cell mappings
-    */
-
     const cellCounts = new Map<string, number>();
     const entityGridIndices = new Map<string, string>();
+    
+    // Initialize all possible grid cells with zero counts
+    for (let row = 0; row < gridDimensions.rowsAmount; row++) {
+        for (let col = 0; col < gridDimensions.colsAmount; col++) {
+            cellCounts.set(`${row}_${col}`, 0);
+        }
+    }
     
     const jsonReadStream = createReadStream(processedJsonPath);
     const jsonParser = JSONStream.parse('*');
@@ -310,7 +305,7 @@ async function firstPassProcessJsonFeaturesToGrid(
                     // Store cell mapping
                     entityGridIndices.set(feature.properties.url, cellId);
                     
-                    // Update count
+                    // Update count (cell already initialized with 0)
                     cellCounts.set(
                         cellId, 
                         (cellCounts.get(cellId) || 0) + 1
@@ -320,7 +315,6 @@ async function firstPassProcessJsonFeaturesToGrid(
                 .on('end', resolve);
         });
     } finally {
-        //await jsonReadStream.destroy();
         jsonParser.end();
     }
 
@@ -329,7 +323,6 @@ async function firstPassProcessJsonFeaturesToGrid(
         entityGridIndices
     };
 }
-
 interface BinaryWriteOptions {
     headerSize: number;
     gridDimensions: GridDimensions;

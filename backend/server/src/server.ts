@@ -54,7 +54,9 @@ async function startServer() {
         const gridFile = Bun.file(BINARY_PATH);
         console.log('Loading grid metadata...');
         const metadata = await loadGridMetadata(gridFile);
-        console.log('Metadata loaded');
+        console.log('Metadata loaded')
+        
+        console.log(metadata.cellCounts);
 
        // serve({
        //     port: PORT,

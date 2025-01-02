@@ -18,12 +18,14 @@ async function preprocessData() {
    const processedJsonPath = './temp/processed_features.json';
 
    if (PREPROCESS) {
+       console.log(`starting geojson folder ${geoJsonFeaturesFolder} processing.`);
        const options : GeoJsonProcessingOptions = { dropNulls: true, convertMetersToLatLon: true };
        await processGeoJsonFolderToFeatures(
            geoJsonFeaturesFolder,
            processedJsonPath,
            options
-       );
+       ); 
+       console.log("finished geojson processing");
   }
 
   console.log("starting bin processing");
@@ -36,7 +38,7 @@ async function preprocessData() {
     gridBinaryFilePath,
     gridDimensions)
 
-    console.log("finished processing");
+    console.log(`finished processing, bin saved to ${gridBinaryFilePath}`);
 }
 
 await preprocessData();
