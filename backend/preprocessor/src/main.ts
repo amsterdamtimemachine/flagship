@@ -1,7 +1,7 @@
-import { getGridDimensionsFromConfig } from './processing';
 import { processGeoJsonFolderToFeatures, 
          type GeoJsonProcessingOptions,
-         processFeaturesToGrid } from './processingStream'; 
+         processFeaturesToGrid,
+         getGridDimensionsFromConfig } from './grid'; 
 import type { GridConfig } from '@atm/shared-types';
 
 const GRID_CONFIG: GridConfig = {
@@ -11,13 +11,13 @@ const GRID_CONFIG: GridConfig = {
     boundB: [5.3, 51.9]
 };
 
-const PROCESS_FOLDER = false;
+const PREPROCESS = false;
 
 async function preprocessData() {
    const geoJsonFeaturesFolder = '/home/m/Downloads/reprojections/3857';
    const processedJsonPath = './temp/processed_features.json';
 
-   if (PROCESS_FOLDER) {
+   if (PREPROCESS) {
        const options : GeoJsonProcessingOptions = { dropNulls: true, convertMetersToLatLon: true };
        await processGeoJsonFolderToFeatures(
            geoJsonFeaturesFolder,
@@ -28,7 +28,7 @@ async function preprocessData() {
 
   console.log("starting bin processing");
 
-  const gridDimensions =getGridDimensionsFromConfig(GRID_CONFIG);
+  const gridDimensions = getGridDimensionsFromConfig(GRID_CONFIG);
   const gridBinaryFilePath = '/atm/public/new_grid.bin'
 
    await processFeaturesToGrid(

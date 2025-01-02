@@ -11,6 +11,7 @@ import type {
    LineStringFeature,
    PolygonFeature,
    GeoFeature,
+   GridConfig,
    GridDimensions
 } from '@atm/shared-types';
 
@@ -21,15 +22,31 @@ import {
     calculateMultiLineCentroid,
 } from './geom';
 
-import {
-    getCellIdForPoint
-} from './processing';
-
-
 type GeoJsonProcessingOptions = {
        dropNulls: boolean;
        convertMetersToLatLon: boolean;
 }
+
+function getGridDimensionsFromConfig(config: GridConfig): GridDimensions {
+    const minLon = Math.min(config.boundA[0], config.boundB[0]);
+    const maxLon = Math.max(config.boundA[0], config.boundB[0]);
+    const minLat = Math.min(config.boundA[1], config.boundB[1]);
+    const maxLat = Math.max(config.boundA[1], config.boundB[1]);
+    
+    const latSpan = Math.abs(config.boundA[1] - config.boundB[1]);
+    const lonSpan = Math.abs(config.boundA[0] - config.boundB[0]);
+    
+    return {
+        colsAmount: config.colsAmount,
+        rowsAmount: config.rowsAmount,
+        cellWidth: lonSpan / config.colsAmount,
+        cellHeight: latSpan / config.rowsAmount,
+        minLon,
+        maxLon,
+        minLat,
+        maxLat
+    };
+};
 
 async function processGeoJsonFolderToFeatures(
   geoJsonFeaturesFolderPath: string,
@@ -73,7 +90,6 @@ async function processGeoJsonFolderToFeatures(
                       .on('end', resolve);
               });
           } finally {
-              //readStream.destroy();
               jsonParser.end();
           }
       }
@@ -86,6 +102,22 @@ async function processGeoJsonFolderToFeatures(
       await writer.end();
   }
 }
+
+const getCellIdForPoint = (
+    point: Point2D,
+    gridDimensions: GridDimensions,
+): string | null => {
+    /* 
+    * find the cell where a point belongs to in the grid 
+    */
+    const col = Math.floor((point.x - gridDimensions.minLon) / gridDimensions.cellWidth);
+    const row = Math.floor((point.y - gridDimensions.minLat) / gridDimensions.cellHeight);
+
+    if (row >= 0 && row < gridDimensions.rowsAmount && col >= 0 && col < gridDimensions.colsAmount) {
+        return `${row}_${col}`;
+    }
+    return null;
+};
 
 function processFeature(feature: any, options: GeoJsonProcessingOptions): GeoFeature | null { 
     /**
@@ -272,7 +304,7 @@ async function firstPassProcessJsonFeaturesToGrid(
 
                     if (!point) return;
                     
-                    const cellId = getCellIdForPoint(point, gridDimensions, );
+                    const cellId = getCellIdForPoint(point, gridDimensions);
                     if (!cellId) return;
 
                     // Store cell mapping
@@ -372,4 +404,5 @@ export {
    GeoJsonProcessingOptions,
    processGeoJsonFolderToFeatures,
    processFeaturesToGrid,
+   getGridDimensionsFromConfig,
 };
