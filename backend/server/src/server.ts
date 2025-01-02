@@ -1,93 +1,87 @@
-import { serve, type BunFile} from "bun";
+import { serve } from "bun";
+
 const PORT = 9000;
-const CORS_PORT = 5175;
 const BINARY_PATH = '/atm/public/new_grid.bin';
 
-/**
-* Loads and parses grid metadata from a binary file that was created using a specific format:
-* 
-* Binary File Structure:
-* [4 bytes: Metadata Size as Uint32]
-* [N bytes: Metadata as JSON] where N is the size from first 4 bytes
-* [Remaining bytes: Features data]
-* 
-* The metadata JSON contains:
-* - cellCounts: Array of [cellId, count] pairs for heatmap visualization
-* - entityGridIndices: Array of [featureUrl, cellId] pairs for feature lookup
-* - dimensions: Grid configuration including bounds and cell sizes
-* - header: Contains totalFeatures count
-* 
-* @param file - BunFile reference to the binary file (lazy loaded)
-* @returns {Promise<{
-*   cellCounts: Map<string, number>,      // cellId -> feature count
-*   entityGridIndices: Map<string, string>, // featureUrl -> cellId
-*   dimensions: GridDimensions,           // Grid configuration
-*   header: { totalFeatures: number }     // Metadata about features
-* }>}
-* 
-* Usage:
-* const file = Bun.file('./grid.bin');
-* const metadata = await loadGridMetadata(file);
-* console.log(`Total features: ${metadata.header.totalFeatures}`);
-* console.log(`Features in cell '1_1': ${metadata.cellCounts.get('1_1')}`);
-*/
-async function loadGridMetadata(file: BunFile) {
-   // Read first 4 bytes which contain metadata size as Uint32
-   const sizeBuffer = await file.slice(0, 4).arrayBuffer();
-   const metadataSize = new Uint32Array(sizeBuffer)[0];
-   
-   // Read exact metadata section (from byte 4 to 4+size)
-   const metadataText = await file.slice(4, 4 + metadataSize).text();
-   const metadata = JSON.parse(metadataText);
-   
-   // Convert arrays back to Maps for efficient lookup
-   return {
-       cellCounts: new Map(metadata.cellCounts),
-       entityGridIndices: new Map(metadata.entityGridIndices),
-       dimensions: metadata.dimensions,
-       header: metadata.header
-   };
+interface GridMetadata {
+    dimensions: any;
+    cellIndices: Record<string, {
+        startOffset: number;
+        endOffset: number;
+        featureCount: number;
+    }>;
 }
 
-async function startServer() {
-    try {
-        const gridFile = Bun.file(BINARY_PATH);
-        console.log('Loading grid metadata...');
-        const metadata = await loadGridMetadata(gridFile);
-        console.log('Metadata loaded')
-        
-        console.log(metadata.cellCounts);
+const mmap = Bun.mmap(BINARY_PATH);
+const metadataSize = new DataView(mmap.buffer).getUint32(0, true);
+const metadata: GridMetadata = JSON.parse(
+    new TextDecoder().decode(mmap.slice(4, 4 + metadataSize))
+);
 
-       // serve({
-       //     port: PORT,
-       //     fetch(req) {
-       //         const url = new URL(req.url);
-       //         const headers = {
-       //             'Access-Control-Allow-Origin': `http://localhost:${CORS_PORT}`,
-       //             'Content-Type': 'application/json'
-       //         };
-
-       //         // Return just metadata for heatmap
-       //         if (url.pathname === '/api/heatmap') {
-       //             return new Response(JSON.stringify({
-       //                 cells: Array.from(metadata.cellCounts.entries()),
-       //                 dimensions: metadata.dimensions
-       //             }), { headers });
-       //         }
-
-       //         // Load features for specific cell when requested
-       //         if (url.pathname.startsWith('/api/cell/')) {
-       //             // Features implementation here
-       //         }
-
-       //         return new Response('Not Found', { status: 404 });
-       //     },
-       // });
-
-    } catch (error) {
-        console.error('Failed to start server:', error);
-        process.exit(1);
+function getFeaturesForCell(mmap: Uint8Array, metadata: GridMetadata, cellId: string) {
+    const cellIndex = metadata.cellIndices[cellId];
+    if (!cellIndex) return [];
+    
+    const metadataOffset = 4 + metadataSize;
+    const start = metadataOffset + cellIndex.startOffset;
+    const end = metadataOffset + cellIndex.endOffset;
+    
+    console.log(`Reading cell ${cellId} (${cellIndex.featureCount} features)`);
+    console.log(`Byte range: ${start}-${end} (${end - start} bytes)`);
+    
+    const features = [];
+    const lines = new TextDecoder().decode(mmap.slice(start, end)).split('\n');
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line) continue;
+        try {
+            features.push(JSON.parse(line));
+        } catch (e) {
+            console.error(`Error parsing feature at line ${i}:`, line);
+        }
     }
+    
+    return features;
 }
 
-startServer().catch(console.error);
+serve({
+    port: PORT,
+    fetch(req) {
+        const url = new URL(req.url);
+        const headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+        };
+
+        if (url.pathname === '/api/metadata') {
+            return new Response(JSON.stringify({
+                dimensions: metadata.dimensions,
+                cellCounts: Object.entries(metadata.cellIndices)
+                    .map(([id, data]) => [id, data.featureCount])
+            }), { headers });
+        }
+
+        const cellMatch = url.pathname.match(/^\/api\/cell\/(\d+_\d+)$/);
+        if (cellMatch) {
+            const features = getFeaturesForCell(mmap, metadata, cellMatch[1]);
+            return new Response(JSON.stringify(features), { headers });
+        }
+
+        return new Response('Not Found', { status: 404 });
+    }
+});
+
+// Test endpoints
+setTimeout(async () => {
+    const metadata = await fetch('http://localhost:9000/api/metadata').then(r => r.json());
+    console.log('\nMetadata response:', metadata);
+    
+    const cellId = '5_2'; // Test cell with most features
+    console.log(`\nTesting cell ${cellId}`);
+    const features = await fetch(`http://localhost:9000/api/cell/${cellId}`).then(r => r.json());
+    console.log(`Found ${features.length} features`);
+    if (features.length > 0) {
+        console.log('Sample feature:', JSON.stringify(features[0], null, 2));
+    }
+}, 1000);

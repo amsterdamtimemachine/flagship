@@ -48,59 +48,84 @@ function getGridDimensionsFromConfig(config: GridConfig): GridDimensions {
     };
 };
 
+function validateFeature(feature: any) {
+    const required = ['type', 'properties', 'geometry'];
+    const props = ['url', 'title', 'start_date', 'end_date'];
+    
+    if (!required.every(key => key in feature)) {
+        throw new Error(`Missing required field: ${required.filter(k => !(k in feature)).join(', ')}`);
+    }
+    
+    if (!props.every(key => key in feature.properties)) {
+        throw new Error(`Missing property: ${props.filter(k => !(k in feature.properties)).join(', ')}`);
+    }
+    
+    // Test stringification
+    const serialized = JSON.stringify(feature);
+    try {
+        JSON.parse(serialized);
+    } catch (e) {
+        throw new Error(`Feature cannot be serialized: ${e}`);
+    }
+    
+    return true;
+}
+
 async function processGeoJsonFolderToFeatures(
-  geoJsonFeaturesFolderPath: string,
-  processedJsonPath: string,
-  options: GeoJsonProcessingOptions
+    geoJsonFeaturesFolderPath: string,
+    processedJsonPath: string,
+    options: GeoJsonProcessingOptions
 ) {
-/**
-* Processes multiple GeoJSON files from a directory and combines them into a single JSON array file.
-* Uses streaming to handle large files. Each feature is processed through processFeature() 
-**/ 
-  const dir = dirname(processedJsonPath);
-  await mkdir(dir, { recursive: true });
-  
-  const writer = Bun.file(processedJsonPath).writer();
-  
-  try {
-      writer.write('[\n');
-      let isFirst = true;
-      const files = await readdir(geoJsonFeaturesFolderPath);
-      const geoJsonFiles = files.filter(f => f.endsWith('.geojson'));
-      
-      for (const file of geoJsonFiles) {
-          const jsonReadStream = createReadStream(join(geoJsonFeaturesFolderPath, file));
-          const jsonParser = JSONStream.parse('features.*');
-          
-          try {
-              await new Promise((resolve, reject) => {
-                  jsonReadStream
-                      .pipe(jsonParser)
-                      .on('data', (feature: any) => {
-                          const processed = processFeature(feature, options);
-                          if (processed) {
-                              if (!isFirst) {
-                                  writer.write(',\n');
-                              }
-                              isFirst = false;
-                              writer.write(JSON.stringify(processed));
-                          }
-                      })
-                      .on('error', reject)
-                      .on('end', resolve);
-              });
-          } finally {
-              jsonParser.end();
-          }
-      }
-      
-      writer.write('\n]');
-  } catch (error) {
-      console.error('Error during geo json processing:', error);
-      throw error;
-  } finally {
-      await writer.end();
-  }
+    const writer = Bun.file(processedJsonPath).writer();
+    writer.write('[\n');
+    let isFirst = true;
+    let featureCount = 0;
+    
+    try {
+        const files = await readdir(geoJsonFeaturesFolderPath);
+        const geoJsonFiles = files.filter(f => f.endsWith('.geojson'));
+        
+        for (const file of geoJsonFiles) {
+            const filePath = join(geoJsonFeaturesFolderPath, file);
+            console.log(`Processing ${file}...`);
+            
+            const jsonReadStream = createReadStream(filePath);
+            const jsonParser = JSONStream.parse('features.*');
+            
+            try {
+                await new Promise((resolve, reject) => {
+                    jsonReadStream
+                        .pipe(jsonParser)
+                        .on('data', (feature: any) => {
+                            try {
+                                const processed = processFeature(feature, options);
+                                if (processed && validateFeature(processed)) {
+                                    if (!isFirst) writer.write(',\n');
+                                    writer.write(JSON.stringify(processed));
+                                    isFirst = false;
+                                    featureCount++;
+                                }
+                            } catch (err) {
+                                console.error(`Error processing feature ${featureCount} in ${file}:`, err);
+                                console.error('Problematic feature:', JSON.stringify(feature, null, 2));
+                            }
+                        })
+                        .on('error', (err) => {
+                            console.error(`Error parsing ${file}:`, err);
+                            reject(err);
+                        })
+                        .on('end', resolve);
+                });
+            } catch (err) {
+                console.error(`Failed to process ${file}:`, err);
+            }
+        }
+        
+        writer.write('\n]');
+        console.log(`Processed ${featureCount} features`);
+    } finally {
+        await writer.end();
+    }
 }
 
 const getCellIdForPoint = (
@@ -328,69 +353,72 @@ interface BinaryWriteOptions {
     gridDimensions: GridDimensions;
 }
 
+interface CellFeatureIndex {
+    startOffset: number;
+    endOffset: number;
+    featureCount: number;
+}
+
 async function secondPassProcessJsonFeaturesToGrid(
-  processedJsonPath: string,
-  binaryPath: string,
-  firstPassResult: FirstPassResult,
-  options: BinaryWriteOptions
+    processedJsonPath: string,
+    binaryPath: string,
+    firstPassResult: FirstPassResult,
+    options: BinaryWriteOptions
 ) {
-   /**
-   * Second pass to create final binary file containing both grid metadata and features.
-   * File structure:
-   * 1. Metadata size (4 bytes)
-   * 2. Grid metadata (JSON)
-   * 3. Feature data
-   * 
-   * @param processedJsonPath - Path to processed JSON file
-   * @param binaryPath - Output path for binary file
-   * @param firstPassResult - Grid indices from first pass
-   * @param options - Binary writing options
-   */
-   const dir = dirname(binaryPath);
-   await mkdir(dir, { recursive: true });
-   
-   // Create empty file
-   await Bun.write(binaryPath, '');
-   const binaryWriter = Bun.file(binaryPath).writer();
-  
-   // Create metadata
-   const gridMetadata = {
-       cellCounts: Array.from(firstPassResult.cellCounts.entries()),
-       entityGridIndices: Array.from(firstPassResult.entityGridIndices.entries()),
-       dimensions: options.gridDimensions,
-       header: {
-           totalFeatures: firstPassResult.cellCounts.size
-       }
-   };
-  
-   // Serialize metadata
-   const metadataBytes = new TextEncoder().encode(JSON.stringify(gridMetadata));
-   
-   // Write metadata size as first 4 bytes
-   const metadataSizeBuffer = new Uint32Array([metadataBytes.length]);
-   binaryWriter.write(metadataSizeBuffer);
-   
-   // Write metadata
-   binaryWriter.write(metadataBytes);
-
-   // Write features
-   const jsonReadStream = createReadStream(processedJsonPath);
-   const jsonParser = JSONStream.parse('*'); 
-
-   try {
-       await new Promise((resolve, reject) => {
-           jsonReadStream
-               .pipe(jsonParser)
-               .on('data', (feature: GeoFeature) => {
-                   binaryWriter.write(JSON.stringify(feature) + '\n');
-               })
-               .on('error', reject)
-               .on('end', resolve);
-       });
-   } finally {
-       await binaryWriter.end();
-       jsonParser.end();
-   }
+    const cellIndices: Record<string, CellFeatureIndex> = {};
+    let currentOffset = 0;
+    
+    // First pass: calculate offsets
+    const firstReadStream = createReadStream(processedJsonPath);
+    const firstJsonParser = JSONStream.parse('*');
+    
+    await new Promise((resolve, reject) => {
+        firstReadStream
+            .pipe(firstJsonParser)
+            .on('data', (feature: GeoFeature) => {
+                const cellId = firstPassResult.entityGridIndices.get(feature.properties.url);
+                const featureBytes = JSON.stringify(feature) + '\n';
+                
+                if (!cellIndices[cellId]) {
+                    cellIndices[cellId] = {
+                        startOffset: currentOffset,
+                        endOffset: currentOffset,
+                        featureCount: 0
+                    };
+                }
+                
+                cellIndices[cellId].startOffset = currentOffset;
+                cellIndices[cellId].endOffset += featureBytes.length;
+                cellIndices[cellId].featureCount++;
+                currentOffset += featureBytes.length;
+            })
+            .on('error', reject)
+            .on('end', resolve);
+    });
+    
+    // Prepare metadata
+    const metadata = {
+        dimensions: options.gridDimensions,
+        cellIndices
+    };
+    const metadataBytes = new TextEncoder().encode(JSON.stringify(metadata));
+    console.log('Metadata size:', metadataBytes.byteLength);
+    
+    // Write metadata and features
+    const writer = Bun.file(binaryPath).writer();
+    writer.write(new Uint32Array([metadataBytes.byteLength]));
+    writer.write(metadataBytes);
+    
+    // Read and write features directly
+    const rawJson = await Bun.file(processedJsonPath).text();
+    const features = JSON.parse(rawJson);
+    
+    for (const feature of features) {
+        writer.write(JSON.stringify(feature) + '\n');
+    }
+    
+    await writer.end();
+    console.log('Processing complete');
 }
 
 export {
