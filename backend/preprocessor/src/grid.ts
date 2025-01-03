@@ -3,6 +3,7 @@ import { createReadStream } from 'node:fs';
 import { dirname } from 'node:path';
 import { join } from 'node:path';
 import JSONStream from 'jsonstream';
+import { encode, decode } from '@msgpack/msgpack';
 
 import type { 
    Point2D, 
@@ -272,15 +273,19 @@ async function processFeaturesToGrid(
         processedJsonPath, 
         gridDimensions,
     );
+
+   // await createMinimalBinary(
+   //     processedJsonPath,
+   //     outputBinaryPath,
+   //     gridDimensions,
+   // );
+
     
     await secondPassProcessJsonFeaturesToGrid(
         processedJsonPath,
         outputBinaryPath,
         firstPassResult,
-        {
-            headerSize: 64,
-            gridDimensions,
-        }
+        { gridDimensions },
     );
 }
 
@@ -348,156 +353,156 @@ async function firstPassProcessJsonFeaturesToGrid(
         entityGridIndices
     };
 }
-interface BinaryWriteOptions {
-    headerSize: number;
-    gridDimensions: GridDimensions;
+
+
+
+import * as fs from 'node:fs/promises';
+
+interface Feature {
+    type: string;
+    properties: {
+        url: string;
+        title: string;
+        start_date: string;
+        end_date: string;
+        thumb: string;
+    };
+    geometry: {
+        type: string;
+        coordinates: number[][][] | number[][];
+        centroid?: { x: number; y: number };
+    };
 }
 
-interface CellFeatureIndex {
+interface BinaryCellIndex {
     startOffset: number;
     endOffset: number;
     featureCount: number;
 }
 
+interface BinaryMetadata {
+    version: number;
+    dimensions: GridDimensions;
+    cellIndices: Record<string, BinaryCellIndex>;
+}
+
 async function secondPassProcessJsonFeaturesToGrid(
-    processedJsonPath: string,
-    binaryPath: string,
-    firstPassResult: FirstPassResult,
-    options: BinaryWriteOptions
+  processedJsonPath: string,
+  binaryPath: string,
+  firstPassResult: { cellCounts: Map<string, number>, entityGridIndices: Map<string, string> },
+  options: { gridDimensions: GridDimensions }
 ) {
-    const encoder = new TextEncoder();
-    
-    // First pass: Calculate exact byte offsets and validate features
-    const cellIndices: Record<string, CellFeatureIndex> = {};
-    let currentOffset = 0;
-    const cellFeatureCounts = new Map<string, number>();
-    
-    // Validate features first
-    console.log('Validating features and calculating offsets...');
-    const firstReadStream = createReadStream(processedJsonPath);
-    const firstJsonParser = JSONStream.parse('*');
-    
-    await new Promise((resolve, reject) => {
-        firstReadStream
-            .pipe(firstJsonParser)
-            .on('data', (feature: GeoFeature) => {
-                try {
-                    // Validate feature structure
-                    if (!feature.properties?.url || !feature.geometry) {
-                        console.warn('Invalid feature structure:', feature);
-                        return;
-                    }
-                    
-                    const cellId = firstPassResult.entityGridIndices.get(feature.properties.url);
-                    if (!cellId) {
-                        console.warn('No cell mapping for feature:', feature.properties.url);
-                        return;
-                    }
-                    
-                    // Test JSON serialization/deserialization
-                    const featureStr = JSON.stringify(feature) + '\n';
-                    try {
-                        JSON.parse(featureStr.trim()); // Verify it can be parsed back
-                    } catch (e) {
-                        console.error('Feature cannot be properly serialized:', feature);
-                        return;
-                    }
-                    
-                    const byteLength = encoder.encode(featureStr).length;
-                    
-                    // Update cell indices
-                    if (!cellIndices[cellId]) {
-                        cellIndices[cellId] = {
-                            startOffset: currentOffset,
-                            endOffset: currentOffset + byteLength,
-                            featureCount: 1
-                        };
-                    } else {
-                        cellIndices[cellId].endOffset = currentOffset + byteLength;
-                        cellIndices[cellId].featureCount++;
-                    }
-                    
-                    // Track feature counts for validation
-                    cellFeatureCounts.set(cellId, (cellFeatureCounts.get(cellId) || 0) + 1);
-                    
-                    currentOffset += byteLength;
-                    
-                } catch (error) {
-                    console.error('Error processing feature:', error);
-                }
-            })
-            .on('error', reject)
-            .on('end', resolve);
-    });
-    
-    // Validate feature counts match first pass
-    for (const [cellId, count] of firstPassResult.cellCounts.entries()) {
-        const calculatedCount = cellFeatureCounts.get(cellId) || 0;
-        if (count !== calculatedCount) {
-            console.warn(`Feature count mismatch for cell ${cellId}: expected ${count}, found ${calculatedCount}`);
+      try {
+        const data = await fs.readFile(processedJsonPath, 'utf8');
+        const features: Feature[] = JSON.parse(data) as Feature[];
+
+        const cellData: Record<string, Feature[]> = {};
+        for (const feature of features) {
+          const cellId = firstPassResult.entityGridIndices.get(feature.properties.url);
+          if (cellId) {
+            cellData[cellId] = cellData[cellId] || [];
+            cellData[cellId].push(feature);
+          }
         }
-    }
-    
-    // Prepare metadata
-    const metadata = {
-        dimensions: options.gridDimensions,
-        cellIndices,
-        version: 1, // Add version for future compatibility
-        featureCounts: Object.fromEntries(cellFeatureCounts)
-    };
-    
-    const metadataBytes = encoder.encode(JSON.stringify(metadata));
-    const metadataOffset = 4 + metadataBytes.byteLength;
-    
-    // Adjust offsets
-    for (const cellIndex of Object.values(cellIndices)) {
-        cellIndex.startOffset += metadataOffset;
-        cellIndex.endOffset += metadataOffset;
-    }
-    
-    console.log('Writing binary file...');
-    const writer = Bun.file(binaryPath).writer();
-    
-    // Write metadata
-    writer.write(new Uint32Array([metadataBytes.byteLength]));
-    writer.write(metadataBytes);
-    
-    // Write features with validation
-    const secondReadStream = createReadStream(processedJsonPath);
-    const secondJsonParser = JSONStream.parse('*');
-    
-    let writtenFeatures = 0;
-    await new Promise((resolve, reject) => {
-        secondReadStream
-            .pipe(secondJsonParser)
-            .on('data', (feature: GeoFeature) => {
-                try {
-                    const cellId = firstPassResult.entityGridIndices.get(feature.properties.url);
-                    if (!cellId) return;
-                    
-                    const featureStr = JSON.stringify(feature) + '\n';
-                    writer.write(encoder.encode(featureStr));
-                    writtenFeatures++;
-                    
-                } catch (error) {
-                    console.error('Error writing feature:', error);
-                }
-            })
-            .on('error', reject)
-            .on('end', resolve);
-    });
-    
-    await writer.end();
-    
-    console.log(`Processing complete. Written ${writtenFeatures} features`);
-    console.log('Validating cell offsets...');
-    for (const [cellId, index] of Object.entries(cellIndices)) {
-        if (index.featureCount > 0) {
-            console.log(`Cell ${cellId}: ${index.featureCount} features, bytes ${index.startOffset}-${index.endOffset}`);
+
+        const cellIndices: Record<string, { startOffset: number; endOffset: number; featureCount: number }> = {};
+        let dataOffset = 0;
+
+        for (const cellId in cellData) {
+          const encoded = encode(cellData[cellId]);
+          cellIndices[cellId] = {
+            startOffset: dataOffset,
+            endOffset: dataOffset + encoded.byteLength,
+            featureCount: cellData[cellId].length,
+          };
+          dataOffset += encoded.byteLength;
         }
+
+        const metadata: BinaryMetadata = {
+          version: 1,
+          dimensions: options.gridDimensions,
+          cellIndices,
+        };
+
+        const writer = Bun.file(binaryPath).writer();
+        const metadataBytes = encode(metadata);
+        const metadataSize = metadataBytes.byteLength;
+
+        const sizeBuffer = Buffer.allocUnsafe(4);
+        sizeBuffer.writeUInt32BE(metadataSize, 0);
+        writer.write(sizeBuffer);
+        writer.write(metadataBytes);
+
+        for (const cellId in cellData) {
+            writer.write(encode(cellData[cellId]));
+        }
+
+        await writer.end();
+        console.log("Binary file written successfully!");
+
+    } catch (error) {
+        console.error("Error processing or writing binary file:", error);
     }
 }
 
+type Metadata = {
+    version: number;
+    dimensions: GridDimensions;
+    featureOffsets: { start: number; end: number }[];
+};
+
+async function createMinimalBinary(
+    processedJsonPath: string,
+    binaryPath: string,
+    gridDimensions: GridDimensions
+) {
+    try {
+        const data = await fs.readFile(processedJsonPath, 'utf8');
+        const features: Feature[] = JSON.parse(data) as Feature[];
+
+        if (features.length === 0) {
+            console.error("No features provided.");
+            return;
+        }
+
+        const encodedFeatures: Uint8Array[] = features.map(encode);
+        const featureOffsets: { start: number; end: number }[] = [];
+        let currentOffset = 0;
+
+        for (const encodedFeature of encodedFeatures) {
+            featureOffsets.push({
+                start: currentOffset,
+                end: currentOffset + encodedFeature.byteLength,
+            });
+            currentOffset += encodedFeature.byteLength;
+        }
+
+        const metadata: Metadata = {
+            version: 1,
+            dimensions: gridDimensions,
+            featureOffsets,
+        };
+
+        const encodedMetadata = encode(metadata);
+        const metadataSize = encodedMetadata.byteLength;
+
+        const sizeBuffer = Buffer.allocUnsafe(4);
+        sizeBuffer.writeUInt32BE(metadataSize, 0);
+
+        const writer = Bun.file(binaryPath).writer();
+        writer.write(sizeBuffer);
+        writer.write(encodedMetadata);
+
+        for (const encodedFeature of encodedFeatures) {
+            writer.write(encodedFeature);
+        }
+
+        await writer.end();
+        console.log("Binary file created with all features successfully!");
+    } catch (error) {
+        console.error("Error creating binary file:", error);
+    }
+}
 export {
    GeoJsonProcessingOptions,
    processGeoJsonFolderToFeatures,

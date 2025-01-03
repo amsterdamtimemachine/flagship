@@ -1,145 +1,152 @@
-import { serve } from "bun";
+import { decode } from '@msgpack/msgpack';
+import type { GridDimensions, GeoFeature } from '@atm/shared-types';
 
-const PORT = 9000;
 const BINARY_PATH = '/atm/public/new_grid.bin';
 
-interface GridMetadata {
-    dimensions: {
-        colsAmount: number;
-        rowsAmount: number;
-        cellWidth: number;
-        cellHeight: number;
-        minLon: number;
-        maxLon: number;
-        minLat: number;
-        maxLat: number;
-    };
-    cellIndices: Record<string, {
-        startOffset: number;
-        endOffset: number;
-        featureCount: number;
-    }>;
+interface BinaryMetadata {
+    version: number;
+    dimensions: GridDimensions;
+    cellIndices: Record<string, BinaryCellIndex>;
 }
 
-// Initialize mmap and metadata
-const mmap = Bun.mmap(BINARY_PATH);
-const metadataSize = new DataView(mmap.buffer).getUint32(0, true);
-const metadata: GridMetadata = JSON.parse(
-    new TextDecoder().decode(mmap.slice(4, 4 + metadataSize))
-);
+interface BinaryCellIndex {
+    startOffset: number;
+    endOffset: number;
+    featureCount: number;
+}
 
-function getFeaturesForCell(mmap: Uint8Array, metadata: GridMetadata, cellId: string): any[] {
-    const cellIndex = metadata.cellIndices[cellId];
-    if (!cellIndex) {
-        console.log(`No cell index found for ${cellId}`);
-        return [];
-    }
-    
-    // Get the exact byte range from metadata
-    const metadataOffset = 4 + metadataSize;
-    const start = metadataOffset + cellIndex.startOffset;
-    const end = metadataOffset + cellIndex.endOffset;
-    
+type Metadata = {
+    version: number;
+    dimensions: GridDimensions;
+    cellIndices: Record<string, { startOffset: number; endOffset: number; featureCount: number }>;
+};
+
+async function loadBinaryWithCells(binaryPath: string) {
     try {
-        // Get the raw text for the cell
-        const cellText = new TextDecoder().decode(mmap.slice(start, end));
-        
-        // Split by newlines and parse each feature
-        const features: any[] = [];
-        const lines = cellText.split('\n');
-        
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue;
+        const mmap = Bun.mmap(binaryPath);
+        const buffer = mmap.buffer;
+        const dataView = new DataView(buffer);
+
+        const metadataSize = dataView.getUint32(0, false); // Important: Big-endian
+
+        if (4 + metadataSize > buffer.byteLength) {
+            console.error("Metadata size exceeds buffer length.");
+            return null;
+        }
+
+        const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
+        const metadata: Metadata = decode(metadataBytes) as Metadata;
+
+        //console.log("Metadata:", metadata);
+
+        const cellDataStartOffset = 4 + metadataSize;
+        const cellData: Record<string, Feature[]> = {};
+
+        for (const cellId in metadata.cellIndices) {
+            const cellIndex = metadata.cellIndices[cellId];
+            const cellDataStart = cellDataStartOffset + cellIndex.startOffset;
+            const cellDataEnd = cellDataStartOffset + cellIndex.endOffset;
+            const featureByteLength = cellIndex.endOffset - cellIndex.startOffset
+
+            if (cellDataStart > buffer.byteLength || cellDataEnd > buffer.byteLength || cellDataEnd < cellDataStart) {
+                console.error(`Cell data for ${cellId} is out of range. Start: ${cellDataStart}, End: ${cellDataEnd}, Buffer Length: ${buffer.byteLength}`);
+                continue; // Skip to the next cell
+            }
+
+            const featureBytes = new Uint8Array(buffer, cellDataStart, featureByteLength);
+
+            try {
+                const featuresInCell: Feature[] = decode(featureBytes) as Feature[];
+                cellData[cellId] = featuresInCell;
+                if (featuresInCell.length !== cellIndex.featureCount) {
+                    console.warn(`Feature count mismatch for cell ${cellId}. Metadata says ${cellIndex.featureCount}, but decoded ${featuresInCell.length}`);
+                }
+            } catch (decodeError) {
+                console.error(`Error decoding features for cell ${cellId}:`, decodeError, featureBytes);
+                return null; // Or handle the error differently
+            }
+        }
+
+        console.log("Cell data loaded:", Object.keys(cellData).length, "cells");
+        return cellData;
+    } catch (error) {
+        console.error("Error loading binary data:", error);
+        return null;
+    }
+}
+type SimpleMetadata = {
+    version: number;
+    dimensions: GridDimensions;
+    featureOffsets: { start: number; end: number }[];
+};
+
+interface Feature {
+    type: string;
+    properties: {
+        url: string;
+        title: string;
+        start_date: string;
+        end_date: string;
+        thumb: string;
+    };
+    geometry: {
+        type: string;
+        coordinates: number[][][] | number[][];
+        centroid?: { x: number; y: number };
+    };
+}
+async function loadMinimalBinary(binaryPath: string) {
+    try {
+        const mmap = Bun.mmap(binaryPath);
+        const buffer = mmap.buffer;
+        const dataView = new DataView(buffer);
+
+        const metadataSize = dataView.getUint32(0, false);
+
+        if (4 + metadataSize > buffer.byteLength) {
+            console.error(`Metadata size exceeds buffer length. Metadata Size: ${metadataSize}, Buffer Length: ${buffer.byteLength}`);
+            return null;
+        }
+
+        const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
+        const metadata: SimpleMetadata = decode(metadataBytes) as SimpleMetadata;
+
+        //console.log("Metadata:", metadata);
+
+        const features: Feature[] = [];
+        const dataStart = 4 + metadataSize;
+
+        for (const offset of metadata.featureOffsets) {
+            const featureDataStart = dataStart + offset.start;
+            const featureByteLength = offset.end - offset.start;
+
+            if (featureDataStart >= buffer.byteLength || featureDataStart + featureByteLength > buffer.byteLength) {
+                console.error("Error: Feature data out of range.");
+                return null;
+            }
+
+            const featureBytes = new Uint8Array(buffer, featureDataStart, featureByteLength);
             
             try {
-                const feature = JSON.parse(line);
-                if (feature && typeof feature === 'object') {
-                    features.push(feature);
-                }
-            } catch (parseError) {
-                console.error(`Error parsing feature at line ${i} in cell ${cellId}:`, parseError.message);
-                console.error('Problematic line:', line);
-                // Continue processing other features
+                const feature: Feature = decode(featureBytes) as Feature;
+                features.push(feature);
+            } catch (decodeError) {
+                console.error("Error decoding feature:", decodeError, featureBytes);
+                return null;
             }
         }
-        
-        // Validation
-        if (features.length !== cellIndex.featureCount) {
-            console.warn(`Warning: Found ${features.length} features but expected ${cellIndex.featureCount} for cell ${cellId}`);
-        }
-        
+
+        console.log("Features loaded:", features.length);
         return features;
-        
     } catch (error) {
-        console.error(`Error processing cell ${cellId}:`, error);
-        return [];
+        console.error("Error loading simplified binary:", error);
+        return null;
     }
 }
 
-const server = serve({
-    port: PORT,
-    async fetch(req) {
-        const url = new URL(req.url);
-        const headers = {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'application/json'
-        };
+async function main() {
+    await loadBinaryWithCells('/atm/public/min_bin.bin');
+    //await loadMinimalBinary('/atm/public/min_bin.bin');
+}
 
-        try {
-            if (url.pathname === '/api/metadata') {
-                return new Response(JSON.stringify({
-                    dimensions: metadata.dimensions,
-                    cellCounts: Object.entries(metadata.cellIndices)
-                        .map(([id, data]) => [id, data.featureCount])
-                }), { headers });
-            }
-
-            const cellMatch = url.pathname.match(/^\/api\/cell\/(\d+_\d+)$/);
-            if (cellMatch) {
-                const features = getFeaturesForCell(mmap, metadata, cellMatch[1]);
-                return new Response(JSON.stringify(features), { headers });
-            }
-
-            return new Response('Not Found', { status: 404 });
-            
-        } catch (error) {
-            console.error('Server error:', error);
-            return new Response(JSON.stringify({ error: 'Internal Server Error' }), { 
-                status: 500,
-                headers 
-            });
-        }
-    }
-});
-
-// Validation on startup
-console.log('Server starting with metadata validation:');
-console.log('Grid dimensions:', metadata.dimensions);
-console.log('Total cells:', Object.keys(metadata.cellIndices).length);
-const totalFeatures = Object.values(metadata.cellIndices)
-    .reduce((sum, cell) => sum + cell.featureCount, 0);
-console.log('Total features:', totalFeatures);
-
-// Optional: Test endpoints
-setTimeout(async () => {
-    try {
-        const metadata = await fetch('http://localhost:9000/api/metadata').then(r => r.json());
-        console.log('\nMetadata response:', metadata);
-        
-        // Find cell with most features for testing
-        const cellCounts = metadata.cellCounts;
-        const [testCellId, count] = cellCounts.reduce((max, curr) => 
-            curr[1] > max[1] ? curr : max
-        );
-        
-        console.log(`\nTesting cell with most features: ${testCellId} (${count} features)`);
-        const features = await fetch(`http://localhost:9000/api/cell/${testCellId}`).then(r => r.json());
-        console.log(`Retrieved ${features.length} features`);
-        if (features.length > 0) {
-            console.log('Sample feature:', JSON.stringify(features[0], null, 2));
-        }
-    } catch (error) {
-        console.error('Test endpoint error:', error);
-    }
-}, 1000);
+main();

@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@msgpack/msgpack": "^3.0.0-beta2"
   },
   "devDependencies": {
     "@atm/shared-types": "file:.yalc/@atm/shared-types",
