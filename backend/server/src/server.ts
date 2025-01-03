@@ -37,7 +37,7 @@ async function loadBinaryWithCells(binaryPath: string) {
         const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
         const metadata: Metadata = decode(metadataBytes) as Metadata;
 
-        //console.log("Metadata:", metadata);
+        console.log("Metadata loaded");
 
         const cellDataStartOffset = 4 + metadataSize;
         const cellData: Record<string, Feature[]> = {};
@@ -110,7 +110,6 @@ async function loadMinimalBinary(binaryPath: string) {
 
         const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
         const metadata: SimpleMetadata = decode(metadataBytes) as SimpleMetadata;
-
         //console.log("Metadata:", metadata);
 
         const features: Feature[] = [];
@@ -145,7 +144,7 @@ async function loadMinimalBinary(binaryPath: string) {
 }
 
 async function main() {
-    await loadBinaryWithCells('/atm/public/min_bin.bin');
+    await loadBinaryWithCells('/atm/public/min_bin2.bin');
     //await loadMinimalBinary('/atm/public/min_bin.bin');
 }
 

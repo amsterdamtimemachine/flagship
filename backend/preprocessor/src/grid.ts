@@ -281,7 +281,15 @@ async function processFeaturesToGrid(
    // );
 
     
-    await secondPassProcessJsonFeaturesToGrid(
+   // await secondPassProcessJsonFeaturesToGrid(
+   //     processedJsonPath,
+   //     outputBinaryPath,
+   //     firstPassResult,
+   //     { gridDimensions },
+   // );
+
+
+    await secondPassProcessJsonFeaturesToGridStream(
         processedJsonPath,
         outputBinaryPath,
         firstPassResult,
@@ -443,6 +451,124 @@ async function secondPassProcessJsonFeaturesToGrid(
     } catch (error) {
         console.error("Error processing or writing binary file:", error);
     }
+}
+
+
+async function secondPassProcessJsonFeaturesToGridStream(
+ processedJsonPath: string, 
+ binaryPath: string,
+ firstPassResult: { cellCounts: Map<string, number>, entityGridIndices: Map<string, string> },
+ options: { gridDimensions: GridDimensions }
+) {
+ try {
+   // First pass: Calculate encoded sizes per cell
+   const cellSizes = new Map<string, number>();
+   const firstStream = createReadStream(processedJsonPath);
+   const firstParser = JSONStream.parse('*');
+
+   await new Promise((resolve, reject) => {
+     const tempFeatures: Record<string, Feature[]> = {};
+     firstStream
+       .pipe(firstParser)
+       .on('data', (feature: Feature) => {
+         const cellId = firstPassResult.entityGridIndices.get(feature.properties.url);
+         if (!cellId) return;
+
+         if (!tempFeatures[cellId]) tempFeatures[cellId] = [];
+         tempFeatures[cellId].push(feature);
+
+         // Encode and measure when we hit batch size or end of cell
+         if (tempFeatures[cellId].length >= 1000 || 
+             tempFeatures[cellId].length === firstPassResult.cellCounts.get(cellId)) {
+           const encoded = encode(tempFeatures[cellId]);
+           cellSizes.set(cellId, (cellSizes.get(cellId) || 0) + encoded.byteLength);
+           tempFeatures[cellId] = []; // Clear batch
+         }
+       })
+       .on('error', reject)
+       .on('end', () => {
+         // Encode any remaining features
+         for (const [cellId, features] of Object.entries(tempFeatures)) {
+           if (features.length > 0) {
+             const encoded = encode(features);
+             cellSizes.set(cellId, (cellSizes.get(cellId) || 0) + encoded.byteLength);
+           }
+         }
+         resolve(undefined);
+       });
+   });
+
+   // Calculate offsets
+   const cellIndices: Record<string, BinaryCellIndex> = {};
+   let dataOffset = 0;
+   
+   for (const [cellId, size] of cellSizes) {
+     cellIndices[cellId] = {
+       startOffset: dataOffset,
+       endOffset: dataOffset + size,
+       featureCount: firstPassResult.cellCounts.get(cellId) || 0
+     };
+     dataOffset += size;
+   }
+
+   // Write metadata
+   const metadata: BinaryMetadata = {
+     version: 1,
+     dimensions: options.gridDimensions,
+     cellIndices
+   };
+
+   const writer = Bun.file(binaryPath).writer();
+    const metadataBytes = encode(metadata);
+    const metadataSize = metadataBytes.byteLength;
+
+    const sizeBuffer = Buffer.allocUnsafe(4);
+    sizeBuffer.writeUInt32BE(metadataSize, 0);
+    writer.write(sizeBuffer);
+    writer.write(metadataBytes);
+   await writer.flush();
+
+   // Second pass: Write features
+   const tempFeatures: Record<string, Feature[]> = {};
+   const secondStream = createReadStream(processedJsonPath);
+   const secondParser = JSONStream.parse('*');
+
+   await new Promise((resolve, reject) => {
+     secondStream
+       .pipe(secondParser)
+       .on('data', (feature: Feature) => {
+         const cellId = firstPassResult.entityGridIndices.get(feature.properties.url);
+         if (!cellId) return;
+
+         if (!tempFeatures[cellId]) tempFeatures[cellId] = [];
+         tempFeatures[cellId].push(feature);
+
+         // Write batch when full or end of cell
+         if (tempFeatures[cellId].length >= 1000 || 
+             tempFeatures[cellId].length === firstPassResult.cellCounts.get(cellId)) {
+           writer.write(encode(tempFeatures[cellId]));
+           writer.flush();
+           tempFeatures[cellId] = []; // Clear batch
+         }
+       })
+       .on('error', reject)
+       .on('end', async () => {
+         // Write any remaining features
+         for (const features of Object.values(tempFeatures)) {
+           if (features.length > 0) {
+             writer.write(encode(features));
+             await writer.flush();
+           }
+         }
+         resolve(undefined);
+       });
+   });
+
+   await writer.end();
+   console.log("Binary file written successfully!");
+ } catch (error) {
+   console.error("Error processing or writing binary file:", error);
+ }
 }
 
 type Metadata = {
