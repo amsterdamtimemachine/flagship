@@ -7,7 +7,6 @@ export type BinaryCellIndex = {
 }
 
 export type BinaryMetadata = {
-    version: number;
     dimensions: GridDimensions;
     cellIndices: Record<string, BinaryCellIndex>;
 }

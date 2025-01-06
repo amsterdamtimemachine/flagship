@@ -1,66 +1,161 @@
 import { decode } from '@msgpack/msgpack';
-import type { GridDimensions, GeoFeature, BinaryMetadata } from '@atm/shared-types';
+import type { GeoFeature, BinaryMetadata } from '@atm/shared-types';
 
-const BINARY_PATH = '/atm/public/geodata.bin';
+// Cache for binary data
+let binaryBuffer: ArrayBufferLike | null = null;
+let metadata: BinaryMetadata | null = null;
+let dataStartOffset: number = 0;
 
-
-async function loadBinaryWithCells(binaryPath: string) {
+async function initializeBinaryData(binaryPath: string) {
     try {
-        const mmap = Bun.mmap(binaryPath);
-        const buffer = mmap.buffer;
-        const dataView = new DataView(buffer);
-
-        const metadataSize = dataView.getUint32(0, false); // Important: Big-endian
-
-        if (4 + metadataSize > buffer.byteLength) {
-            console.error("Metadata size exceeds buffer length.");
-            return null;
+        if (!binaryBuffer) {
+            const mmap = Bun.mmap(binaryPath);
+            const buffer = mmap.buffer as ArrayBufferLike;
+            binaryBuffer = buffer;
+            
+            const dataView = new DataView(buffer);
+            const metadataSize = dataView.getUint32(0, false);
+            const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
+            metadata = decode(metadataBytes) as BinaryMetadata;
+            dataStartOffset = 4 + metadataSize;
+            
+            console.log("Binary data initialized successfully");
         }
-
-        const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
-        const metadata: BinaryMetadata = decode(metadataBytes) as BinaryMetadata;
-
-        console.log("Metadata loaded");
-
-        const cellDataStartOffset = 4 + metadataSize;
-        const cellData: Record<string, GeoFeature[]> = {};
-
-        for (const cellId in metadata.cellIndices) {
-            const cellIndex = metadata.cellIndices[cellId];
-            const cellDataStart = cellDataStartOffset + cellIndex.startOffset;
-            const cellDataEnd = cellDataStartOffset + cellIndex.endOffset;
-            const featureByteLength = cellIndex.endOffset - cellIndex.startOffset
-
-            if (cellDataStart > buffer.byteLength || cellDataEnd > buffer.byteLength || cellDataEnd < cellDataStart) {
-                console.error(`Cell data for ${cellId} is out of range. Start: ${cellDataStart}, End: ${cellDataEnd}, Buffer Length: ${buffer.byteLength}`);
-                continue; // Skip to the next cell
-            }
-
-            const featureBytes = new Uint8Array(buffer, cellDataStart, featureByteLength);
-
-            try {
-                const featuresInCell: GeoFeature[] = decode(featureBytes) as GeoFeature[];
-                cellData[cellId] = featuresInCell;
-                if (featuresInCell.length !== cellIndex.featureCount) {
-                    console.warn(`Feature count mismatch for cell ${cellId}. Metadata says ${cellIndex.featureCount}, but decoded ${featuresInCell.length}`);
-                }
-            } catch (decodeError) {
-                console.error(`Error decoding features for cell ${cellId}:`, decodeError, featureBytes);
-                return null; // Or handle the error differently
-            }
-        }
-
-        console.log("Cell data loaded:", Object.keys(cellData).length, "cells");
-        return cellData;
     } catch (error) {
-        console.error("Error loading binary data:", error);
+        console.error("Failed to initialize binary data:", error);
+        throw new Error("Failed to initialize binary data");
+    }
+}
+
+function getCellData(cellId: string): GeoFeature[] | null {
+    if (!binaryBuffer || !metadata) {
+        throw new Error("Binary data not initialized");
+    }
+
+    const buffer = binaryBuffer as ArrayBufferLike;
+    const cellIndex = metadata.cellIndices[cellId];
+    if (!cellIndex) {
+        return null;
+    }
+
+    try {
+        const cellDataStart = dataStartOffset + cellIndex.startOffset;
+        const featureByteLength = cellIndex.endOffset - cellIndex.startOffset;
+        
+        const featureBytes = new Uint8Array(buffer, cellDataStart, featureByteLength);
+        return decode(featureBytes) as GeoFeature[];
+    } catch (error) {
+        console.error(`Error decoding cell ${cellId}:`, error);
         return null;
     }
 }
 
+// Initialize binary data before starting server
+const BINARY_PATH = '/atm/public/geodata.bin';
 
-async function main() {
-    await loadBinaryWithCells(BINARY_PATH);
-}
+await initializeBinaryData(BINARY_PATH);
 
-main();
+const server = Bun.serve({
+    port: process.env.PORT || 3000,
+    async fetch(req) {
+        const url = new URL(req.url);
+        
+        // Handle metadata endpoint
+        if (url.pathname === '/grid/metadata') {
+            if (!metadata) {
+                return new Response(JSON.stringify({
+                    error: "Metadata not initialized"
+                }), {
+                    status: 500,
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    }
+                });
+            }
+
+            return new Response(JSON.stringify({
+                dimensions: metadata.dimensions,
+                cellIndices: metadata.cellIndices
+            }), {
+                status: 200,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'public, max-age=3600',
+                    'Access-Control-Allow-Origin': '*'
+                }
+            });
+        }
+
+        // Handle cell data endpoint
+        if (url.pathname.startsWith('/grid/cell/')) {
+            const cellId = url.pathname.slice('/grid/cell/'.length);
+            
+            // Validate cell ID format first
+            if (!/^\d+_\d+$/.test(cellId)) {
+                return new Response(JSON.stringify({
+                    error: "Invalid cell ID format. Expected format: number_number"
+                }), {
+                    status: 400,
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    }
+                });
+            }
+            
+            try {
+                const features = getCellData(cellId);
+                
+                if (features === null) {
+                    return new Response(JSON.stringify({
+                        error: "Cell not found"
+                    }), {
+                        status: 404,
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        }
+                    });
+                }
+
+                return new Response(JSON.stringify({
+                    cellId,
+                    featureCount: features.length,
+                    features
+                }), {
+                    status: 200,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'public, max-age=3600',
+                        'Access-Control-Allow-Origin': '*'
+                    }
+                });
+            } catch (error) {
+                console.error("Error serving cell data:", error);
+                return new Response(JSON.stringify({
+                    error: "Internal server error"
+                }), {
+                    status: 500,
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*'
+                    }
+                });
+            }
+        }
+
+        // Handle 404 for unknown routes
+        return new Response(JSON.stringify({
+            error: "Not found"
+        }), {
+            status: 404,
+            headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    }
+});
+
+console.log(`Server running on port ${server.port}`);

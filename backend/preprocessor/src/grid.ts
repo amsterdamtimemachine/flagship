@@ -22,6 +22,7 @@ import type {
    GridConfig,
    GridDimensions,
    BinaryMetadata,
+   BinaryCellIndex,
 
 } from '@atm/shared-types';
 
@@ -373,7 +374,7 @@ async function secondPassProcessJsonFeaturesToGrid(
           }
         }
 
-        const cellIndices: Record<string, { startOffset: number; endOffset: number; featureCount: number }> = {};
+        const cellIndices: Record<string, BinaryCellIndex> = {};
         let dataOffset = 0;
 
         for (const cellId in cellData) {
@@ -387,7 +388,6 @@ async function secondPassProcessJsonFeaturesToGrid(
         }
 
         const metadata: BinaryMetadata = {
-          version: 1,
           dimensions: options.gridDimensions,
           cellIndices,
         };
