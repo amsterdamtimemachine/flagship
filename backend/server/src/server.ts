@@ -2,17 +2,14 @@ import { GridApi } from './api';
 import { config } from './config';
 
 async function startServer() {
-    // Initialize API
     const api = new GridApi(config.dataPath);
     await api.initialize();
 
-    // Start server
     const server = Bun.serve({
         port: config.port,
         async fetch(req) {
             const url = new URL(req.url);
             
-            // Simple router
             try {
                 if (url.pathname === '/grid/metadata') {
                     return await api.getMetadata(req);
