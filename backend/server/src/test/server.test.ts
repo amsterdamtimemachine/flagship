@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { GeoFeature, GridDimensions, BinaryCellIndex } from '@atm/shared-types';
+import type { HeatmapCell, HeatmapResponse } from "../processing";
 import { config } from '../config';
 
 async function testGridCell(cellId: string): Promise<{
@@ -28,6 +29,19 @@ async function testMetadata(): Promise<{
     error?: string;
 }> {
     const response = await fetch(`${config.baseUrl}/grid/metadata`);
+    const data = await response.json();
+    return {
+        status: response.status,
+        ...(response.ok ? { data } : { error: data.error })
+    };
+}
+
+async function testHeatmap(): Promise<{
+    status: number;
+    data?: HeatmapResponse;
+    error?: string;
+}> {
+    const response = await fetch(`${config.baseUrl}/grid/heatmap`);
     const data = await response.json();
     return {
         status: response.status,
@@ -144,3 +158,69 @@ test("handles multiple concurrent requests", async () => {
     });
 });
 
+test("heatmap endpoint basic response", async () => {
+    const response = await testHeatmap();
+    expect(response.status).toBe(200);
+    expect(response.data).toBeDefined();
+    expect(response.data?.dimensions).toBeDefined();
+    expect(response.data?.cells).toBeDefined();
+});
+
+test("heatmap cells array has correct structure", async () => {
+    const response = await testHeatmap();
+    const { dimensions, cells } = response.data!;
+
+    // Check total number of cells
+    const expectedCellCount = dimensions.rowsAmount * dimensions.colsAmount;
+    expect(cells.length).toBe(expectedCellCount);
+
+    // Check each cell's structure
+    cells.forEach(cell => {
+        expect(cell).toHaveProperty('cellId');
+        expect(cell).toHaveProperty('row');
+        expect(cell).toHaveProperty('col');
+        expect(cell).toHaveProperty('featureCount');
+        
+        // Validate cell ID format matches row/col
+        expect(cell.cellId).toBe(`${cell.row}_${cell.col}`);
+        
+        // Check bounds
+        expect(cell.row).toBeGreaterThanOrEqual(0);
+        expect(cell.row).toBeLessThan(dimensions.rowsAmount);
+        expect(cell.col).toBeGreaterThanOrEqual(0);
+        expect(cell.col).toBeLessThan(dimensions.colsAmount);
+        
+        // Feature count should be non-negative
+        expect(cell.featureCount).toBeGreaterThanOrEqual(0);
+    });
+});
+
+test("heatmap cells are ordered correctly", async () => {
+    const response = await testHeatmap();
+    const { cells } = response.data!;
+
+    // Check cells are ordered by row then column
+    for (let i = 1; i < cells.length; i++) {
+        const prevCell = cells[i - 1];
+        const currentCell = cells[i];
+
+        if (prevCell.row === currentCell.row) {
+            expect(currentCell.col).toBe(prevCell.col + 1);
+        } else {
+            expect(currentCell.row).toBe(prevCell.row + 1);
+            expect(currentCell.col).toBe(0);
+        }
+    }
+});
+
+test("heatmap includes empty and non-empty cells", async () => {
+    const response = await testHeatmap();
+    const { cells } = response.data!;
+
+    const emptyCells = cells.filter(cell => cell.featureCount === 0);
+    const nonEmptyCells = cells.filter(cell => cell.featureCount > 0);
+
+    // Should have both empty and non-empty cells in a typical grid
+    expect(emptyCells.length).toBeGreaterThan(0);
+    expect(nonEmptyCells.length).toBeGreaterThan(0);
+});

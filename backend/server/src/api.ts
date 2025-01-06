@@ -1,4 +1,5 @@
 import { decode } from '@msgpack/msgpack';
+import { generateHeatmapData } from './processing'; 
 import type { GeoFeature, BinaryMetadata } from '@atm/shared-types';
 
 export type ApiHandler = (req: Request) => Promise<Response>;
@@ -79,6 +80,19 @@ export class GridApi {
             dimensions: this.metadata.dimensions,
             cellIndices: this.metadata.cellIndices
         });
+    }
+
+    getHeatmap: ApiHandler = async () => {
+        if (!this.metadata) {
+            return errorResponse("Metadata not initialized", 500);
+        }
+
+        const heatmapData = generateHeatmapData(
+            this.metadata.dimensions,
+            this.metadata.cellIndices
+        );
+
+        return jsonResponse(heatmapData);
     }
 
     getCellFeatures: ApiHandler = async (req) => {

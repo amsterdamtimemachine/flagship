@@ -21,6 +21,10 @@ async function startServer() {
                 if (url.pathname.startsWith('/grid/cell/')) {
                     return await api.getCellFeatures(req);
                 }
+
+                if (url.pathname === '/grid/heatmap') {
+                    return await api.getHeatmap(req);
+                }
                 
                 // Handle 404
                 return new Response(JSON.stringify({ error: "Not found" }), {
