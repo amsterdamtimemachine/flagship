@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 import type { GeoFeature, GridDimensions, BinaryCellIndex } from '@atm/shared-types';
-
-const BASE_URL = 'http://localhost:3000';
+import { config } from '../config';
 
 async function testGridCell(cellId: string): Promise<{
     status: number;
@@ -12,7 +11,7 @@ async function testGridCell(cellId: string): Promise<{
     };
     error?: string;
 }> {
-    const response = await fetch(`${BASE_URL}/grid/cell/${cellId}`);
+    const response = await fetch(`${config.baseUrl}/grid/cell/${cellId}`);
     const data = await response.json();
     return {
         status: response.status,
@@ -28,7 +27,7 @@ async function testMetadata(): Promise<{
     };
     error?: string;
 }> {
-    const response = await fetch(`${BASE_URL}/grid/metadata`);
+    const response = await fetch(`${config.baseUrl}/grid/metadata`);
     const data = await response.json();
     return {
         status: response.status,
