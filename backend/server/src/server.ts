@@ -1,25 +1,8 @@
 import { decode } from '@msgpack/msgpack';
-import type { GridDimensions, GeoFeature } from '@atm/shared-types';
+import type { GridDimensions, GeoFeature, BinaryMetadata } from '@atm/shared-types';
 
-const BINARY_PATH = '/atm/public/new_grid.bin';
+const BINARY_PATH = '/atm/public/geodata.bin';
 
-interface BinaryMetadata {
-    version: number;
-    dimensions: GridDimensions;
-    cellIndices: Record<string, BinaryCellIndex>;
-}
-
-interface BinaryCellIndex {
-    startOffset: number;
-    endOffset: number;
-    featureCount: number;
-}
-
-type Metadata = {
-    version: number;
-    dimensions: GridDimensions;
-    cellIndices: Record<string, { startOffset: number; endOffset: number; featureCount: number }>;
-};
 
 async function loadBinaryWithCells(binaryPath: string) {
     try {
@@ -35,12 +18,12 @@ async function loadBinaryWithCells(binaryPath: string) {
         }
 
         const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
-        const metadata: Metadata = decode(metadataBytes) as Metadata;
+        const metadata: BinaryMetadata = decode(metadataBytes) as BinaryMetadata;
 
         console.log("Metadata loaded");
 
         const cellDataStartOffset = 4 + metadataSize;
-        const cellData: Record<string, Feature[]> = {};
+        const cellData: Record<string, GeoFeature[]> = {};
 
         for (const cellId in metadata.cellIndices) {
             const cellIndex = metadata.cellIndices[cellId];
@@ -56,7 +39,7 @@ async function loadBinaryWithCells(binaryPath: string) {
             const featureBytes = new Uint8Array(buffer, cellDataStart, featureByteLength);
 
             try {
-                const featuresInCell: Feature[] = decode(featureBytes) as Feature[];
+                const featuresInCell: GeoFeature[] = decode(featureBytes) as GeoFeature[];
                 cellData[cellId] = featuresInCell;
                 if (featuresInCell.length !== cellIndex.featureCount) {
                     console.warn(`Feature count mismatch for cell ${cellId}. Metadata says ${cellIndex.featureCount}, but decoded ${featuresInCell.length}`);
@@ -74,78 +57,10 @@ async function loadBinaryWithCells(binaryPath: string) {
         return null;
     }
 }
-type SimpleMetadata = {
-    version: number;
-    dimensions: GridDimensions;
-    featureOffsets: { start: number; end: number }[];
-};
 
-interface Feature {
-    type: string;
-    properties: {
-        url: string;
-        title: string;
-        start_date: string;
-        end_date: string;
-        thumb: string;
-    };
-    geometry: {
-        type: string;
-        coordinates: number[][][] | number[][];
-        centroid?: { x: number; y: number };
-    };
-}
-async function loadMinimalBinary(binaryPath: string) {
-    try {
-        const mmap = Bun.mmap(binaryPath);
-        const buffer = mmap.buffer;
-        const dataView = new DataView(buffer);
-
-        const metadataSize = dataView.getUint32(0, false);
-
-        if (4 + metadataSize > buffer.byteLength) {
-            console.error(`Metadata size exceeds buffer length. Metadata Size: ${metadataSize}, Buffer Length: ${buffer.byteLength}`);
-            return null;
-        }
-
-        const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
-        const metadata: SimpleMetadata = decode(metadataBytes) as SimpleMetadata;
-        //console.log("Metadata:", metadata);
-
-        const features: Feature[] = [];
-        const dataStart = 4 + metadataSize;
-
-        for (const offset of metadata.featureOffsets) {
-            const featureDataStart = dataStart + offset.start;
-            const featureByteLength = offset.end - offset.start;
-
-            if (featureDataStart >= buffer.byteLength || featureDataStart + featureByteLength > buffer.byteLength) {
-                console.error("Error: Feature data out of range.");
-                return null;
-            }
-
-            const featureBytes = new Uint8Array(buffer, featureDataStart, featureByteLength);
-            
-            try {
-                const feature: Feature = decode(featureBytes) as Feature;
-                features.push(feature);
-            } catch (decodeError) {
-                console.error("Error decoding feature:", decodeError, featureBytes);
-                return null;
-            }
-        }
-
-        console.log("Features loaded:", features.length);
-        return features;
-    } catch (error) {
-        console.error("Error loading simplified binary:", error);
-        return null;
-    }
-}
 
 async function main() {
-    await loadBinaryWithCells('/atm/public/min_bin2.bin');
-    //await loadMinimalBinary('/atm/public/min_bin.bin');
+    await loadBinaryWithCells(BINARY_PATH);
 }
 
 main();

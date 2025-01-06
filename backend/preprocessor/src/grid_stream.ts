@@ -1,16 +1,10 @@
-// WIP: This grid processor uses streaming only partially. 
-// the current input geojson files are completely loaded into the ram requiring ~10gb of memory, this might become an issue on a server.
-
-// The goal is to implement streaming throughout the whole process to avoid running into out of memory issues with large datasets.
-// I removed streaming from the secondPassProcessJsonFeaturesToGrid fn since it was causing issues when deserialising the dataset on the server
-// continue working on the streaming fn in the grid_stream.ts module
+// WIP: grid processing with streaming, the secondPassProcessJsonFeaturesToGrid fn breaks the binary when the binary is deserialised on the server 
 
 import { readdir } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { join } from 'node:path';
 import JSONStream from 'jsonstream';
 import { encode } from '@msgpack/msgpack';
-import * as fs from 'node:fs/promises';
 
 import type { 
    Point2D, 
@@ -22,7 +16,6 @@ import type {
    GridConfig,
    GridDimensions,
    BinaryMetadata,
-
 } from '@atm/shared-types';
 
 import { 
@@ -68,8 +61,8 @@ function validateFeature(feature: GeoFeature) {
     
     if (!props.every(key => key in feature.properties)) {
         throw new Error(`Missing property: ${props.filter(k => !(k in feature.properties)).join(', ')}`);
-    }
-    
+    } 
+    // Test stringification
     const serialized = JSON.stringify(feature);
     try {
         JSON.parse(serialized);
@@ -281,7 +274,8 @@ async function processFeaturesToGrid(
         processedJsonPath, 
         gridDimensions,
     );
-    await secondPassProcessJsonFeaturesToGrid(
+
+    await secondPassProcessJsonFeaturesToGridStream(
         processedJsonPath,
         outputBinaryPath,
         firstPassResult,
@@ -353,64 +347,120 @@ async function firstPassProcessJsonFeaturesToGrid(
         entityGridIndices
     };
 }
-
-async function secondPassProcessJsonFeaturesToGrid(
-  processedJsonPath: string,
-  binaryPath: string,
-  firstPassResult: { cellCounts: Map<string, number>, entityGridIndices: Map<string, string> },
-  options: { gridDimensions: GridDimensions }
+async function secondPassProcessJsonFeaturesToGridStream(
+ processedJsonPath: string, 
+ binaryPath: string,
+ firstPassResult: { cellCounts: Map<string, number>, entityGridIndices: Map<string, string> },
+ options: { gridDimensions: GridDimensions }
 ) {
-      try {
-        const data = await fs.readFile(processedJsonPath, 'utf8');
-        const features: GeoFeature[] = JSON.parse(data) as GeoFeature[];
+ try {
+   // First pass: Calculate encoded sizes per cell
+   const cellSizes = new Map<string, number>();
+   const firstStream = createReadStream(processedJsonPath);
+   const firstParser = JSONStream.parse('*');
 
-        const cellData: Record<string, GeoFeature[]> = {};
-        for (const feature of features) {
-          const cellId = firstPassResult.entityGridIndices.get(feature.properties.url);
-          if (cellId) {
-            cellData[cellId] = cellData[cellId] || [];
-            cellData[cellId].push(feature);
-          }
-        }
+   await new Promise((resolve, reject) => {
+     const tempFeatures: Record<string, GeoFeature[]> = {};
+     firstStream
+       .pipe(firstParser)
+       .on('data', (feature: GeoFeature) => {
+         const cellId = firstPassResult.entityGridIndices.get(feature.properties.url);
+         if (!cellId) return;
 
-        const cellIndices: Record<string, { startOffset: number; endOffset: number; featureCount: number }> = {};
-        let dataOffset = 0;
+         if (!tempFeatures[cellId]) tempFeatures[cellId] = [];
+         tempFeatures[cellId].push(feature);
 
-        for (const cellId in cellData) {
-          const encoded = encode(cellData[cellId]);
-          cellIndices[cellId] = {
-            startOffset: dataOffset,
-            endOffset: dataOffset + encoded.byteLength,
-            featureCount: cellData[cellId].length,
-          };
-          dataOffset += encoded.byteLength;
-        }
+         // Encode and measure when we hit batch size or end of cell
+         if (tempFeatures[cellId].length >= 1000 || 
+             tempFeatures[cellId].length === firstPassResult.cellCounts.get(cellId)) {
+           const encoded = encode(tempFeatures[cellId]);
+           cellSizes.set(cellId, (cellSizes.get(cellId) || 0) + encoded.byteLength);
+           tempFeatures[cellId] = []; // Clear batch
+         }
+       })
+       .on('error', reject)
+       .on('end', () => {
+         // Encode any remaining features
+         for (const [cellId, features] of Object.entries(tempFeatures)) {
+           if (features.length > 0) {
+             const encoded = encode(features);
+             cellSizes.set(cellId, (cellSizes.get(cellId) || 0) + encoded.byteLength);
+           }
+         }
+         resolve(undefined);
+       });
+   });
 
-        const metadata: BinaryMetadata = {
-          version: 1,
-          dimensions: options.gridDimensions,
-          cellIndices,
-        };
+   // Calculate offsets
+   const cellIndices: Record<string, BinaryCellIndex> = {};
+   let dataOffset = 0;
+   
+   for (const [cellId, size] of cellSizes) {
+     cellIndices[cellId] = {
+       startOffset: dataOffset,
+       endOffset: dataOffset + size,
+       featureCount: firstPassResult.cellCounts.get(cellId) || 0
+     };
+     dataOffset += size;
+   }
 
-        const writer = Bun.file(binaryPath).writer();
-        const metadataBytes = encode(metadata);
-        const metadataSize = metadataBytes.byteLength;
+   // Write metadata
+   const metadata: BinaryMetadata = {
+     dimensions: options.gridDimensions,
+     cellIndices
+   };
 
-        const sizeBuffer = Buffer.allocUnsafe(4);
-        sizeBuffer.writeUInt32BE(metadataSize, 0);
-        writer.write(sizeBuffer);
-        writer.write(metadataBytes);
+   const writer = Bun.file(binaryPath).writer();
+    const metadataBytes = encode(metadata);
+    const metadataSize = metadataBytes.byteLength;
 
-        for (const cellId in cellData) {
-            writer.write(encode(cellData[cellId]));
-        }
+    const sizeBuffer = Buffer.allocUnsafe(4);
+    sizeBuffer.writeUInt32BE(metadataSize, 0);
+    writer.write(sizeBuffer);
+    writer.write(metadataBytes);
+   await writer.flush();
 
-        await writer.end();
-        console.log("Binary file written successfully!");
+   // Second pass: Write features
+   const tempFeatures: Record<string, GeoFeature[]> = {};
+   const secondStream = createReadStream(processedJsonPath);
+   const secondParser = JSONStream.parse('*');
 
-    } catch (error) {
-        console.error("Error processing or writing binary file:", error);
-    }
+   await new Promise((resolve, reject) => {
+     secondStream
+       .pipe(secondParser)
+       .on('data', (feature: GeoFeature) => {
+         const cellId = firstPassResult.entityGridIndices.get(feature.properties.url);
+         if (!cellId) return;
+
+         if (!tempFeatures[cellId]) tempFeatures[cellId] = [];
+         tempFeatures[cellId].push(feature);
+
+         // Write batch when full or end of cell
+         if (tempFeatures[cellId].length >= 1000 || 
+             tempFeatures[cellId].length === firstPassResult.cellCounts.get(cellId)) {
+           writer.write(encode(tempFeatures[cellId]));
+           writer.flush();
+           tempFeatures[cellId] = []; // Clear batch
+         }
+       })
+       .on('error', reject)
+       .on('end', async () => {
+         // Write any remaining features
+         for (const features of Object.values(tempFeatures)) {
+           if (features.length > 0) {
+             writer.write(encode(features));
+             await writer.flush();
+           }
+         }
+         resolve(undefined);
+       });
+   });
+
+   await writer.end();
+   console.log("Binary file written successfully!");
+ } catch (error) {
+   console.error("Error processing or writing binary file:", error);
+ }
 }
 
 export {
