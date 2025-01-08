@@ -2,59 +2,49 @@
     import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
     import { onMount, onDestroy, createEventDispatcher } from 'svelte';
     import maplibre, { type Map } from 'maplibre-gl';
+    import type { Heatmap, HeatmapCell, GridDimensions } from '@atm/shared-types';
     import 'maplibre-gl/dist/maplibre-gl.css';
 
-    interface Cell {
-        cellId: string;
-        count: number;
-        bounds: {
-            minLon: number;
-            maxLon: number;
-            minLat: number;
-            maxLat: number;
-        };
-    }
+    export let heatmap: Heatmap;
+    export let compensateMercatorDistortion = true;
 
-    interface MapBounds {
-        boundA: [number, number];
-        boundB: [number, number];
-    }
-
-    interface Dimensions {
-        width: number;
-        height: number;
-    }
-
-    export let cells: Cell[] = [];
-    export let bounds: MapBounds;
-    export let dimensions: Dimensions;
-
-    const MIN_ZOOM = 11;
+    const MIN_ZOOM = 1;
     const MAX_ZOOM = 16;
     const DEFAULT_ZOOM = 13;
-    const PADDING = 0.1;
 
     const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
 
     let map: Map | undefined;
     let mapContainer: HTMLElement;
 
-   // function getLatitudeAdjustmentFactor(latitude: number): number {
-   //     return 1 / Math.cos((latitude * Math.PI) / 180);
-   // }
+    function calculateCellBounds(cell: HeatmapCell, dimensions: GridDimensions) {
+        const minLon = dimensions.minLon + (cell.col * dimensions.cellWidth);
+        const maxLon = minLon + dimensions.cellWidth;
+        const minLat = dimensions.minLat + (cell.row * dimensions.cellHeight);
+        const maxLat = minLat + dimensions.cellHeight;
+        
+        return { minLon, maxLon, minLat, maxLat };
+    }
 
-    function calculateSquareCoordinates(cell: Cell, scale: number = 1): number[][] {
-        const centerLat = (cell.bounds.minLat + cell.bounds.maxLat) / 2;
-        //const latAdjustment = getLatitudeAdjustmentFactor(centerLat);
+function calculateSquareCoordinates(cell: HeatmapCell, dimensions: GridDimensions, scale: number = 1): number[][] {
+    // First get the bounds for this cell
+    const minLon = dimensions.minLon + (cell.col * dimensions.cellWidth);
+    const maxLon = minLon + dimensions.cellWidth;
+    const minLat = dimensions.minLat + (cell.row * dimensions.cellHeight);
+    const maxLat = minLat + dimensions.cellHeight;
+
+    const centerLat = (minLat + maxLat) / 2;
+    
+    if (compensateMercatorDistortion) {
+        const latAdjustment = 1 / Math.cos((centerLat * Math.PI) / 180);
+        const cellWidth = maxLon - minLon;
+        const cellHeight = (maxLat - minLat) * latAdjustment;
         
-        const cellWidth = cell.bounds.maxLon - cell.bounds.minLon;
-        const cellHeight = (cell.bounds.maxLat - cell.bounds.minLat); // * latAdjustment;
-        
-        const centerLng = cell.bounds.minLon + (cellWidth / 2);
+        const centerLng = minLon + (cellWidth / 2);
         
         const halfSize = (Math.min(cellWidth, cellHeight) * scale) / 2;
         const halfSizeLng = halfSize;
-        const halfSizeLat = halfSize; // / latAdjustment;
+        const halfSizeLat = halfSize / latAdjustment;
 
         return [
             [centerLng - halfSizeLng, centerLat - halfSizeLat],
@@ -65,11 +55,20 @@
         ];
     }
 
-    function generateGridFeatures(cells: Cell[]) {
-        const maxCount = Math.max(...cells.map(cell => cell.count));
+    return [
+        [minLon, minLat],
+        [maxLon, minLat],
+        [maxLon, maxLat],
+        [minLon, maxLat],
+        [minLon, minLat]
+    ];
+}
+
+    function generateGridFeatures(heatmap: Heatmap) {
+        const maxCount = Math.max(...heatmap.cells.map(cell => cell.featureCount));
         
-        const features = cells.flatMap(cell => {
-            const normalizedValue = cell.count / maxCount;
+        const features = heatmap.cells.flatMap(cell => {
+            const normalizedValue = cell.featureCount / maxCount;
             
             // Create outline feature with adjusted square coordinates
             const outlineFeature = {
@@ -79,12 +78,12 @@
                     isOutline: true,
                     cellId: cell.cellId,
                     value: normalizedValue,
-                    count: cell.count
+                    count: cell.featureCount
                 },
                 geometry: {
                     type: 'Polygon',
                     coordinates: [
-                        calculateSquareCoordinates(cell, 1) // Full size for outline
+                        calculateSquareCoordinates(cell, heatmap.dimensions, 1)
                     ]
                 }
             };
@@ -96,12 +95,12 @@
                     id: cell.cellId,
                     isData: true,
                     value: normalizedValue,
-                    count: cell.count
+                    count: cell.featureCount
                 },
                 geometry: {
                     type: 'Polygon',
                     coordinates: [
-                        calculateSquareCoordinates(cell, 0.1 + (normalizedValue * 0.8)) // Scaled size for inner square
+                        calculateSquareCoordinates(cell, heatmap.dimensions, 0.1 + (normalizedValue * 0.8))
                     ]
                 }
             };
@@ -115,13 +114,13 @@
         };
     }
 
-    export function updateData(newCells: Cell[]) {
+    export function updateHeatmap(newHeatmap: Heatmap) {
         if (!map) return;
         
-        cells = newCells;
+        heatmap = newHeatmap;
         const source = map.getSource('grid') as maplibre.GeoJSONSource;
         if (source) {
-            source.setData(generateGridFeatures(cells));
+            source.setData(generateGridFeatures(heatmap));
         }
     }
 
@@ -146,19 +145,14 @@
     onMount(() => {
         if (!mapContainer) return;
         
-        const [west, north] = bounds.boundA;
-        const [east, south] = bounds.boundB;
+        const { minLon: west, maxLon: east, minLat: south, maxLat: north } = heatmap.dimensions;
         
         map = new maplibre.Map({
             container: mapContainer,
             style: STYLE_URL,
             bounds: [[west, south], [east, north]],
-           // maxBounds: [
-           //     [west - PADDING, south - PADDING],
-           //     [east + PADDING, north + PADDING]
-           // ],
-            //minZoom: MIN_ZOOM,
-            //maxZoom: MAX_ZOOM,
+            minZoom: MIN_ZOOM,
+            maxZoom: MAX_ZOOM,
             zoom: DEFAULT_ZOOM,
             dragRotate: false,
             touchZoomRotate: false,
@@ -170,7 +164,7 @@
         map.on('load', () => {
             map.addSource('grid', {
                 type: 'geojson',
-                data: generateGridFeatures(cells),
+                data: generateGridFeatures(heatmap),
                 promoteId: 'id'
             });
 
