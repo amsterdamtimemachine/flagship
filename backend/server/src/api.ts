@@ -83,6 +83,7 @@ export class GridApi {
     }
 
     getHeatmap: ApiHandler = async () => {
+        console.log("heatmap request");
         if (!this.metadata) {
             return errorResponse("Metadata not initialized", 500);
         }

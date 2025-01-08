@@ -1,21 +1,13 @@
-import type { GridDimensions, BinaryCellIndex } from '@atm/shared-types';
-
-export interface HeatmapCell {
-    cellId: string;
-    row: number;
-    col: number;
-    featureCount: number;
-}
-
-export interface HeatmapResponse {
-    dimensions: GridDimensions;
-    cells: HeatmapCell[];
-}
+import type { 
+    GridDimensions,
+    HeatmapCell,
+    Heatmap,
+    BinaryCellIndex } from '@atm/shared-types';
 
 export function generateHeatmapData(
     dimensions: GridDimensions,
     cellIndices: Record<string, BinaryCellIndex>
-): HeatmapResponse {
+): Heatmap {
     const cells: HeatmapCell[] = [];
 
 

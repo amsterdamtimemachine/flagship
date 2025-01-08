@@ -34,6 +34,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@atm/shared-types": "file:.yalc/@atm/shared-types",
 		"mapbox-gl": "^3.5.2",
 		"maplibre-gl": "^4.5.1"
 	}

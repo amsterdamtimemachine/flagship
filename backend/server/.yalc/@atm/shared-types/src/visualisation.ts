@@ -36,3 +36,14 @@ export interface Grid {
     dimensions: GridDimensions;
 }
 
+export interface HeatmapCell {
+    cellId: string;
+    row: number;
+    col: number;
+    featureCount: number;
+}
+
+export interface Heatmap {
+    dimensions: GridDimensions;
+    cells: HeatmapCell[];
+}
