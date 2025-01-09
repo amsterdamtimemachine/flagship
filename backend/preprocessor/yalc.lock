@@ -2,7 +2,7 @@
   "version": "v1",
   "packages": {
     "@atm/shared-types": {
-      "signature": "ded1314fd8101c7bf6dbef56412a4376",
+      "signature": "995399b38a5903461b0dd176cd169759",
       "file": true
     }
   }

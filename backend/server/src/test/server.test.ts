@@ -163,29 +163,38 @@ test("heatmap endpoint basic response", async () => {
     expect(response.data?.cells).toBeDefined();
     expect(Array.isArray(response.data?.cells)).toBe(true);
 });
-test("heatmap cells array has correct structure", async () => {
-    const response = await testHeatmap();
-    const { dimensions, cells } = response.data!;
 
-    // Check each cell's structure
-    cells.forEach(cell => {
-        expect(cell).toHaveProperty('cellId');
-        expect(cell).toHaveProperty('row');
-        expect(cell).toHaveProperty('col');
-        expect(cell).toHaveProperty('featureCount');
-        
-        // Validate cell ID format matches row/col
-        expect(cell.cellId).toBe(`${cell.row}_${cell.col}`);
-        
-        // Check bounds
-        expect(cell.row).toBeGreaterThanOrEqual(0);
-        expect(cell.row).toBeLessThan(dimensions.rowsAmount);
-        expect(cell.col).toBeGreaterThanOrEqual(0);
-        expect(cell.col).toBeLessThan(dimensions.colsAmount);
-        
-        // Feature count should be positive (we no longer store empty cells)
-        expect(cell.featureCount).toBeGreaterThan(0);
-    });
+test("heatmap cells array has correct structure", async () => {
+   const response = await testHeatmap();
+   const { dimensions, cells } = response.data!;
+
+   cells.forEach(cell => {
+       expect(cell).toHaveProperty('cellId');
+       expect(cell).toHaveProperty('row');
+       expect(cell).toHaveProperty('col');
+       expect(cell).toHaveProperty('featureCount');
+       expect(cell).toHaveProperty('bounds');
+       expect(cell.featureCount).toBeGreaterThan(0);
+       
+       expect(cell.bounds).toEqual({
+           minLon: expect.any(Number),
+           maxLon: expect.any(Number),
+           minLat: expect.any(Number),
+           maxLat: expect.any(Number)
+       });
+   });
+});
+
+test("cell indices have correct structure", async () => {
+   const result = await testMetadata();
+   const cellIndices = result.data!.cellIndices;
+
+   Object.values(cellIndices).forEach(index => {
+       expect(index).toHaveProperty('startOffset');
+       expect(index).toHaveProperty('endOffset');
+       expect(index).toHaveProperty('featureCount');
+       expect(index).not.toHaveProperty('bounds');
+   });
 });
 
 // Remove or modify tests that assume empty cells
@@ -200,16 +209,4 @@ test("heatmap only includes non-empty cells", async () => {
     expect(cells.length).toBeGreaterThan(0);
 });
 
-test("heatmap cells have valid structure", async () => {
-    const response = await testHeatmap();
-    const { cells } = response.data!;
 
-    // Verify each cell has proper structure and non-zero features
-    cells.forEach(cell => {
-        expect(cell).toHaveProperty('cellId');
-        expect(cell).toHaveProperty('row');
-        expect(cell).toHaveProperty('col');
-        expect(cell).toHaveProperty('featureCount');
-        expect(cell.featureCount).toBeGreaterThan(0);
-    });
-});

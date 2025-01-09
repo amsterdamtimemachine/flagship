@@ -4,12 +4,7 @@ export interface BinaryCellIndex {
     startOffset: number;
     endOffset: number;
     featureCount: number;
-    bounds: {
-        minLon: number;
-        maxLon: number;
-        minLat: number;
-        maxLat: number;
-    };
+
 }
 
 export interface BinaryMetadata {

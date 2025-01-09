@@ -37,7 +37,6 @@ export interface GridCellCount {
     bounds: GridCellBounds;
 }
 
-
 export interface Grid {
     cellCounts: Map<string, number>;
     entityGridIndices: Map<string, string>;
@@ -49,6 +48,12 @@ export interface HeatmapCell {
     row: number;
     col: number;
     featureCount: number;
+    bounds: {
+        minLon: number;
+        maxLon: number;
+        minLat: number;
+        maxLat: number;
+    };
 }
 
 export interface Heatmap {
