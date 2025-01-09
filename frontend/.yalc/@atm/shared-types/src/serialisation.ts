@@ -10,5 +10,9 @@ export interface BinaryCellIndex {
 export interface BinaryMetadata {
     dimensions: GridDimensions;
     cellIndices: Record<string, BinaryCellIndex>;
-    heatmap: Heatmap;
+    timeRange: {
+        start: string;
+        end: string;
+    };
+    heatmaps: Heatmap[];
 }

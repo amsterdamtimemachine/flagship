@@ -1,5 +1,5 @@
 import { decode } from '@msgpack/msgpack';
-import type { GeoFeature, BinaryMetadata } from '@atm/shared-types';
+import type { GeoFeature, BinaryMetadata, HeatmapCell } from '@atm/shared-types';
 
 export type ApiHandler = (req: Request) => Promise<Response>;
 
@@ -77,16 +77,40 @@ export class GridApi {
         return jsonResponse({
             dimensions: this.metadata.dimensions,
             cellIndices: this.metadata.cellIndices,
-            heatmap: this.metadata.heatmap  
+            heatmap: this.metadata.heatmaps  
         });
     }
 
-    getHeatmap: ApiHandler = async () => {
+   getHeatmap: ApiHandler = async (req) => {
         if (!this.metadata) {
             return errorResponse("Metadata not initialized", 500);
         }
 
-        return jsonResponse(this.metadata.heatmap);
+        const url = new URL(req.url);
+        const period = url.searchParams.get('period');
+
+        // If no period specified, return the first slice (or a default total heatmap)
+        if (!period && this.metadata.heatmaps.length > 0) {
+            return jsonResponse({
+                dimensions: this.metadata.dimensions,
+                cells: this.metadata.heatmaps[0].cells,
+                timeRange: this.metadata.timeRange,
+                periods: this.metadata.heatmaps.map(s => s.period)
+            });
+        }
+
+        // Find requested time slice
+        const slice = this.metadata.heatmaps.find(s => s.period === period);
+        if (!slice) {
+            return errorResponse("Invalid time period", 400);
+        }
+
+        return jsonResponse({
+            dimensions: this.metadata.dimensions,
+            cells: slice.cells,
+            timeRange: this.metadata.timeRange,
+            periods: this.metadata.heatmaps.map(s => s.period)
+        });
     }
 
     getCellFeatures: ApiHandler = async (req) => {

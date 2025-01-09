@@ -5,7 +5,6 @@ export interface GridConfig {
     boundB: [number, number]; 
 }
 
-// Modified GridConfig without bounds
 export interface GridConfig {
     colsAmount: number;
     rowsAmount: number;
@@ -57,6 +56,6 @@ export interface HeatmapCell {
 }
 
 export interface Heatmap {
-    dimensions: GridDimensions;
+    period: string,
     cells: HeatmapCell[];
 }

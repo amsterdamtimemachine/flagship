@@ -15,6 +15,7 @@ async function preprocessAndSaveData() {
         console.log(`Starting geojson folder ${geoJsonFeaturesFolder} processing.`);
         const options: GeoJsonProcessingOptions = { 
             dropNulls: true, 
+            dropUndated: true,
             convertMetersToLatLon: true 
         };
         

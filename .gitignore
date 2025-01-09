@@ -8,6 +8,9 @@ dist/
 public/*
 .bin
 .csv
+.yalc/*
+.yalc/
+.yalc
 
 # Output
 .output

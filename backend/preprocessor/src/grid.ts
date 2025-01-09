@@ -36,9 +36,10 @@ import {
     calculateMultiLineCentroid,
 } from './geom';
 
-type GeoJsonProcessingOptions = {
-       dropNulls: boolean;
-       convertMetersToLatLon: boolean;
+interface GeoJsonProcessingOptions {
+    dropNulls: boolean;
+    convertMetersToLatLon: boolean;
+    dropUndated: boolean; 
 }
 
 async function processFeaturesToGrid(
@@ -65,30 +66,10 @@ async function processFeaturesToGrid(
         processedJsonPath,
         outputBinaryPath,
         firstPassResult,
-        { gridDimensions },
+        { gridDimensions, sliceYears: 50 },
     );
 }
 
-//function getGridDimensionsFromConfig(config: GridConfig): GridDimensions {
-//    const minLon = Math.min(config.boundA[0], config.boundB[0]);
-//    const maxLon = Math.max(config.boundA[0], config.boundB[0]);
-//    const minLat = Math.min(config.boundA[1], config.boundB[1]);
-//    const maxLat = Math.max(config.boundA[1], config.boundB[1]);
-//    
-//    const latSpan = Math.abs(config.boundA[1] - config.boundB[1]);
-//    const lonSpan = Math.abs(config.boundA[0] - config.boundB[0]);
-//    
-//    return {
-//        colsAmount: config.colsAmount,
-//        rowsAmount: config.rowsAmount,
-//        cellWidth: lonSpan / config.colsAmount,
-//        cellHeight: latSpan / config.rowsAmount,
-//        minLon,
-//        maxLon,
-//        minLat,
-//        maxLat
-//    };
-//};
 
 async function calculateGridDimensions(
     processedJsonPath: string,
@@ -185,6 +166,11 @@ async function processGeoJsonFolderToFeatures(
     writer.write('[\n');
     let isFirst = true;
     let featureCount = 0;
+    let droppedCount = { 
+        geometry: 0, 
+        validation: 0,
+        dates: 0 
+    };
     
     try {
         const files = await readdir(geoJsonFeaturesFolderPath);
@@ -203,13 +189,32 @@ async function processGeoJsonFolderToFeatures(
                         .pipe(jsonParser)
                         .on('data', (feature: any) => {
                             try {
+                                // Process geometry
                                 const processed = processFeature(feature, options);
-                                if (processed && validateFeature(processed)) {
-                                    if (!isFirst) writer.write(',\n');
-                                    writer.write(JSON.stringify(processed));
-                                    isFirst = false;
-                                    featureCount++;
+                                if (!processed) {
+                                    droppedCount.geometry++;
+                                    return;
                                 }
+
+                                // Validate required fields
+                                if (!validateFeature(processed)) {
+                                    droppedCount.validation++;
+                                    return;
+                                }
+
+                                // Validate dates
+                                const hasStart = Boolean(processed.properties.start_date);
+                                const hasEnd = Boolean(processed.properties.end_date);
+                                if (options.dropUndated && !hasStart && !hasEnd) {
+                                    droppedCount.dates++;
+                                    return;
+                                }
+
+                                // Write valid feature
+                                if (!isFirst) writer.write(',\n');
+                                writer.write(JSON.stringify(processed));
+                                isFirst = false;
+                                featureCount++;
                             } catch (err) {
                                 console.error(`Error processing feature ${featureCount} in ${file}:`, err);
                                 console.error('Problematic feature:', JSON.stringify(feature, null, 2));
@@ -228,11 +233,11 @@ async function processGeoJsonFolderToFeatures(
         
         writer.write('\n]');
         console.log(`Processed ${featureCount} features`);
+        console.log('Dropped features:', droppedCount);
     } finally {
         await writer.end();
     }
 }
-
 const getCellIdForPoint = (
     point: Point2D,
     gridDimensions: GridDimensions,
@@ -284,13 +289,13 @@ async function findTimeRange(processedJsonPath: string): Promise<{start: Date, e
                         const featureEnd = new Date(feature.properties.end_date);
                         
                         if (isNaN(featureStart.getTime())) {
-                            console.warn(`Invalid start_date: ${feature.properties.start_date} for feature ${feature.properties.url}`);
+                           // console.warn(`Invalid start_date: ${feature.properties.start_date} for feature ${feature.properties.url}`);
                             errorCount++;
                             return;
                         }
 
                         if (isNaN(featureEnd.getTime())) {
-                            console.warn(`Invalid end_date: ${feature.properties.end_date} for feature ${feature.properties.url}`);
+                           // console.warn(`Invalid end_date: ${feature.properties.end_date} for feature ${feature.properties.url}`);
                             errorCount++;
                             return;
                         }
@@ -322,6 +327,83 @@ async function findTimeRange(processedJsonPath: string): Promise<{start: Date, e
 }
 
 
+function featureFitsTimeSlice(feature: GeoFeature, sliceStart: Date, sliceEnd: Date): boolean {
+    const start = feature.properties.start_date ? new Date(feature.properties.start_date) : null;
+    const end = feature.properties.end_date ? new Date(feature.properties.end_date) : null;
+
+    // Both dates exist - check if feature spans slice
+    if (start && end) {
+        return start <= sliceEnd && end >= sliceStart;
+    }
+
+    // Only start date exists
+    if (start) {
+        return start >= sliceStart && start <= sliceEnd;
+    }
+
+    // Only end date exists
+    if (end) {
+        return end >= sliceStart && end <= sliceEnd;
+    }
+
+    // No dates - include in all slices
+    return true;
+}
+
+
+interface TimeSlice {
+    start: Date;
+    end: Date;
+    cellCounts: Map<string, number>; 
+}
+
+
+async function generateTimeSlices(
+   processedJsonPath: string,
+   timeRange: { start: Date; end: Date },
+   sliceYears: number,
+   entityGridIndices: Map<string, string>
+): Promise<TimeSlice[]> {
+   const startYear = timeRange.start.getFullYear();
+   const endYear = timeRange.end.getFullYear();
+   
+   const slices: TimeSlice[] = [];
+   for (let year = startYear; year < endYear; year += sliceYears) {
+       slices.push({
+           start: new Date(year, 0),
+           end: new Date(year + sliceYears, 0),
+           cellCounts: new Map<string, number>()
+       });
+   }
+
+   const jsonReadStream = createReadStream(processedJsonPath);
+   const jsonParser = JSONStream.parse('*');
+
+   try {
+       await new Promise((resolve, reject) => {
+           jsonReadStream
+               .pipe(jsonParser)
+               .on('data', (feature: GeoFeature) => {
+                   const cellId = entityGridIndices.get(feature.properties.url);
+                   if (!cellId) return;
+
+                   // Update counts for each slice this feature belongs in
+                   slices.forEach(slice => {
+                       if (featureFitsTimeSlice(feature, slice.start, slice.end)) {
+                           const currentCount = slice.cellCounts.get(cellId) || 0;
+                           slice.cellCounts.set(cellId, currentCount + 1);
+                       }
+                   });
+               })
+               .on('error', reject)
+               .on('end', resolve);
+       });
+   } finally {
+       jsonParser.end();
+   }
+
+   return slices;
+}
 
 function processFeature(feature: any, options: GeoJsonProcessingOptions): GeoFeature | null { 
     /**
@@ -518,18 +600,60 @@ async function secondPassProcessJsonFeaturesToGrid(
    processedJsonPath: string,
    binaryPath: string,
    firstPassResult: FirstPassResult,
-   options: { gridDimensions: GridDimensions }
+   options: { 
+       gridDimensions: GridDimensions;
+       sliceYears: number;
+   }
 ) {
    try {
+       // Find time range first
        const timeRange = await findTimeRange(processedJsonPath);
-       console.log(timeRange);
-
-       const data = await fs.readFile(processedJsonPath, 'utf8');
-       const features: GeoFeature[] = JSON.parse(data) as GeoFeature[];
-
        
-       // Group features by cell
+       // Generate time slices with counts
+       const timeSlices = await generateTimeSlices(
+           processedJsonPath,
+           timeRange,
+           options.sliceYears,
+           firstPassResult.entityGridIndices
+       );
+
+       // Process each slice into heatmap format
+       const heatmaps = timeSlices.map(slice => {
+           const cells: HeatmapCell[] = [];
+
+           // Convert counts to heatmap cells
+           slice.cellCounts.forEach((count, cellId) => {
+               if (count === 0) return;
+
+               const [row, col] = cellId.split('_').map(Number);
+               const metadata = firstPassResult.cellMetadata.get(cellId);
+               
+               if (!metadata) return;
+
+               cells.push({
+                   cellId,
+                   row,
+                   col,
+                   featureCount: count,
+                   bounds: metadata.bounds
+               });
+           });
+
+           return {
+               period: `${slice.start.getFullYear()}-${slice.end.getFullYear()}`,
+               cells
+           };
+       });
+
+       // Create cell indices for binary storage
+       const cellIndices: Record<string, BinaryCellIndex> = {};
+       let dataOffset = 0;
+
+       // Regular feature data processing
+       const data = await fs.readFile(processedJsonPath, 'utf8');
+       const features: GeoFeature[] = JSON.parse(data);
        const cellData: Record<string, GeoFeature[]> = {};
+       
        for (const feature of features) {
            const cellId = firstPassResult.entityGridIndices.get(feature.properties.url);
            if (cellId) {
@@ -538,67 +662,37 @@ async function secondPassProcessJsonFeaturesToGrid(
            }
        }
 
-       // Build cell indices with bounds and calculate heatmap cells
-       const cellIndices: Record<string, BinaryCellIndex> = {};
-       const heatmapCells: HeatmapCell[] = [];
-       let dataOffset = 0;
-
-       // Process only cells that have features
        for (const cellId in cellData) {
-           const [row, col] = cellId.split('_').map(Number);
-           const metadata = firstPassResult.cellMetadata.get(cellId);
            const encoded = encode(cellData[cellId]);
-           
-           if (!metadata) {
-               console.warn(`No metadata found for cell ${cellId}`);
-               continue;
-           }
-
-        cellIndices[cellId] = {
-            startOffset: dataOffset,
-            endOffset: dataOffset + encoded.byteLength,
-            featureCount: cellData[cellId].length
-        };
-
-
-
-
-        heatmapCells.push({
-            cellId,
-            row,
-            col,
-            featureCount: cellData[cellId].length,
-            bounds: metadata.bounds  
-        });
-           
+           cellIndices[cellId] = {
+               startOffset: dataOffset,
+               endOffset: dataOffset + encoded.byteLength,
+               featureCount: cellData[cellId].length
+           };
            dataOffset += encoded.byteLength;
        }
 
-
-       // Create metadata with prebaked heatmap
+       // Create complete metadata
        const metadata: BinaryMetadata = {
            dimensions: options.gridDimensions,
            cellIndices,
-           heatmap: {
-               dimensions: options.gridDimensions,
-               cells: heatmapCells
-           } as Heatmap
+           timeRange: {
+               start: timeRange.start.toISOString(),
+               end: timeRange.end.toISOString()
+           },
+           heatmaps 
        };
 
-       // Write to binary file
+       // Write binary file
        const writer = Bun.file(binaryPath).writer();
        const metadataBytes = encode(metadata);
        const metadataSize = metadataBytes.byteLength;
 
-       // Write header size
        const sizeBuffer = Buffer.allocUnsafe(4);
        sizeBuffer.writeUInt32BE(metadataSize, 0);
        writer.write(sizeBuffer);
-
-       // Write metadata (includes heatmap)
        writer.write(metadataBytes);
 
-       // Write cell data
        for (const cellId in cellData) {
            writer.write(encode(cellData[cellId]));
        }
@@ -610,8 +704,7 @@ async function secondPassProcessJsonFeaturesToGrid(
        console.error("Error processing or writing binary file:", error);
        throw error;
    }
-}
-export {
+}export {
    GeoJsonProcessingOptions,
    processGeoJsonFolderToFeatures,
    processFeaturesToGrid,
