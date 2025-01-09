@@ -6,61 +6,18 @@
    import 'maplibre-gl/dist/maplibre-gl.css';
 
    export let heatmap: Heatmap;
-   export let compensateMercatorDistortion = false;
-
+   
    const MIN_ZOOM = 1; 
    const MAX_ZOOM = 16;
    const DEFAULT_ZOOM = 13;
-
    const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
 
    let map: Map | undefined;
    let mapContainer: HTMLElement;
 
-
-function calculateSquareCoordinates(cell: HeatmapCell, dimensions: GridDimensions, scale: number = 1): number[][] {
-   const cellWidth = +(Math.abs(dimensions.maxLon - dimensions.minLon) / dimensions.colsAmount).toFixed(10);
-   const cellHeight = +(Math.abs(dimensions.maxLat - dimensions.minLat) / dimensions.rowsAmount).toFixed(10);
-   
-   const minLon = +(dimensions.minLon + (cell.col * cellWidth)).toFixed(10);
-   const maxLon = +(minLon + cellWidth).toFixed(10);
-   const minLat = +(dimensions.minLat + (cell.row * cellHeight)).toFixed(10);
-   const maxLat = +(minLat + cellHeight).toFixed(10);
-
-   if (compensateMercatorDistortion) {
-       const centerLat = +((minLat + maxLat) / 2).toFixed(10);
-       const latAdjustment = +(1 / Math.cos((centerLat * Math.PI) / 180)).toFixed(10);
-       
-       const adjustedCellWidth = +(maxLon - minLon).toFixed(10);
-       const adjustedCellHeight = +((maxLat - minLat) * latAdjustment).toFixed(10);
-       
-       const centerLng = +(minLon + (adjustedCellWidth / 2)).toFixed(10);
-       
-       const halfSize = +((Math.min(adjustedCellWidth, adjustedCellHeight) * scale) / 2).toFixed(10);
-       const halfSizeLng = halfSize;
-       const halfSizeLat = +(halfSize / latAdjustment).toFixed(10);
-
-       return [
-           [+(centerLng - halfSizeLng).toFixed(10), +(centerLat - halfSizeLat).toFixed(10)],
-           [+(centerLng + halfSizeLng).toFixed(10), +(centerLat - halfSizeLat).toFixed(10)],
-           [+(centerLng + halfSizeLng).toFixed(10), +(centerLat + halfSizeLat).toFixed(10)],
-           [+(centerLng - halfSizeLng).toFixed(10), +(centerLat + halfSizeLat).toFixed(10)],
-           [+(centerLng - halfSizeLng).toFixed(10), +(centerLat - halfSizeLat).toFixed(10)]
-       ];
-   }
-
-   return [
-       [minLon, minLat],
-       [maxLon, minLat], 
-       [maxLon, maxLat],
-       [minLon, maxLat],
-       [minLon, minLat]
-   ];
-}
-
    function generateGridFeatures(heatmap: Heatmap) {
        const maxCount = Math.max(...heatmap.cells.map(cell => cell.featureCount));
-       console.log(heatmap.dimensions);
+       console.log(heatmap.cells[0]);
        
        const features = heatmap.cells.map(cell => ({
            type: 'Feature',
@@ -71,7 +28,13 @@ function calculateSquareCoordinates(cell: HeatmapCell, dimensions: GridDimension
            },
            geometry: {
                type: 'Polygon',
-               coordinates: [calculateSquareCoordinates(cell, heatmap.dimensions)]
+               coordinates: [[
+                   [cell.bounds.minLon, cell.bounds.minLat],
+                   [cell.bounds.maxLon, cell.bounds.minLat],
+                   [cell.bounds.maxLon, cell.bounds.maxLat],
+                   [cell.bounds.minLon, cell.bounds.maxLat],
+                   [cell.bounds.minLon, cell.bounds.minLat]
+               ]]
            }
        }));
 
@@ -83,7 +46,6 @@ function calculateSquareCoordinates(cell: HeatmapCell, dimensions: GridDimension
 
    export function updateHeatmap(newHeatmap: Heatmap) {
        if (!map) return;
-       
        heatmap = newHeatmap;
        const source = map.getSource('grid') as maplibre.GeoJSONSource;
        if (source) {
@@ -145,8 +107,9 @@ function calculateSquareCoordinates(cell: HeatmapCell, dimensions: GridDimension
                }
            });
 
+           // Event handlers
            map.on('mousemove', 'heatmap-squares', (e) => {
-               if (e.features && e.features.length > 0) {
+               if (e.features?.[0]) {
                    const feature = e.features[0];
                    dispatch('cellHover', {
                        id: feature.properties.id,
@@ -164,7 +127,7 @@ function calculateSquareCoordinates(cell: HeatmapCell, dimensions: GridDimension
            });
 
            map.on('click', 'heatmap-squares', (e) => {
-               if (e.features && e.features.length > 0) {
+               if (e.features?.[0]) {
                    const feature = e.features[0];
                    dispatch('cellClick', {
                        id: feature.properties.id,

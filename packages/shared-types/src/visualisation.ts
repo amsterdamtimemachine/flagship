@@ -5,6 +5,14 @@ export interface GridConfig {
     boundB: [number, number]; 
 }
 
+// Modified GridConfig without bounds
+export interface GridConfig {
+    colsAmount: number;
+    rowsAmount: number;
+    padding: number; 
+}
+
+
 export interface GridDimensions {
     colsAmount: number;
     rowsAmount: number;
@@ -29,7 +37,6 @@ export interface GridCellCount {
     bounds: GridCellBounds;
 }
 
-
 export interface Grid {
     cellCounts: Map<string, number>;
     entityGridIndices: Map<string, string>;
@@ -41,6 +48,12 @@ export interface HeatmapCell {
     row: number;
     col: number;
     featureCount: number;
+    bounds: {
+        minLon: number;
+        maxLon: number;
+        minLat: number;
+        maxLat: number;
+    };
 }
 
 export interface Heatmap {
