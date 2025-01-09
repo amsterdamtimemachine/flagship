@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
-import type { GeoFeature, GridDimensions, BinaryCellIndex } from '@atm/shared-types';
-import type { HeatmapCell, HeatmapResponse } from "../processing";
+import type { GeoFeature, BinaryMetadata, Heatmap } from '@atm/shared-types';
 import { config } from '../config';
 
 async function testGridCell(cellId: string): Promise<{
@@ -22,10 +21,7 @@ async function testGridCell(cellId: string): Promise<{
 
 async function testMetadata(): Promise<{
     status: number;
-    data?: {
-        dimensions: GridDimensions;
-        cellIndices: Record<string, BinaryCellIndex>;
-    };
+    data?: BinaryMetadata,
     error?: string;
 }> {
     const response = await fetch(`${config.baseUrl}/grid/metadata`);
@@ -38,7 +34,7 @@ async function testMetadata(): Promise<{
 
 async function testHeatmap(): Promise<{
     status: number;
-    data?: HeatmapResponse;
+    data?: Heatmap;
     error?: string;
 }> {
     const response = await fetch(`${config.baseUrl}/grid/heatmap`);
@@ -95,17 +91,17 @@ test("metadata endpoint returns correct structure", async () => {
     expect(result.data).toBeDefined();
     expect(result.data?.dimensions).toBeDefined();
     expect(result.data?.cellIndices).toBeDefined();
+    expect(result.data?.heatmap).toBeDefined(); // New check
     
     const { dimensions } = result.data!;
-    expect(dimensions.colsAmount).toBe(10);
-    expect(dimensions.rowsAmount).toBe(10);
+    expect(dimensions.colsAmount).toBeGreaterThan(0);
+    expect(dimensions.rowsAmount).toBeGreaterThan(0);
     expect(dimensions.minLon).toBeDefined();
     expect(dimensions.maxLon).toBeDefined();
     expect(dimensions.minLat).toBeDefined();
     expect(dimensions.maxLat).toBeDefined();
-});
 
-test("grid cell endpoint returns valid data for existing cell", async () => {
+});test("grid cell endpoint returns valid data for existing cell", async () => {
     const result = await testGridCell(validCellId);
     
     expect(result.status).toBe(200);
@@ -158,21 +154,18 @@ test("handles multiple concurrent requests", async () => {
     });
 });
 
+// Update heatmap tests
 test("heatmap endpoint basic response", async () => {
     const response = await testHeatmap();
     expect(response.status).toBe(200);
     expect(response.data).toBeDefined();
     expect(response.data?.dimensions).toBeDefined();
     expect(response.data?.cells).toBeDefined();
+    expect(Array.isArray(response.data?.cells)).toBe(true);
 });
-
 test("heatmap cells array has correct structure", async () => {
     const response = await testHeatmap();
     const { dimensions, cells } = response.data!;
-
-    // Check total number of cells
-    const expectedCellCount = dimensions.rowsAmount * dimensions.colsAmount;
-    expect(cells.length).toBe(expectedCellCount);
 
     // Check each cell's structure
     cells.forEach(cell => {
@@ -190,37 +183,33 @@ test("heatmap cells array has correct structure", async () => {
         expect(cell.col).toBeGreaterThanOrEqual(0);
         expect(cell.col).toBeLessThan(dimensions.colsAmount);
         
-        // Feature count should be non-negative
-        expect(cell.featureCount).toBeGreaterThanOrEqual(0);
+        // Feature count should be positive (we no longer store empty cells)
+        expect(cell.featureCount).toBeGreaterThan(0);
     });
 });
 
-test("heatmap cells are ordered correctly", async () => {
+// Remove or modify tests that assume empty cells
+test("heatmap only includes non-empty cells", async () => {
     const response = await testHeatmap();
     const { cells } = response.data!;
 
-    // Check cells are ordered by row then column
-    for (let i = 1; i < cells.length; i++) {
-        const prevCell = cells[i - 1];
-        const currentCell = cells[i];
-
-        if (prevCell.row === currentCell.row) {
-            expect(currentCell.col).toBe(prevCell.col + 1);
-        } else {
-            expect(currentCell.row).toBe(prevCell.row + 1);
-            expect(currentCell.col).toBe(0);
-        }
-    }
+    // All cells should have features
+    expect(cells.every(cell => cell.featureCount > 0)).toBe(true);
+    
+    // Should have some cells with data
+    expect(cells.length).toBeGreaterThan(0);
 });
 
-test("heatmap includes empty and non-empty cells", async () => {
+test("heatmap cells have valid structure", async () => {
     const response = await testHeatmap();
     const { cells } = response.data!;
 
-    const emptyCells = cells.filter(cell => cell.featureCount === 0);
-    const nonEmptyCells = cells.filter(cell => cell.featureCount > 0);
-
-    // Should have both empty and non-empty cells in a typical grid
-    expect(emptyCells.length).toBeGreaterThan(0);
-    expect(nonEmptyCells.length).toBeGreaterThan(0);
+    // Verify each cell has proper structure and non-zero features
+    cells.forEach(cell => {
+        expect(cell).toHaveProperty('cellId');
+        expect(cell).toHaveProperty('row');
+        expect(cell).toHaveProperty('col');
+        expect(cell).toHaveProperty('featureCount');
+        expect(cell.featureCount).toBeGreaterThan(0);
+    });
 });

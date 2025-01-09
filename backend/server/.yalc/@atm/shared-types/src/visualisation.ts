@@ -5,6 +5,14 @@ export interface GridConfig {
     boundB: [number, number]; 
 }
 
+// Modified GridConfig without bounds
+export interface GridConfig {
+    colsAmount: number;
+    rowsAmount: number;
+    padding: number; 
+}
+
+
 export interface GridDimensions {
     colsAmount: number;
     rowsAmount: number;
@@ -28,7 +36,6 @@ export interface GridCellCount {
     count: number;
     bounds: GridCellBounds;
 }
-
 
 export interface Grid {
     cellCounts: Map<string, number>;
