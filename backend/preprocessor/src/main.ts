@@ -5,10 +5,10 @@ import { processGeoJsonFolderToFeatures,
 import type { GridConfig } from '@atm/shared-types';
 
 const GRID_CONFIG: GridConfig = {
-    colsAmount: 10,
-    rowsAmount: 10,
-    boundA: [4.73, 52.7],  
-    boundB: [5.3, 51.9]
+    colsAmount: 100,
+    rowsAmount: 100,
+    padding: 0.0,
+
 };
 
 const PREPROCESS = false;
@@ -30,13 +30,13 @@ async function preprocessAndSaveData() {
 
   console.log("starting bin processing");
 
-  const gridDimensions = getGridDimensionsFromConfig(GRID_CONFIG);
+  //const gridDimensions = getGridDimensionsFromConfig(GRID_CONFIG);
   const gridBinaryFilePath = '/atm/public/geodata.bin'
 
    await processFeaturesToGrid(
     processedJsonPath,
     gridBinaryFilePath,
-    gridDimensions)
+    GRID_CONFIG)
 
     console.log(`finished processing, bin saved to ${gridBinaryFilePath}`);
 }

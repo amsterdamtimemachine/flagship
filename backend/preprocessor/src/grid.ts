@@ -21,6 +21,7 @@ import type {
    GeoFeature,
    GridConfig,
    GridDimensions,
+    GridCellBounds,
    BinaryMetadata,
    BinaryCellIndex,
 
@@ -58,6 +59,70 @@ function getGridDimensionsFromConfig(config: GridConfig): GridDimensions {
         maxLat
     };
 };
+
+async function calculateGridDimensions(
+    processedJsonPath: string,
+    config: GridConfig
+): Promise<GridDimensions> {
+    const bounds: GridCellBounds = {
+        minLon: Infinity,
+        maxLon: -Infinity,
+        minLat: Infinity,
+        maxLat: -Infinity
+    };
+
+    const jsonReadStream = createReadStream(processedJsonPath);
+    const jsonParser = JSONStream.parse('*');
+
+    try {
+        await new Promise((resolve, reject) => {
+            jsonReadStream
+                .pipe(jsonParser)
+                .on('data', (feature: GeoFeature) => {
+                    let point: Point2D | undefined;
+                    
+                    if (feature.geometry.type === "Point") {
+                        point = {
+                            x: feature.geometry.coordinates[0],
+                            y: feature.geometry.coordinates[1]
+                        };
+                    } else {
+                        point = feature.geometry.centroid;
+                    }
+
+                    if (!point) return;
+
+                    bounds.minLon = Math.min(bounds.minLon, point.x);
+                    bounds.maxLon = Math.max(bounds.maxLon, point.x);
+                    bounds.minLat = Math.min(bounds.minLat, point.y);
+                    bounds.maxLat = Math.max(bounds.maxLat, point.y);
+                })
+                .on('error', reject)
+                .on('end', resolve);
+        });
+    } finally {
+        jsonParser.end();
+    }
+
+    // Add padding
+    const lonSpan = bounds.maxLon - bounds.minLon;
+    const latSpan = bounds.maxLat - bounds.minLat;
+    const lonPadding = lonSpan * config.padding;
+    const latPadding = latSpan * config.padding;
+
+    const dimensions: GridDimensions = {
+        colsAmount: config.colsAmount,
+        rowsAmount: config.rowsAmount,
+        minLon: bounds.minLon - lonPadding,
+        maxLon: bounds.maxLon + lonPadding,
+        minLat: bounds.minLat - latPadding,
+        maxLat: bounds.maxLat + latPadding,
+        cellWidth: (bounds.maxLon - bounds.minLon + 2 * lonPadding) / config.colsAmount,
+        cellHeight: (bounds.maxLat - bounds.minLat + 2 * latPadding) / config.rowsAmount
+    };
+
+    return dimensions;
+}
 
 function validateFeature(feature: GeoFeature) {
     const required = ['type', 'properties', 'geometry'];
@@ -263,7 +328,13 @@ function processFeature(feature: any, options: GeoJsonProcessingOptions): GeoFea
            return null;
 }
 
+
 async function processFeaturesToGrid(
+    processedJsonPath: string,
+    outputBinaryPath: string,
+    config: GridConfig
+) {
+
     /**
     * Main function for creating the final binary grid file.
     * Process:
@@ -272,16 +343,18 @@ async function processFeaturesToGrid(
 
     * @param processedJsonPath - Path to processed JSON from processGeoJsonFolderToFeatures
     * @param outputBinaryPath - Path for final binary output
-    * @param gridDimensions - Grid configuration
+    * @param config - Grid configuration
     */
-    processedJsonPath: string,
-    outputBinaryPath: string,
-    gridDimensions: GridDimensions
-) {
+
+    // First calculate dimensions from the data
+    const gridDimensions = await calculateGridDimensions(processedJsonPath, config);
+    
+    // Then proceed with the grid processing using these dimensions
     const firstPassResult = await firstPassProcessJsonFeaturesToGrid(
         processedJsonPath, 
         gridDimensions,
     );
+    
     await secondPassProcessJsonFeaturesToGrid(
         processedJsonPath,
         outputBinaryPath,
