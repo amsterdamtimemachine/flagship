@@ -60,10 +60,3 @@ export interface Heatmap {
     cells: HeatmapCell[];
 }
 
-export interface HeatmapResponse extends Heatmap {
-    timeRange: {
-        start: string;
-        end: string;
-    };
-    availablePeriods: string[];
-}

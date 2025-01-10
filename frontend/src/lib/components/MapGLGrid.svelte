@@ -6,6 +6,7 @@
    import 'maplibre-gl/dist/maplibre-gl.css';
 
    export let heatmap: Heatmap;
+   export let dimensions: GridDimensions;
    
    const MIN_ZOOM = 1; 
    const MAX_ZOOM = 16;
@@ -74,7 +75,7 @@
    onMount(() => {
        if (!mapContainer) return;
        
-       const { minLon: west, maxLon: east, minLat: south, maxLat: north } = heatmap.dimensions;
+       const { minLon: west, maxLon: east, minLat: south, maxLat: north } = dimensions;
        
        map = new maplibre.Map({
            container: mapContainer,

@@ -17,6 +17,8 @@ export interface BinaryMetadata {
     heatmaps: Heatmap[];
 }
 
+// this is only necessary for the /heatmap api endpoint
+// delete this if if the /heatmap isn't used
 export interface HeatmapResponse extends Heatmap {
     heatmap: Heatmap,
     timeRange: {
