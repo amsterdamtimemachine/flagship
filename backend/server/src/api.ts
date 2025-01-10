@@ -37,6 +37,18 @@ export class GridApi {
                 const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
                 this.metadata = decode(metadataBytes) as BinaryMetadata;
                 this.dataStartOffset = 4 + metadataSize;
+
+              // // Calculate sizes
+              //  const heatmapsSize = JSON.stringify(this.metadata.heatmaps).length;
+              //  const totalMetadataSize = JSON.stringify(this.metadata).length;
+              //  
+              //  console.log("Metadata size breakdown:");
+              //  console.log(`- Total metadata size: ${(totalMetadataSize / 1024).toFixed(2)} KB`);
+              //  console.log(`- Heatmaps size: ${(heatmapsSize / 1024).toFixed(2)} KB`);
+              //  console.log(`- Heatmaps count: ${this.metadata.heatmaps.length}`);
+              //  console.log(`- Total cells in heatmaps: ${this.metadata.heatmaps.reduce((sum, h) => sum + h.cells.length, 0)}`);
+                
+            console.log("Binary data initialized successfully");
                 
                 console.log("Binary data initialized successfully");
             }
@@ -77,41 +89,39 @@ export class GridApi {
         return jsonResponse({
             dimensions: this.metadata.dimensions,
             cellIndices: this.metadata.cellIndices,
-            heatmap: this.metadata.heatmaps  
+            heatmaps: this.metadata.heatmaps  
         });
     }
 
-   getHeatmap: ApiHandler = async (req) => {
-        if (!this.metadata) {
-            return errorResponse("Metadata not initialized", 500);
-        }
+      getHeatmap: ApiHandler = async (req) => {
+            // WIP: this might be redundant endpoint since all heatmaps are sent via the /metadata endpoint
+            // keeping this for now if it shows that sending all heatmaps with metadata slows the app start up too much
+            if (!this.metadata) {
+                return errorResponse("Metadata not initialized", 500);
+            }
 
-        const url = new URL(req.url);
-        const period = url.searchParams.get('period');
+            const url = new URL(req.url);
+            const period = url.searchParams.get('period');
 
-        // If no period specified, return the first slice (or a default total heatmap)
-        if (!period && this.metadata.heatmaps.length > 0) {
+            if (!period && this.metadata.heatmaps.length > 0) {
+                return jsonResponse({
+                    ...this.metadata.heatmaps[0],
+                    timeRange: this.metadata.timeRange,
+                    availablePeriods: this.metadata.heatmaps.map(h => h.period)
+                });
+            }
+
+            const heatmap = this.metadata.heatmaps.find(h => h.period === period);
+            if (!heatmap) {
+                return errorResponse("Invalid time period", 400);
+            }
             return jsonResponse({
-                dimensions: this.metadata.dimensions,
-                cells: this.metadata.heatmaps[0].cells,
+                period: heatmap.period,
+                cells: heatmap.cells,
                 timeRange: this.metadata.timeRange,
-                periods: this.metadata.heatmaps.map(s => s.period)
+                availablePeriods: this.metadata.heatmaps.map(h => h.period)
             });
         }
-
-        // Find requested time slice
-        const slice = this.metadata.heatmaps.find(s => s.period === period);
-        if (!slice) {
-            return errorResponse("Invalid time period", 400);
-        }
-
-        return jsonResponse({
-            dimensions: this.metadata.dimensions,
-            cells: slice.cells,
-            timeRange: this.metadata.timeRange,
-            periods: this.metadata.heatmaps.map(s => s.period)
-        });
-    }
 
     getCellFeatures: ApiHandler = async (req) => {
         const url = new URL(req.url);

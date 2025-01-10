@@ -59,3 +59,12 @@ export interface Heatmap {
     period: string,
     cells: HeatmapCell[];
 }
+
+export interface HeatmapResponse extends Heatmap {
+    dimensions: GridDimensions;
+    timeRange: {
+        start: string;
+        end: string;
+    };
+    availablePeriods: string[];
+}

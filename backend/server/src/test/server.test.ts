@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { GeoFeature, BinaryMetadata, Heatmap } from '@atm/shared-types';
+import type { GeoFeature, BinaryMetadata, Heatmap, HeatmapResponse } from '@atm/shared-types';
 import { config } from '../config';
 
 async function testGridCell(cellId: string): Promise<{
@@ -34,7 +34,7 @@ async function testMetadata(): Promise<{
 
 async function testHeatmap(): Promise<{
     status: number;
-    data?: Heatmap;
+    data?: HeatmapResponse;
     error?: string;
 }> {
     const response = await fetch(`${config.baseUrl}/grid/heatmap`);
@@ -91,7 +91,6 @@ test("metadata endpoint returns correct structure", async () => {
     expect(result.data).toBeDefined();
     expect(result.data?.dimensions).toBeDefined();
     expect(result.data?.cellIndices).toBeDefined();
-    expect(result.data?.heatmap).toBeDefined(); // New check
     
     const { dimensions } = result.data!;
     expect(dimensions.colsAmount).toBeGreaterThan(0);
@@ -159,14 +158,13 @@ test("heatmap endpoint basic response", async () => {
     const response = await testHeatmap();
     expect(response.status).toBe(200);
     expect(response.data).toBeDefined();
-    expect(response.data?.dimensions).toBeDefined();
     expect(response.data?.cells).toBeDefined();
     expect(Array.isArray(response.data?.cells)).toBe(true);
 });
 
 test("heatmap cells array has correct structure", async () => {
    const response = await testHeatmap();
-   const { dimensions, cells } = response.data!;
+   const { cells } = response.data!;
 
    cells.forEach(cell => {
        expect(cell).toHaveProperty('cellId');
@@ -209,4 +207,93 @@ test("heatmap only includes non-empty cells", async () => {
     expect(cells.length).toBeGreaterThan(0);
 });
 
+test("heatmap endpoint returns time-related metadata", async () => {
+    const response = await testHeatmap();
+    expect(response.status).toBe(200);
+    expect(response.data).toBeDefined();
+    expect(response.data?.timeRange).toBeDefined();
+    expect(response.data?.availablePeriods).toBeDefined();
+    expect(Array.isArray(response.data?.availablePeriods)).toBe(true);
+    expect(response.data?.availablePeriods.length).toBeGreaterThan(0);
+});
 
+test("heatmap endpoint handles period parameter", async () => {
+    // First get available periods
+    const initialResponse = await testHeatmap();
+    const firstPeriod = initialResponse.data?.availablePeriods[0];
+    expect(firstPeriod).toBeDefined();
+
+    // Test with specific period
+    const response = await fetch(`${config.baseUrl}/grid/heatmap?period=${firstPeriod}`);
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.period).toBe(firstPeriod);
+    expect(Array.isArray(data.cells)).toBe(true);
+});
+
+test("heatmap response structure matches interface", async () => {
+    const response = await testHeatmap();
+    expect(response.data).toMatchObject({
+        period: expect.any(String),
+        cells: expect.any(Array),
+        timeRange: {
+            start: expect.any(String),
+            end: expect.any(String)
+        },
+        availablePeriods: expect.any(Array)
+    });
+
+    // Check cell structure
+    if (response.data?.cells.length) {
+        const cell = response.data.cells[0];
+        expect(cell).toMatchObject({
+            cellId: expect.any(String),
+            row: expect.any(Number),
+            col: expect.any(Number),
+            featureCount: expect.any(Number),
+            bounds: {
+                minLon: expect.any(Number),
+                maxLon: expect.any(Number),
+                minLat: expect.any(Number),
+                maxLat: expect.any(Number)
+            }
+        });
+    }
+});
+
+test("heatmap endpoint handles invalid period", async () => {
+    const response = await fetch(`${config.baseUrl}/grid/heatmap?period=invalid-period`);
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toBeDefined();
+});
+
+test("heatmap cells are consistent within a period", async () => {
+    const response = await testHeatmap();
+    const period = response.data?.availablePeriods[0];
+    
+    const [response1, response2] = await Promise.all([
+        fetch(`${config.baseUrl}/grid/heatmap?period=${period}`),
+        fetch(`${config.baseUrl}/grid/heatmap?period=${period}`)
+    ]);
+
+    const data1 = await response1.json();
+    const data2 = await response2.json();
+
+    expect(data1.cells).toEqual(data2.cells);
+});
+
+test("heatmap periods are chronologically ordered", async () => {
+    const response = await testHeatmap();
+    const periods = response.data?.availablePeriods;
+
+    expect(periods).toBeDefined();
+    
+    const extractYear = (period: string) => parseInt(period.split('-')[0]);
+    
+    for (let i = 1; i < periods.length; i++) {
+        const prevYear = extractYear(periods[i - 1]);
+        const currentYear = extractYear(periods[i]);
+        expect(currentYear).toBeGreaterThan(prevYear);
+    }
+});

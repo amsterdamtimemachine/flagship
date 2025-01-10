@@ -16,3 +16,12 @@ export interface BinaryMetadata {
     };
     heatmaps: Heatmap[];
 }
+
+export interface HeatmapResponse extends Heatmap {
+    heatmap: Heatmap,
+    timeRange: {
+        start: string;
+        end: string;
+    };
+    availablePeriods: string[];
+}
