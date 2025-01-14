@@ -1,11 +1,10 @@
+<!-- HeatmapSlider.svelte -->
 <script lang="ts">
     import { Slider } from "bits-ui";
     import type { Heatmap } from '@atm/shared-types';
 
     export let heatmaps: Heatmap[];
     export let value = [0];
-    
-    $: periods = heatmaps?.map(h => h.period) ?? [];
 </script>
 
 <div class="w-full px-4 py-2">
@@ -29,13 +28,16 @@
             />
         {/each}
 
-        {#each ticks as tick}
-            <Slider.Tick
-                {tick}
-                class="absolute top-8 -translate-x-1/2 text-xs text-gray-500"
-            >
-                {periods[tick.value]}
-            </Slider.Tick>
+        {#each ticks as tick, i}
+            <div class="absolute -translate-x-1/2" style="left: {tick.position}%">
+                <Slider.Tick
+                    {tick}
+                    class="h-2 w-0.5 bg-gray-300"
+                />
+                <div class="mt-4 text-xs text-gray-500 whitespace-nowrap">
+                    {heatmaps[i].period}
+                </div>
+            </div>
         {/each}
     </Slider.Root>
 </div>
