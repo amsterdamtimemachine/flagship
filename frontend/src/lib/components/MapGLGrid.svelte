@@ -1,3 +1,4 @@
+<!-- MapGLGrid.svelte -->
 <script lang="ts">
    import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
    import { onMount, onDestroy, createEventDispatcher } from 'svelte';
@@ -15,10 +16,18 @@
 
    let map: Map | undefined;
    let mapContainer: HTMLElement;
+   let isMapLoaded = false;
+
+   // Add reactive statement to update map when heatmap changes
+   $: if (isMapLoaded && map && heatmap) {
+       const source = map.getSource('grid') as maplibre.GeoJSONSource;
+       if (source) {
+           source.setData(generateGridFeatures(heatmap));
+       }
+   }
 
    function generateGridFeatures(heatmap: Heatmap) {
        const maxCount = Math.max(...heatmap.cells.map(cell => cell.featureCount));
-       console.log(heatmap.cells[0]);
        
        const features = heatmap.cells.map(cell => ({
            type: 'Feature',
@@ -43,15 +52,6 @@
            type: 'FeatureCollection',
            features
        };
-   }
-
-   export function updateHeatmap(newHeatmap: Heatmap) {
-       if (!map) return;
-       heatmap = newHeatmap;
-       const source = map.getSource('grid') as maplibre.GeoJSONSource;
-       if (source) {
-           source.setData(generateGridFeatures(heatmap));
-       }
    }
 
    const dispatch = createEventDispatcher<{
@@ -146,6 +146,8 @@
            map.on('mouseleave', 'heatmap-squares', () => {
                map.getCanvas().style.cursor = '';
            });
+
+           isMapLoaded = true;
        });
    });
 
