@@ -1,5 +1,5 @@
 import { decode } from '@msgpack/msgpack';
-import type { GeoFeature, BinaryMetadata, HeatmapCell } from '@atm/shared-types';
+import type { GeoFeature, BinaryMetadata, HeatmapResponse, MetadataResponse, CellFeaturesResponse } from '@atm/shared-types';
 
 export type ApiHandler = (req: Request) => Promise<Response>;
 
@@ -90,7 +90,7 @@ export class GridApi {
             dimensions: this.metadata.dimensions,
             cellIndices: this.metadata.cellIndices,
             heatmaps: this.metadata.heatmaps  
-        });
+        } as MetadataResponse);
     }
 
       getHeatmap: ApiHandler = async (req) => {
@@ -108,7 +108,7 @@ export class GridApi {
                     ...this.metadata.heatmaps[0],
                     timeRange: this.metadata.timeRange,
                     availablePeriods: this.metadata.heatmaps.map(h => h.period)
-                });
+                } as HeatmapResponse);
             }
 
             const heatmap = this.metadata.heatmaps.find(h => h.period === period);
@@ -143,7 +143,7 @@ export class GridApi {
                 cellId,
                 featureCount: features.length,
                 features
-            });
+            } as CellFeaturesResponse);
         } catch (error) {
             console.error("Error serving cell data:", error);
             return errorResponse("Internal server error", 500);
