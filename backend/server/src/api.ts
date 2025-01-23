@@ -32,58 +32,47 @@ export class GridApi {
 
     constructor(private binaryPath: string) {}
 
-    async initialize() {
-        try {
-            if (!this.binaryBuffer) {
-                const mmap = Bun.mmap(this.binaryPath);
-                const buffer = mmap.buffer as ArrayBufferLike;
-                this.binaryBuffer = buffer;
-                
-                const dataView = new DataView(buffer);
-                const metadataSize = dataView.getUint32(0, false);
+async initialize() {
+    try {
+        if (!this.binaryBuffer) {
+            console.log("Opening binary file...");
+            const mmap = Bun.mmap(this.binaryPath);
+            const buffer = mmap.buffer as ArrayBufferLike;
+            this.binaryBuffer = buffer;
+            
+            console.log("Buffer size:", buffer.byteLength);
+            
+            if (buffer.byteLength < 4) {
+                throw new Error("Binary file too small - missing metadata size");
+            }
+
+            const dataView = new DataView(buffer);
+            const metadataSize = dataView.getUint32(0, false);
+            console.log("Metadata size from binary:", metadataSize);
+            
+            if (buffer.byteLength < 4 + metadataSize) {
+                throw new Error(`Binary file truncated. Expected ${4 + metadataSize} bytes, got ${buffer.byteLength}`);
+            }
+
+            try {
                 const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
                 this.metadata = decode(metadataBytes) as BinaryMetadata;
                 this.dataStartOffset = 4 + metadataSize;
                 
-                console.log("Binary data initialized successfully");
-
-                // Debug info about data sizes
-                const totalMetadataSize = metadataSize / 1024;
-                const heatmapCount = Object.keys(this.metadata.heatmaps).length;
-                const timeSliceCount = Object.keys(this.metadata.timeSliceIndex).length;
-                
-                console.log(`Total metadata size: ${totalMetadataSize.toFixed(2)} KB`);
-                console.log(`Number of time slices: ${timeSliceCount}`);
-                console.log(`Number of heatmaps: ${heatmapCount}`);
+                console.log("Successfully decoded metadata");
+                console.log("Data start offset:", this.dataStartOffset);
+                console.log("Number of periods:", Object.keys(this.metadata.timeSliceIndex).length);
+                console.log("Number of heatmaps:", Object.keys(this.metadata.heatmaps).length);
+            } catch (error) {
+                console.error("Failed to decode metadata:", error);
+                throw error;
             }
-        } catch (error) {
-            console.error("Failed to initialize binary data:", error);
-            throw error;
         }
+    } catch (error) {
+        console.error("Failed to initialize binary data:", error);
+        throw error;
     }
-    private getTimeSliceData(period: string): TimeSliceFeatures | null {
-        if (!this.binaryBuffer || !this.metadata) {
-            throw new Error("Binary data not initialized");
-        }
-
-        const timeSliceIndex = this.metadata.timeSliceIndex[period];
-        if (!timeSliceIndex) {
-            return null;
-        }
-
-        try {
-            const sliceDataStart = this.dataStartOffset + timeSliceIndex.offset;
-            const sliceBytes = new Uint8Array(
-                this.binaryBuffer, 
-                sliceDataStart, 
-                timeSliceIndex.length
-            );
-            return decode(sliceBytes) as TimeSliceFeatures;
-        } catch (error) {
-            console.error(`Error decoding time slice ${period}:`, error);
-            return null;
-        }
-    }
+}
 
     getMetadata: ApiHandler = async () => {
         if (!this.metadata) {
@@ -124,45 +113,79 @@ export class GridApi {
         } as HeatmapResponse);
     }
 
+private getTimeSliceData(period: string): TimeSliceFeatures | null {
+    console.log(`Reading time slice ${period}`);
+    console.log(`Data start offset: ${this.dataStartOffset}`);
+    
+    const timeSliceIndex = this.metadata.timeSliceIndex[period];
+    console.log(`Time slice index:`, timeSliceIndex);
+    
+    const readPosition = this.dataStartOffset + timeSliceIndex.offset;
+    console.log(`Reading from position ${readPosition} for ${timeSliceIndex.length} bytes`);
+    
+    const sliceBytes = new Uint8Array(
+        this.binaryBuffer,
+        readPosition,
+        timeSliceIndex.length
+    );
+    return decode(sliceBytes) as TimeSliceFeatures;
+}
 
-    getCellFeatures: ApiHandler = async (req) => {
-        const url = new URL(req.url);
-        const cellId = url.pathname.slice('/grid/cell/'.length);
-        const period = url.searchParams.get('period');
-        
-        if (!period) {
-            return errorResponse("Period parameter is required", 400);
+getCellFeatures: ApiHandler = async (req) => {
+    const url = new URL(req.url);
+    const cellId = url.pathname.slice('/grid/cell/'.length);
+    const period = url.searchParams.get('period');
+    const page = parseInt(url.searchParams.get('page') ?? '1');
+    
+    if (!period) {
+        return errorResponse("Period parameter is required", 400);
+    }
+
+    try {
+        // First get the time slice structure which has all the offsets
+        const timeSlice = this.getTimeSliceData(period);
+        if (!timeSlice) {
+            return errorResponse("Time period not found", 404);
         }
 
-        if (!/^\d+_\d+$/.test(cellId)) {
-            return errorResponse("Invalid cell ID format. Expected format: number_number", 400);
-        }
-        
-        try {
-            const timeSlice = this.getTimeSliceData(period);
-            if (!timeSlice) {
-                return errorResponse("Time period not found", 404);
-            }
-
-            const cellData = timeSlice.cells[cellId];
-            if (!cellData) {
-                return jsonResponse({
-                    cellId,
-                    period,
-                    features: [],
-                    featureCount: 0
-                } as CellFeaturesResponse);
-            }
-
+        const cellData = timeSlice.cells[cellId];
+        if (!cellData) {
             return jsonResponse({
                 cellId,
                 period,
-                features: cellData.features,
-                featureCount: cellData.count
-            } as CellFeaturesResponse);
-        } catch (error) {
-            console.error("Error serving cell data:", error);
-            return errorResponse("Internal server error", 500);
+                features: [],
+                featureCount: 0,
+                currentPage: 1,
+                totalPages: 0
+            });
         }
+
+        // Get the specific page we want
+        const pageKey = `page${page}`;
+        const pageData = cellData.pages[pageKey];
+        if (!pageData) {
+            return errorResponse("Page not found", 404);
+        }
+
+        // Now we can read just the features for this specific page
+        const pageBytes = new Uint8Array(
+            this.binaryBuffer,
+            this.dataStartOffset + pageData.offset,
+            pageData.length
+        );
+        const features = decode(pageBytes) as GeoFeature[];
+
+        return jsonResponse({
+            cellId,
+            period,
+            features,
+            featureCount: cellData.count,
+            currentPage: page,
+            totalPages: Object.keys(cellData.pages).length
+        });
+    } catch (error) {
+        console.error("Error serving cell data:", error);
+        return errorResponse("Internal server error", 500);
     }
+}
 }

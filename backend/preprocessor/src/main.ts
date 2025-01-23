@@ -1,6 +1,6 @@
 import { processGeoJsonFolderToFeatures, 
          type GeoJsonProcessingOptions,
-         processFeaturesToGrid,
+         processFeaturesToTimeBinary,
          calculateGridDimensions } from './grid'; 
 
 const PREPROCESS = false;
@@ -32,12 +32,15 @@ async function preprocessAndSaveData() {
         padding: 0.0,
     });
     
-    const gridBinaryFilePath = '/atm/public/timegeodata2.bin';
-    await processFeaturesToGrid(
+    const gridBinaryFilePath = '/atm/public/timegeodata3.bin';
+
+    await processFeaturesToTimeBinary(
         processedJsonPath,
         gridBinaryFilePath,
-        gridDimensions
+        gridDimensions,
+        { pageSize: 25, sliceYears: 50 },
     );
+
     
     console.log(`Finished processing, bin saved to ${gridBinaryFilePath}`);
 }

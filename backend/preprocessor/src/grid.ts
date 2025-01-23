@@ -43,30 +43,6 @@ interface GeoJsonProcessingOptions {
     dropUndated: boolean; 
 }
 
-async function processFeaturesToGrid(
-    processedJsonPath: string,
-    outputBinaryPath: string,
-    gridDimensions: GridDimensions
-) {
-    /**
-    * Main function for creating the final binary grid file.
-    * Process:
-    * 1. First pass: Create grid structure and indices
-    * 2. Second pass: Write binary file with metadata and features
-
-    * @param processedJsonPath - Path to processed JSON from processGeoJsonFolderToFeatures
-    * @param outputBinaryPath - Path for final binary output
-    * @param config - Grid configuration
-    */ 
-    await processFeaturesToTimeBinary(
-        processedJsonPath,
-        outputBinaryPath,
-        gridDimensions,
-        { sliceYears: 50 },
-    );
-}
-
-
 async function calculateGridDimensions(
     processedJsonPath: string,
     config: GridConfig
@@ -455,31 +431,33 @@ function processFeature(feature: any, options: GeoJsonProcessingOptions): GeoFea
            return null;
 }
 
+
+interface ProcessingOptions {
+    sliceYears: number;
+    pageSize: number;
+}
+
 async function processFeaturesToTimeBinary(
     processedJsonPath: string,
     binaryPath: string,
     gridDimensions: GridDimensions,
     options: { sliceYears: number }
 ) {
-    // Read all features into memory
+    // Read features
     console.log('Reading features...');
     const rawData = await fs.readFile(processedJsonPath, 'utf8');
     const features: GeoFeature[] = JSON.parse(rawData);
     
     // Find time range
+    console.log('Computing time range...');
     let minStart = Infinity;
     let maxEnd = -Infinity;
-
     for (const feature of features) {
         const startDate = new Date(feature.properties.start_date).getTime();
         const endDate = new Date(feature.properties.end_date).getTime();
         
-        if (!isNaN(startDate)) {
-            minStart = Math.min(minStart, startDate);
-        }
-        if (!isNaN(endDate)) {
-            maxEnd = Math.max(maxEnd, endDate);
-        }
+        if (!isNaN(startDate)) minStart = Math.min(minStart, startDate);
+        if (!isNaN(endDate)) maxEnd = Math.max(maxEnd, endDate);
     }
 
     const timeRange = {
@@ -487,40 +465,31 @@ async function processFeaturesToTimeBinary(
         end: new Date(maxEnd)
     };
     
-    const startYear = timeRange.start.getFullYear();
-    const endYear = timeRange.end.getFullYear();
-    
     // Initialize time slices
     console.log('Creating time slices...');
     const timeSlices: Record<string, TimeSliceFeatures> = {};
-    for (let year = startYear; year < endYear; year += options.sliceYears) {
+    for (let year = timeRange.start.getFullYear(); year < timeRange.end.getFullYear(); year += options.sliceYears) {
         const period = `${year}-${year + options.sliceYears}`;
         timeSlices[period] = {
             cells: {}
         };
     }
 
-    // Process features into time slices and cells
+    // Group features by time and cell
     console.log('Processing features into time slices...');
     for (const feature of features) {
-        // Get feature's point (either direct point or centroid)
         let point: Point2D | undefined;
         if (feature.geometry.type === "Point") {
-            point = {
-                x: feature.geometry.coordinates[0],
-                y: feature.geometry.coordinates[1]
-            };
+            point = { x: feature.geometry.coordinates[0], y: feature.geometry.coordinates[1] };
         } else {
             point = feature.geometry.centroid;
         }
         if (!point) continue;
 
-        // Get cell for this feature
         const cellId = getCellIdForPoint(point, gridDimensions);
         if (!cellId) continue;
 
-        // Add to relevant time slices
-        for (let year = startYear; year < endYear; year += options.sliceYears) {
+        for (let year = timeRange.start.getFullYear(); year < timeRange.end.getFullYear(); year += options.sliceYears) {
             const period = `${year}-${year + options.sliceYears}`;
             const sliceStart = new Date(year, 0);
             const sliceEnd = new Date(year + options.sliceYears, 0);
@@ -543,13 +512,11 @@ async function processFeaturesToTimeBinary(
     const heatmaps: Record<string, Heatmap> = {};
     for (const [period, slice] of Object.entries(timeSlices)) {
         const cells: HeatmapCell[] = [];
-        
         for (const [cellId, cellData] of Object.entries(slice.cells)) {
             if (cellData.count === 0) continue;
             
             const [row, col] = cellId.split('_').map(Number);
             const bounds = calculateCellBounds(row, col, gridDimensions);
-            
             cells.push({
                 cellId,
                 row,
@@ -558,31 +525,28 @@ async function processFeaturesToTimeBinary(
                 bounds
             });
         }
-
-        heatmaps[period] = {
-            period,
-            cells
-        };
+        heatmaps[period] = { period, cells };
     }
 
-    // Write binary file
-    console.log('Writing binary file...');
-    const writer = Bun.file(binaryPath).writer();
-    
-    // Build metadata
-    const timeSliceIndex: Record<string, TimeSliceIndex> = {};
+    // Calculate offsets for the binary
+    console.log('Calculating offsets...');
     let currentOffset = 0;
+    const timeSliceIndex: Record<string, TimeSliceIndex> = {};
     
-    // Calculate offsets for time slices
     for (const [period, slice] of Object.entries(timeSlices)) {
-        const encoded = encode(slice);
+        const encodedSlice = encode(slice);
         timeSliceIndex[period] = {
             offset: currentOffset,
-            length: encoded.byteLength
+            length: encodedSlice.byteLength
         };
-        currentOffset += encoded.byteLength;
+        currentOffset += encodedSlice.byteLength;
     }
 
+    // Write the binary
+    console.log('Writing binary file...');
+    const writer = Bun.file(binaryPath).writer();
+
+    // Write metadata
     const metadata: BinaryMetadata = {
         dimensions: gridDimensions,
         timeRange: {
@@ -593,7 +557,6 @@ async function processFeaturesToTimeBinary(
         heatmaps
     };
 
-    // Write metadata
     const metadataBytes = encode(metadata);
     const metadataSize = metadataBytes.byteLength;
     
@@ -602,7 +565,7 @@ async function processFeaturesToTimeBinary(
     writer.write(sizeBuffer);
     writer.write(metadataBytes);
 
-    // Write time slice data
+    // Write time slices
     for (const slice of Object.values(timeSlices)) {
         writer.write(encode(slice));
     }
@@ -610,8 +573,6 @@ async function processFeaturesToTimeBinary(
     await writer.end();
     console.log("Binary file written successfully!");
 }
-
-
 
 // STREAMING VERSION, probably still breaks the binary for some reason.
 //async function processFeaturesToTimeBinary(
@@ -753,11 +714,8 @@ async function processFeaturesToTimeBinary(
 
 
 export {
-//    processFeaturesToTimeBinary,
-//    type TimeSliceFeatures
-//};
    GeoJsonProcessingOptions,
    processGeoJsonFolderToFeatures,
-   processFeaturesToGrid,
+   processFeaturesToTimeBinary,
    calculateGridDimensions,
 };

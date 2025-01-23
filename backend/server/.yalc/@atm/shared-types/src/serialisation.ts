@@ -28,11 +28,18 @@ export interface TimeSliceIndex {
     length: number;
 }
 
+
 export interface TimeSliceFeatures {
     cells: {
         [cellId: string]: {
-            features: GeoFeature[];
             count: number;
+            pages: {
+                [pageNum: string]: {
+                    features: GeoFeature[];
+                    offset: number;
+                    length: number;
+                }
+            }
         };
     };
 }
