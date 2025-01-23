@@ -1,5 +1,12 @@
 import { decode } from '@msgpack/msgpack';
-import type { GeoFeature, BinaryMetadata, HeatmapResponse, MetadataResponse, CellFeaturesResponse } from '@atm/shared-types';
+import type { 
+    GeoFeature, 
+    BinaryMetadata, 
+    HeatmapResponse, 
+    MetadataResponse, 
+    CellFeaturesResponse,
+    TimeSliceFeatures
+} from '@atm/shared-types';
 
 export type ApiHandler = (req: Request) => Promise<Response>;
 
@@ -37,46 +44,43 @@ export class GridApi {
                 const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
                 this.metadata = decode(metadataBytes) as BinaryMetadata;
                 this.dataStartOffset = 4 + metadataSize;
-
-              // // Calculate sizes
-              //  const heatmapsSize = JSON.stringify(this.metadata.heatmaps).length;
-              //  const totalMetadataSize = JSON.stringify(this.metadata).length;
-              //  
-              //  console.log("Metadata size breakdown:");
-              //  console.log(`- Total metadata size: ${(totalMetadataSize / 1024).toFixed(2)} KB`);
-              //  console.log(`- Heatmaps size: ${(heatmapsSize / 1024).toFixed(2)} KB`);
-              //  console.log(`- Heatmaps count: ${this.metadata.heatmaps.length}`);
-              //  console.log(`- Total cells in heatmaps: ${this.metadata.heatmaps.reduce((sum, h) => sum + h.cells.length, 0)}`);
-                
-            console.log("Binary data initialized successfully");
                 
                 console.log("Binary data initialized successfully");
+
+                // Debug info about data sizes
+                const totalMetadataSize = metadataSize / 1024;
+                const heatmapCount = Object.keys(this.metadata.heatmaps).length;
+                const timeSliceCount = Object.keys(this.metadata.timeSliceIndex).length;
+                
+                console.log(`Total metadata size: ${totalMetadataSize.toFixed(2)} KB`);
+                console.log(`Number of time slices: ${timeSliceCount}`);
+                console.log(`Number of heatmaps: ${heatmapCount}`);
             }
         } catch (error) {
             console.error("Failed to initialize binary data:", error);
-            throw new Error("Failed to initialize binary data");
+            throw error;
         }
     }
-
-    private getCellData(cellId: string): GeoFeature[] | null {
+    private getTimeSliceData(period: string): TimeSliceFeatures | null {
         if (!this.binaryBuffer || !this.metadata) {
             throw new Error("Binary data not initialized");
         }
 
-        const buffer = this.binaryBuffer as ArrayBufferLike;
-        const cellIndex = this.metadata.cellIndices[cellId];
-        if (!cellIndex) {
+        const timeSliceIndex = this.metadata.timeSliceIndex[period];
+        if (!timeSliceIndex) {
             return null;
         }
 
         try {
-            const cellDataStart = this.dataStartOffset + cellIndex.startOffset;
-            const featureByteLength = cellIndex.endOffset - cellIndex.startOffset;
-            
-            const featureBytes = new Uint8Array(buffer, cellDataStart, featureByteLength);
-            return decode(featureBytes) as GeoFeature[];
+            const sliceDataStart = this.dataStartOffset + timeSliceIndex.offset;
+            const sliceBytes = new Uint8Array(
+                this.binaryBuffer, 
+                sliceDataStart, 
+                timeSliceIndex.length
+            );
+            return decode(sliceBytes) as TimeSliceFeatures;
         } catch (error) {
-            console.error(`Error decoding cell ${cellId}:`, error);
+            console.error(`Error decoding time slice ${period}:`, error);
             return null;
         }
     }
@@ -88,61 +92,73 @@ export class GridApi {
 
         return jsonResponse({
             dimensions: this.metadata.dimensions,
-            cellIndices: this.metadata.cellIndices,
-            heatmaps: this.metadata.heatmaps  
+            timeRange: this.metadata.timeRange,
+            heatmaps: this.metadata.heatmaps
         } as MetadataResponse);
     }
 
-      getHeatmap: ApiHandler = async (req) => {
-            // WIP: this might be redundant endpoint since all heatmaps are sent via the /metadata endpoint
-            // keeping this for now if it shows that sending all heatmaps with metadata slows the app start up too much
-            if (!this.metadata) {
-                return errorResponse("Metadata not initialized", 500);
-            }
 
-            const url = new URL(req.url);
-            const period = url.searchParams.get('period');
-
-            if (!period && this.metadata.heatmaps.length > 0) {
-                return jsonResponse({
-                    ...this.metadata.heatmaps[0],
-                    timeRange: this.metadata.timeRange,
-                    availablePeriods: this.metadata.heatmaps.map(h => h.period)
-                } as HeatmapResponse);
-            }
-
-            const heatmap = this.metadata.heatmaps.find(h => h.period === period);
-            if (!heatmap) {
-                return errorResponse("Invalid time period", 400);
-            }
-            return jsonResponse({
-                period: heatmap.period,
-                cells: heatmap.cells,
-                timeRange: this.metadata.timeRange,
-                availablePeriods: this.metadata.heatmaps.map(h => h.period)
-            });
+    getHeatmap: ApiHandler = async (req) => {
+        if (!this.metadata) {
+            return errorResponse("Metadata not initialized", 500);
         }
+
+        const url = new URL(req.url);
+        const period = url.searchParams.get('period');
+        const periods = Object.keys(this.metadata.heatmaps);
+
+        // No heatmaps available
+        if (periods.length === 0) {
+            return errorResponse("No heatmaps available", 404);
+        }
+
+        // If period not specified or invalid, return first period's heatmap
+        const targetPeriod = !period || !this.metadata.heatmaps[period] 
+            ? periods[0] 
+            : period;
+
+        return jsonResponse({
+            ...this.metadata.heatmaps[targetPeriod],
+            timeRange: this.metadata.timeRange,
+            availablePeriods: periods
+        } as HeatmapResponse);
+    }
+
 
     getCellFeatures: ApiHandler = async (req) => {
         const url = new URL(req.url);
         const cellId = url.pathname.slice('/grid/cell/'.length);
+        const period = url.searchParams.get('period');
         
-        // Validate cell ID format
+        if (!period) {
+            return errorResponse("Period parameter is required", 400);
+        }
+
         if (!/^\d+_\d+$/.test(cellId)) {
             return errorResponse("Invalid cell ID format. Expected format: number_number", 400);
         }
         
         try {
-            const features = this.getCellData(cellId);
-            
-            if (features === null) {
-                return errorResponse("Cell not found", 404);
+            const timeSlice = this.getTimeSliceData(period);
+            if (!timeSlice) {
+                return errorResponse("Time period not found", 404);
+            }
+
+            const cellData = timeSlice.cells[cellId];
+            if (!cellData) {
+                return jsonResponse({
+                    cellId,
+                    period,
+                    features: [],
+                    featureCount: 0
+                } as CellFeaturesResponse);
             }
 
             return jsonResponse({
                 cellId,
-                featureCount: features.length,
-                features
+                period,
+                features: cellData.features,
+                featureCount: cellData.count
             } as CellFeaturesResponse);
         } catch (error) {
             console.error("Error serving cell data:", error);

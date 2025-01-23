@@ -9,14 +9,19 @@
     $: heatmaps = data?.metadata?.heatmaps;
     $: dimensions = data?.metadata?.dimensions;
     
-    let currentIndex = [0];
-    $: currentHeatmap = heatmaps?.[currentIndex[0]];
-    $: console.log(currentHeatmap);
+    // Convert object to array for ordering
+    $: periods = heatmaps ? Object.keys(heatmaps).sort() : [];
+    $: currentIndex = [0];
+    $: currentHeatmap = heatmaps?.[periods[currentIndex[0]]];
 </script>
 
 <div class="flex flex-col gap-4 w-full h-full">
     {#if heatmaps}
-        <HeatmapSlider {heatmaps} bind:value={currentIndex} /> 
+        <HeatmapSlider 
+            periods={periods} 
+            heatmaps={heatmaps} 
+            bind:value={currentIndex} 
+        /> 
         <div class="flex-1">
             <MapGLGridContainer let:handleCellHover let:handleCellLeave let:handleCellClick>
                 <MapGLGrid

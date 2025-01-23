@@ -32,7 +32,7 @@ async function preprocessAndSaveData() {
         padding: 0.0,
     });
     
-    const gridBinaryFilePath = '/atm/public/geodata250x250.bin';
+    const gridBinaryFilePath = '/atm/public/timegeodata2.bin';
     await processFeaturesToGrid(
         processedJsonPath,
         gridBinaryFilePath,

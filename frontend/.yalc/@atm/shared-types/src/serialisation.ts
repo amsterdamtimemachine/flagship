@@ -8,19 +8,48 @@ export interface BinaryCellIndex {
 
 }
 
+// Binary file metadata structure
 export interface BinaryMetadata {
     dimensions: GridDimensions;
-    cellIndices: Record<string, BinaryCellIndex>;
     timeRange: {
         start: string;
         end: string;
     };
-    heatmaps: Heatmap[];
+    timeSliceIndex: {
+        [period: string]: TimeSliceIndex;
+    };
+    heatmaps: {
+        [period: string]: Heatmap;
+    };
 }
 
+export interface TimeSliceIndex {
+    offset: number;
+    length: number;
+}
 
-export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'cellIndices' | 'heatmaps'> {}
+export interface TimeSliceFeatures {
+    cells: {
+        [cellId: string]: {
+            features: GeoFeature[];
+            count: number;
+        };
+    };
+}
 
+export interface CellFeatures {
+    features: GeoFeature[];
+    count: number;
+}
+
+export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'timeRange' | 'heatmaps'> {}
+
+export interface CellFeaturesResponse {
+    cellId: string;
+    period: string;
+    features: GeoFeature[];
+    featureCount: number;
+}
 
 // this is only necessary for the /heatmap api endpoint
 // delete this if if the /heatmap isn't used
@@ -33,8 +62,3 @@ export interface HeatmapResponse extends Heatmap {
     availablePeriods: string[];
 }
 
-export interface CellFeaturesResponse {
-    cellId: string,
-    featureCount: number,
-    features: GeoFeature[]
-}
