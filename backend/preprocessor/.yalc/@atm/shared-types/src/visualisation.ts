@@ -1,13 +1,6 @@
 export interface GridConfig {
     colsAmount: number;
     rowsAmount: number;
-    boundA: [number, number];  
-    boundB: [number, number]; 
-}
-
-export interface GridConfig {
-    colsAmount: number;
-    rowsAmount: number;
     padding: number; 
 }
 

@@ -6,7 +6,6 @@
     import type { Heatmap } from '@atm/shared-types';
     
     export let data;
-    let heatmaps: Heatmap[];
     $: heatmaps = data?.metadata?.heatmaps;
     $: dimensions = data?.metadata?.dimensions;
     

@@ -5,8 +5,6 @@ import { processGeoJsonFolderToFeatures,
 
 const PREPROCESS = false;
 
-
-
 async function preprocessAndSaveData() {
     const geoJsonFeaturesFolder = '/home/m/Downloads/reprojections/3857';
     const processedJsonPath = './temp/processed_features.json';
@@ -29,12 +27,12 @@ async function preprocessAndSaveData() {
     
     console.log("Starting bin processing");
     const gridDimensions = await calculateGridDimensions(processedJsonPath, {
-        colsAmount: 100,
-        rowsAmount: 100,
+        colsAmount: 500,
+        rowsAmount: 500,
         padding: 0.0,
     });
     
-    const gridBinaryFilePath = '/atm/public/geodata.bin';
+    const gridBinaryFilePath = '/atm/public/geodata250x250.bin';
     await processFeaturesToGrid(
         processedJsonPath,
         gridBinaryFilePath,
