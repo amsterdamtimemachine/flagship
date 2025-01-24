@@ -36,6 +36,7 @@
 	"dependencies": {
 		"@atm/shared-types": "file:.yalc/@atm/shared-types",
 		"bits-ui": "^0.22.0",
+		"lodash.debounce": "^4.0.8",
 		"mapbox-gl": "^3.5.2",
 		"maplibre-gl": "^4.5.1"
 	}

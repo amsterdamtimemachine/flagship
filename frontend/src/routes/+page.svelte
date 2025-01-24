@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import MapGLGridContainer from '$components/MapGLGridContainer.svelte';
-    import MapGLGrid from '$components/MapGLGrid.svelte';
+    import MapGLGrid from '$components/MapGLGrid2.svelte';
     import HeatmapSlider from '$components/HeatmapSlider.svelte';
     import type { Heatmap } from '@atm/shared-types';
     

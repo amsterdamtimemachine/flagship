@@ -23,6 +23,7 @@ import type {
    GridDimensions,
    GridCellBounds,
    BinaryMetadata,
+   CellPages,
    TimeSliceIndex,
    TimeSliceFeatures,
    HeatmapCell,
@@ -133,7 +134,7 @@ async function processGeoJsonFolderToFeatures(
     geoJsonFeaturesFolderPath: string,
     processedJsonPath: string,
     options: GeoJsonProcessingOptions
-) {
+) : Promise<void> {
     const writer = Bun.file(processedJsonPath).writer();
     writer.write('[\n');
     let isFirst = true;
@@ -441,14 +442,14 @@ async function processFeaturesToTimeBinary(
     processedJsonPath: string,
     binaryPath: string,
     gridDimensions: GridDimensions,
-    options: { sliceYears: number }
-) {
+    options: ProcessingOptions
+) : Promise<void> {
     // Read features
     console.log('Reading features...');
     const rawData = await fs.readFile(processedJsonPath, 'utf8');
     const features: GeoFeature[] = JSON.parse(rawData);
     
-    // Find time range
+    // Find the total time range
     console.log('Computing time range...');
     let minStart = Infinity;
     let maxEnd = -Infinity;
@@ -478,6 +479,8 @@ async function processFeaturesToTimeBinary(
     // Group features by time and cell
     console.log('Processing features into time slices...');
     for (const feature of features) {
+
+        // get the center of the feature
         let point: Point2D | undefined;
         if (feature.geometry.type === "Point") {
             point = { x: feature.geometry.coordinates[0], y: feature.geometry.coordinates[1] };
@@ -485,24 +488,36 @@ async function processFeaturesToTimeBinary(
             point = feature.geometry.centroid;
         }
         if (!point) continue;
-
+        
+        // find the grid cell to which the feature belongs to 
         const cellId = getCellIdForPoint(point, gridDimensions);
         if (!cellId) continue;
 
-        for (let year = timeRange.start.getFullYear(); year < timeRange.end.getFullYear(); year += options.sliceYears) {
-            const period = `${year}-${year + options.sliceYears}`;
-            const sliceStart = new Date(year, 0);
-            const sliceEnd = new Date(year + options.sliceYears, 0);
+        for (const [period, slice] of Object.entries(timeSlices as Record<string, TimeSliceFeatures>)) {
+            const [startYear, endYear] = period.split('-').map(Number);
+            const sliceStart = new Date(startYear, 0);
+            const sliceEnd = new Date(endYear, 0);
 
             if (featureFitsTimeSlice(feature, sliceStart, sliceEnd)) {
-                if (!timeSlices[period].cells[cellId]) {
-                    timeSlices[period].cells[cellId] = {
-                        features: [],
-                        count: 0
+                if (!slice.cells[cellId]) {
+                    slice.cells[cellId] = {
+                        count: 0,
+                        pages: {}
                     };
                 }
-                timeSlices[period].cells[cellId].features.push(feature);
-                timeSlices[period].cells[cellId].count++;
+
+                const cell = timeSlices[period].cells[cellId];
+                const pageNum = Math.floor(cell.count / options.pageSize) + 1;
+                const pageKey = `page${pageNum}`;
+
+                // Initialize page if needed
+                if (!cell.pages[pageKey]) {
+                    cell.pages[pageKey] = [];
+                }
+
+                // Add feature to current page
+                cell.pages[pageKey].push(feature);
+                cell.count++;
             }
         }
     }
@@ -510,7 +525,7 @@ async function processFeaturesToTimeBinary(
     // Generate heatmaps
     console.log('Generating heatmaps...');
     const heatmaps: Record<string, Heatmap> = {};
-    for (const [period, slice] of Object.entries(timeSlices)) {
+    for (const [period, slice] of Object.entries(timeSlices as Record<string, TimeSliceFeatures>)) {
         const cells: HeatmapCell[] = [];
         for (const [cellId, cellData] of Object.entries(slice.cells)) {
             if (cellData.count === 0) continue;
@@ -523,23 +538,37 @@ async function processFeaturesToTimeBinary(
                 col,
                 featureCount: cellData.count,
                 bounds
-            });
+            } as HeatmapCell);
         }
         heatmaps[period] = { period, cells };
     }
 
-    // Calculate offsets for the binary
-    console.log('Calculating offsets...');
     let currentOffset = 0;
     const timeSliceIndex: Record<string, TimeSliceIndex> = {};
-    
+
     for (const [period, slice] of Object.entries(timeSlices)) {
-        const encodedSlice = encode(slice);
-        timeSliceIndex[period] = {
-            offset: currentOffset,
-            length: encodedSlice.byteLength
-        };
-        currentOffset += encodedSlice.byteLength;
+        const sliceStartOffset = currentOffset;
+
+        const pageLocations: Record<string, CellPages> = {};
+
+    // Calculate offsets for each page in this slice
+    for (const [cellId, cell] of Object.entries(slice.cells)) {
+        pageLocations[cellId] = {};
+
+        for (const [pageNum, features] of Object.entries(cell.pages)) {
+            const encodedFeatures = encode(features);
+            pageLocations[cellId][pageNum] = {
+                offset: currentOffset,
+                length: encodedFeatures.byteLength
+            };
+            currentOffset += encodedFeatures.byteLength;
+        }
+    }
+
+    timeSliceIndex[period] = {
+        offset: sliceStartOffset,
+        pages: pageLocations
+    };
     }
 
     // Write the binary
@@ -565,13 +594,16 @@ async function processFeaturesToTimeBinary(
     writer.write(sizeBuffer);
     writer.write(metadataBytes);
 
-    // Write time slices
-    for (const slice of Object.values(timeSlices)) {
-        writer.write(encode(slice));
+    // Write features in same order we calculated offsets
+    for (const [_, slice] of Object.entries(timeSlices)) {
+        for (const [_, cell] of Object.entries(slice.cells)) {
+            for (const [_, features] of Object.entries(cell.pages)) {
+                writer.write(encode(features));
+            }
+        }
     }
 
     await writer.end();
-    console.log("Binary file written successfully!");
 }
 
 // STREAMING VERSION, probably still breaks the binary for some reason.

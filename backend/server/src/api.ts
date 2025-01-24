@@ -113,79 +113,63 @@ async initialize() {
         } as HeatmapResponse);
     }
 
-private getTimeSliceData(period: string): TimeSliceFeatures | null {
-    console.log(`Reading time slice ${period}`);
-    console.log(`Data start offset: ${this.dataStartOffset}`);
-    
-    const timeSliceIndex = this.metadata.timeSliceIndex[period];
-    console.log(`Time slice index:`, timeSliceIndex);
-    
-    const readPosition = this.dataStartOffset + timeSliceIndex.offset;
-    console.log(`Reading from position ${readPosition} for ${timeSliceIndex.length} bytes`);
-    
-    const sliceBytes = new Uint8Array(
-        this.binaryBuffer,
-        readPosition,
-        timeSliceIndex.length
-    );
-    return decode(sliceBytes) as TimeSliceFeatures;
-}
-
-getCellFeatures: ApiHandler = async (req) => {
-    const url = new URL(req.url);
-    const cellId = url.pathname.slice('/grid/cell/'.length);
-    const period = url.searchParams.get('period');
-    const page = parseInt(url.searchParams.get('page') ?? '1');
-    
-    if (!period) {
-        return errorResponse("Period parameter is required", 400);
-    }
-
-    try {
-        // First get the time slice structure which has all the offsets
-        const timeSlice = this.getTimeSliceData(period);
-        if (!timeSlice) {
-            return errorResponse("Time period not found", 404);
+    getCellFeatures: ApiHandler = async (req) => {
+        const url = new URL(req.url);
+        const cellId = url.pathname.slice('/grid/cell/'.length);
+        const period = url.searchParams.get('period');
+        const page = parseInt(url.searchParams.get('page') ?? '1');
+        
+        if (!period) {
+            return errorResponse("Period parameter is required", 400);
         }
 
-        const cellData = timeSlice.cells[cellId];
-        if (!cellData) {
+        try {
+            if (!this.metadata?.timeSliceIndex[period]) {
+                return errorResponse("Time period not found", 404);
+            }
+
+            const timeSlice = this.metadata.timeSliceIndex[period];
+            const cellPages = timeSlice.pages[cellId];
+
+            if (!cellPages) {
+                return jsonResponse({
+                    cellId,
+                    period,
+                    features: [],
+                    featureCount: 0,
+                    currentPage: 1,
+                    totalPages: 0
+                });
+            }
+
+            const pageKey = `page${page}`;
+            const pageLocation = cellPages[pageKey];
+            
+            if (!pageLocation) {
+                return errorResponse("Page not found", 404);
+            }
+
+            // Read this specific page's features
+            const featuresBytes = new Uint8Array(
+                this.binaryBuffer,
+                this.dataStartOffset + pageLocation.offset,
+                pageLocation.length
+            );
+            
+            const features = decode(featuresBytes) as GeoFeature[];
+            
             return jsonResponse({
                 cellId,
                 period,
-                features: [],
-                featureCount: 0,
-                currentPage: 1,
-                totalPages: 0
+                features,
+                featureCount: features.length,
+                currentPage: page,
+                totalPages: Object.keys(cellPages).length
             });
+
+        } catch (error) {
+            console.error("Error serving cell data:", error);
+            return errorResponse("Internal server error", 500);
         }
-
-        // Get the specific page we want
-        const pageKey = `page${page}`;
-        const pageData = cellData.pages[pageKey];
-        if (!pageData) {
-            return errorResponse("Page not found", 404);
-        }
-
-        // Now we can read just the features for this specific page
-        const pageBytes = new Uint8Array(
-            this.binaryBuffer,
-            this.dataStartOffset + pageData.offset,
-            pageData.length
-        );
-        const features = decode(pageBytes) as GeoFeature[];
-
-        return jsonResponse({
-            cellId,
-            period,
-            features,
-            featureCount: cellData.count,
-            currentPage: page,
-            totalPages: Object.keys(cellData.pages).length
-        });
-    } catch (error) {
-        console.error("Error serving cell data:", error);
-        return errorResponse("Internal server error", 500);
     }
-}
 }

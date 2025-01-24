@@ -1,14 +1,6 @@
 import { GeoFeature } from "./geo";
 import type { GridDimensions, Heatmap } from "./visualisation";
 
-export interface BinaryCellIndex {
-    startOffset: number;
-    endOffset: number;
-    featureCount: number;
-
-}
-
-// Binary file metadata structure
 export interface BinaryMetadata {
     dimensions: GridDimensions;
     timeRange: {
@@ -18,28 +10,40 @@ export interface BinaryMetadata {
     timeSliceIndex: {
         [period: string]: TimeSliceIndex;
     };
-    heatmaps: {
-        [period: string]: Heatmap;
-    };
+    heatmaps: Record<string, Heatmap>;
+}
+
+
+export interface CellPages {
+    [pageNum: string]: {
+        offset: number;
+        length: number;
+    }
 }
 
 export interface TimeSliceIndex {
     offset: number;
-    length: number;
+    pages: {
+        [cellId: string]: CellPages;
+    };
 }
 
 export interface TimeSliceFeatures {
     cells: {
         [cellId: string]: {
-            features: GeoFeature[];
             count: number;
-        };
-    };
+            pages: {
+                [pageNum: string]: GeoFeature[]
+            }
+        }
+    }
 }
 
-export interface CellFeatures {
-    features: GeoFeature[];
-    count: number;
+export interface BinaryCellIndex {
+    startOffset: number;
+    endOffset: number;
+    featureCount: number;
+
 }
 
 export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'timeRange' | 'heatmaps'> {}
@@ -49,6 +53,8 @@ export interface CellFeaturesResponse {
     period: string;
     features: GeoFeature[];
     featureCount: number;
+    currentPage: number;   // New: which page this is
+    totalPages: number;    // New: total number of pages for this cell
 }
 
 // this is only necessary for the /heatmap api endpoint
