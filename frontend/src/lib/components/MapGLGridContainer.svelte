@@ -31,8 +31,8 @@
     }
 
     function handleCellClick(event: CustomEvent) {
-        const { id, coordinates, value, count } = event.detail;
-        console.log('Cell clicked:', { id, coordinates, value, count });
+        const { id, period } = event.detail;
+        console.log('Cell clicked:', { id, period });
     }
 </script>
 

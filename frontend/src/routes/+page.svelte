@@ -13,6 +13,7 @@
     $: periods = heatmaps ? Object.keys(heatmaps).sort() : [];
     $: currentIndex = [0];
     $: currentHeatmap = heatmaps?.[periods[currentIndex[0]]];
+    $: console.log(currentHeatmap);
 </script>
 
 <div class="flex flex-col gap-4 w-full h-full">

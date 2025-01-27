@@ -32,9 +32,7 @@
        cellLeave: void;
        cellClick: {
            id: string;
-           coordinates: number[][];
-           value: number;
-           count: number;
+           period:string;
        };
    }>();
 
@@ -142,48 +140,53 @@
                if (e.features?.[0]) {
                    const feature = e.features[0];
                    const featureState = map.getFeatureState({ source: 'grid', id: feature.properties.id });
-                   dispatch('cellHover', {
-                       id: feature.properties.id,
-                       coordinates: feature.geometry.coordinates,
-                       mouseX: e.point.x,
-                       mouseY: e.point.y,
-                       value: featureState.value || 0,
-                       count: featureState.count || 0
-                   });
+                   
+                   // Only dispatch if the cell has a value
+                   if (featureState.count > 0) {
+                       dispatch('cellHover', {
+                           id: feature.properties.id,
+                           coordinates: feature.geometry.coordinates,
+                           mouseX: e.point.x,
+                           mouseY: e.point.y,
+                           value: featureState.value || 0,
+                           count: featureState.count || 0
+                       });
+                       map.getCanvas().style.cursor = 'pointer';
+                   } else {
+                       map.getCanvas().style.cursor = '';
+                   }
                }
            });
 
            map.on('mouseleave', 'heatmap-squares', () => {
                dispatch('cellLeave');
+               map.getCanvas().style.cursor = '';
            });
 
            map.on('click', 'heatmap-squares', (e) => {
                if (e.features?.[0]) {
                    const feature = e.features[0];
                    const featureState = map.getFeatureState({ source: 'grid', id: feature.properties.id });
-                   dispatch('cellClick', {
-                       id: feature.properties.id,
-                       coordinates: feature.geometry.coordinates,
-                       value: featureState.value || 0,
-                       count: featureState.count || 0
-                   });
+                   
+                   // Only dispatch if the cell has a value
+                   if (featureState.count > 0) {
+                       dispatch('cellClick', {
+                           id: feature.properties.id,
+                           period: heatmap.period,
+                       });
+                   }
                }
-           });
-
-           map.on('mouseenter', 'heatmap-squares', () => {
-               map.getCanvas().style.cursor = 'pointer';
-           });
-           
-           map.on('mouseleave', 'heatmap-squares', () => {
-               map.getCanvas().style.cursor = '';
            });
 
            isMapLoaded = true;
        });
    });
-
    onDestroy(() => {
        if (map) {
+           map.off('mousemove', 'heatmap-squares');
+           map.off('mouseleave', 'heatmap-squares');
+           map.off('click', 'heatmap-squares');
+           map.off('mouseenter', 'heatmap-squares');
            updateFeatureStates.cancel();
            map.remove();
        }
