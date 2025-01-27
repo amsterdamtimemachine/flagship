@@ -495,7 +495,7 @@ async function processFeaturesToTimeBinary(
         if (!cellId) continue;
 
         for (const [period, slice] of Object.entries(timeSlices as Record<string, TimeSliceFeatures>)) {
-            const [startYear, endYear] = period.split('-').map(Number);
+            const [startYear, endYear] = period.split('_').map(Number);
             const sliceStart = new Date(startYear, 0);
             const sliceEnd = new Date(endYear, 0);
 

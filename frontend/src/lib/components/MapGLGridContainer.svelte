@@ -1,7 +1,7 @@
 <script lang="ts">
     import {goto} from '$app/navigation';
 
-    const baseUrl = 'cells/' 
+    const baseUrl = 'cells' 
 
     interface ModalData {
         id: string;
@@ -36,7 +36,7 @@
 
     function handleCellClick(event: CustomEvent) {
         const { id, period } = event.detail;
-        goto(`${baseUrl}${period}-${id}`);
+        goto(`${baseUrl}/${period}/${id}`);
         //console.log('Cell clicked:', { id, period });
     }
 </script>
