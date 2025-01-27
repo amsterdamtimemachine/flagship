@@ -1,4 +1,8 @@
 <script lang="ts">
+    import {goto} from '$app/navigation';
+
+    const baseUrl = 'cells/' 
+
     interface ModalData {
         id: string;
         coordinates: number[][];  // Array of [longitude, latitude] pairs
@@ -32,7 +36,8 @@
 
     function handleCellClick(event: CustomEvent) {
         const { id, period } = event.detail;
-        console.log('Cell clicked:', { id, period });
+        goto(`${baseUrl}${period}-${id}`);
+        //console.log('Cell clicked:', { id, period });
     }
 </script>
 

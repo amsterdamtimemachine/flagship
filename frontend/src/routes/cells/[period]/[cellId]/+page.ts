@@ -6,7 +6,9 @@ import { PUBLIC_SERVER_DEV_URL, PUBLIC_SERVER_PROD_URL } from '$env/static/publi
 export const load: PageLoad = async ({ params, fetch }) => {
 
   const baseUrl = import.meta.env.MODE === 'production' ? PUBLIC_SERVER_DEV_URL : PUBLIC_SERVER_PROD_URL;
-  const { cellId, period } = params;
+  const { period, cellId } = params;
+  console.log(period);
+  console.log(cellId);
   
 
 //	const cellFeaturesUrl = baseUrl + '/grid/cell/303_249?period=1968-2018&page=1'; 	

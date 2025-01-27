@@ -471,7 +471,7 @@ async function processFeaturesToTimeBinary(
     console.log('Creating time slices...');
     const timeSlices: Record<string, TimeSliceFeatures> = {};
     for (let year = timeRange.start.getFullYear(); year < timeRange.end.getFullYear(); year += options.sliceYears) {
-        const period = `${year}-${year + options.sliceYears}`;
+        const period = `${year}_${year + options.sliceYears}`;
         timeSlices[period] = {
             cells: {}
         };
