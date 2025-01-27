@@ -523,21 +523,35 @@ async function processFeaturesToTimeBinary(
         }
     }
 
-    // Generate heatmaps
-    console.log('Generating heatmaps...');
     const heatmaps: Record<string, Heatmap> = {};
     for (const [period, slice] of Object.entries(timeSlices as Record<string, TimeSliceFeatures>)) {
         const cells: HeatmapCell[] = [];
+        
+        // First find max count for this period
+        const maxCount = Math.max(
+            ...Object.values(slice.cells)
+                .map(cellData => cellData.count)
+        );
+
+        // Calculate max transformed value for normalization
+        const maxTransformedCount = Math.log(maxCount + 1);
+
         for (const [cellId, cellData] of Object.entries(slice.cells)) {
             if (cellData.count === 0) continue;
             
             const [row, col] = cellId.split('_').map(Number);
             const bounds = calculateCellBounds(row, col, gridDimensions);
+            
+            // Calculate log-scaled normalized density
+            const transformedCount = Math.log(cellData.count + 1);
+            const countDensity = transformedCount / maxTransformedCount;
+            
             cells.push({
                 cellId,
                 row,
                 col,
                 featureCount: cellData.count,
+                countDensity,
                 bounds
             } as HeatmapCell);
         }

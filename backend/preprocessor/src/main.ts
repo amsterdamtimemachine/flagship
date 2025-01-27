@@ -27,8 +27,8 @@ async function preprocessAndSaveData() {
     
     console.log("Starting bin processing");
     const gridDimensions = await calculateGridDimensions(processedJsonPath, {
-        colsAmount: 500,
-        rowsAmount: 500,
+        colsAmount: 1000,
+        rowsAmount: 1000,
         padding: 0.0,
     });
     
