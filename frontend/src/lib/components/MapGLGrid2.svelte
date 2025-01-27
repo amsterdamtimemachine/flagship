@@ -3,11 +3,12 @@
    import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
    import { onMount, onDestroy, createEventDispatcher } from 'svelte';
    import maplibre, { type Map } from 'maplibre-gl';
-   import type { Heatmap, HeatmapCell, GridDimensions } from '@atm/shared-types';
+   import type { Heatmap, HeatmapCell, HeatmapBlueprintCell, GridDimensions } from '@atm/shared-types';
    import debounce from 'lodash.debounce';
    import 'maplibre-gl/dist/maplibre-gl.css';
 
    export let heatmap: Heatmap;
+   export let heatmapBlueprint: HeatmapBlueprintCell[];
    export let dimensions: GridDimensions;
    
    const MIN_ZOOM = 1; 
@@ -18,7 +19,6 @@
    let map: Map | undefined;
    let mapContainer: HTMLElement;
    let isMapLoaded = false;
-   let maxCount = 0;
 
    const dispatch = createEventDispatcher<{
        cellHover: {
@@ -38,14 +38,14 @@
        };
    }>();
 
-   // Generate initial features - geometry won't change
-   function generateInitialFeatures(heatmap: Heatmap) {
-       const features = heatmap.cells.map(cell => ({
+   // Generate initial features from blueprint
+   function generateInitialFeatures(blueprint: HeatmapBlueprintCell[]) {
+       const features = blueprint.map(cell => ({
            type: 'Feature',
            id: cell.cellId,
            properties: {
                id: cell.cellId,
-               count: cell.featureCount
+               count: 0  // Initial count is 0
            },
            geometry: {
                type: 'Polygon',
@@ -66,20 +66,34 @@
    }
 
    // Debounced function to update feature states
-   const updateFeatureStates = debounce((map: Map, heatmap: Heatmap) => {
-       maxCount = Math.max(...heatmap.cells.map(cell => cell.featureCount));
+   const updateFeatureStates = debounce((map: Map, heatmap: Heatmap, blueprint: HeatmapBlueprintCell[]) => {
+       // Create a map of current cell values for quick lookup
+       const currentValues = new Map(
+           heatmap.cells.map(cell => [cell.cellId, cell.featureCount])
+       );
        
-       heatmap.cells.forEach(cell => {
+       // Calculate max count from existing cells
+       const maxCount = Math.max(...heatmap.cells.map(cell => cell.featureCount), 1);  // Prevent division by zero
+       
+       // Update ALL blueprint cells, whether they have current values or not
+       blueprint.forEach(cell => {
+           const featureCount = currentValues.get(cell.cellId) ?? 0;
+           const value = featureCount ? Math.max(featureCount / maxCount, 0.1) : 0;
+           
+           // Always set the state, even for cells with no values
            map.setFeatureState(
                { source: 'grid', id: cell.cellId },
-               { value: Math.max(cell.featureCount / maxCount, 0.1) }
+               { 
+                   value,
+                   count: featureCount
+               }
            );
        });
-   }, 16); // Debounce to roughly match 60fps
+   }, 16);
 
    // Update feature states when heatmap changes
    $: if (isMapLoaded && map && heatmap) {
-       updateFeatureStates(map, heatmap);
+       updateFeatureStates(map, heatmap, heatmapBlueprint);
    }
 
    onMount(() => {
@@ -102,14 +116,14 @@
        });
 
        map.on('load', () => {
-           // Add source with initial features
+           // Add source with blueprint features
            map.addSource('grid', {
                type: 'geojson',
-               data: generateInitialFeatures(heatmap),
+               data: generateInitialFeatures(heatmapBlueprint),
                promoteId: 'id'
            });
 
-           // Add layer using feature state for opacity
+           // Add layer using feature state for opacity with transition
            map.addLayer({
                id: 'heatmap-squares',
                type: 'fill',
@@ -121,19 +135,20 @@
            });
 
            // Initial feature state setup
-           updateFeatureStates(map, heatmap);
+           updateFeatureStates(map, heatmap, heatmapBlueprint);
 
            // Event handlers
            map.on('mousemove', 'heatmap-squares', (e) => {
                if (e.features?.[0]) {
                    const feature = e.features[0];
+                   const featureState = map.getFeatureState({ source: 'grid', id: feature.properties.id });
                    dispatch('cellHover', {
                        id: feature.properties.id,
                        coordinates: feature.geometry.coordinates,
                        mouseX: e.point.x,
                        mouseY: e.point.y,
-                       value: feature.properties.value,
-                       count: feature.properties.count
+                       value: featureState.value || 0,
+                       count: featureState.count || 0
                    });
                }
            });
@@ -145,11 +160,12 @@
            map.on('click', 'heatmap-squares', (e) => {
                if (e.features?.[0]) {
                    const feature = e.features[0];
+                   const featureState = map.getFeatureState({ source: 'grid', id: feature.properties.id });
                    dispatch('cellClick', {
                        id: feature.properties.id,
                        coordinates: feature.geometry.coordinates,
-                       value: feature.properties.value,
-                       count: feature.properties.count
+                       value: featureState.value || 0,
+                       count: featureState.count || 0
                    });
                }
            });

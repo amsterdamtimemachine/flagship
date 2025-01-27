@@ -7,8 +7,8 @@
     
     export let data;
     $: heatmaps = data?.metadata?.heatmaps;
-    $: dimensions = data?.metadata?.dimensions;
-    
+    $: dimensions = data?.metadata?.dimensions; 
+    $: heatmapBlueprint = data?.metadata?.heatmapBlueprint?.cells;
     // Convert object to array for ordering
     $: periods = heatmaps ? Object.keys(heatmaps).sort() : [];
     $: currentIndex = [0];
@@ -26,6 +26,7 @@
             <MapGLGridContainer let:handleCellHover let:handleCellLeave let:handleCellClick>
                 <MapGLGrid
                     heatmap={currentHeatmap}
+                    {heatmapBlueprint}
                     {dimensions}
                     on:cellHover={handleCellHover}
                     on:cellLeave={handleCellLeave}

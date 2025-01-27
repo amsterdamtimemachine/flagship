@@ -49,7 +49,7 @@ export interface BinaryCellIndex {
 
 }
 
-export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'timeRange' | 'heatmaps'> {}
+export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'timeRange' | 'heatmaps' | 'heatmapBlueprint'> {}
 
 export interface CellFeaturesResponse {
     cellId: string;

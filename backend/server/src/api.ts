@@ -82,7 +82,8 @@ async initialize() {
         return jsonResponse({
             dimensions: this.metadata.dimensions,
             timeRange: this.metadata.timeRange,
-            heatmaps: this.metadata.heatmaps
+            heatmaps: this.metadata.heatmaps,
+            heatmapBlueprint: this.metadata.heatmapBlueprint,
         } as MetadataResponse);
     }
 

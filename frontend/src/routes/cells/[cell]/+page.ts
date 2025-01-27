@@ -3,7 +3,7 @@ import type { CellFeaturesResponse } from '@atm/shared-types';
 import type { PageLoad } from './$types';
 
 import { PUBLIC_SERVER_DEV_URL, PUBLIC_SERVER_PROD_URL } from '$env/static/public';
-export const load: PageLoad = async ({ fetch }) => {
+export const load: PageLoad = async ({ params, fetch }) => {
 
   const baseUrl = import.meta.env.MODE === 'production' ? PUBLIC_SERVER_DEV_URL : PUBLIC_SERVER_PROD_URL;
 
