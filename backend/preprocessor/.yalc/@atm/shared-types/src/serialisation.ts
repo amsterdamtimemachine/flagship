@@ -1,5 +1,5 @@
 import { GeoFeature } from "./geo";
-import type { GridDimensions, Heatmap } from "./visualisation";
+import type { GridDimensions, Heatmap, HeatmapBlueprintCell } from "./visualisation";
 
 export interface BinaryMetadata {
     dimensions: GridDimensions;
@@ -11,6 +11,9 @@ export interface BinaryMetadata {
         [period: string]: TimeSliceIndex;
     };
     heatmaps: Record<string, Heatmap>;
+    heatmapBlueprint: {
+        cells: HeatmapBlueprintCell[];  
+    };
 }
 
 

@@ -48,6 +48,9 @@ export interface HeatmapCell {
     };
 }
 
+
+export interface HeatmapBlueprintCell extends Omit<HeatmapCell, 'featureCount'> {}
+
 export interface Heatmap {
     period: string,
     cells: HeatmapCell[];

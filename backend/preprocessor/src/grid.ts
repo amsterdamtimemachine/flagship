@@ -27,6 +27,7 @@ import type {
    TimeSliceIndex,
    TimeSliceFeatures,
    HeatmapCell,
+   HeatmapBlueprintCell,
    Heatmap,
 
 } from '@atm/shared-types';
@@ -543,6 +544,26 @@ async function processFeaturesToTimeBinary(
         heatmaps[period] = { period, cells };
     }
 
+    // Then in the processing code, after generating heatmaps:
+    console.log('Generating heatmap blueprint...');
+    const heatmapBlueprint = new Map<string, HeatmapBlueprintCell>();
+
+    // Collect all unique cells from all heatmaps
+    for (const heatmap of Object.values(heatmaps)) {
+       for (const cell of heatmap.cells) {
+           if (!heatmapBlueprint.has(cell.cellId)) {
+               heatmapBlueprint.set(cell.cellId, {
+                   cellId: cell.cellId,
+                   row: cell.row,
+                   col: cell.col,
+                   bounds: cell.bounds
+               });
+           }
+       }
+    }
+
+
+    // calculate byte offsets
     let currentOffset = 0;
     const timeSliceIndex: Record<string, TimeSliceIndex> = {};
 
@@ -583,7 +604,10 @@ async function processFeaturesToTimeBinary(
             end: timeRange.end.toISOString()
         },
         timeSliceIndex,
-        heatmaps
+        heatmaps,
+        heatmapBlueprint: {
+            cells: Array.from(heatmapBlueprint.values())
+        }
     };
 
     const metadataBytes = encode(metadata);
