@@ -46,7 +46,7 @@ async function loadMore() {
     </button>
   {/if}
 
-  {#each data.cellFeatures.features as feature}
+  {#each allFeatures as feature}
     <FeatureBlock {feature}/>
 
   {/each}

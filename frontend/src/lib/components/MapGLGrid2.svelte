@@ -63,31 +63,30 @@
        };
    }
 
-   // Debounced function to update feature states
-   const updateFeatureStates = debounce((map: Map, heatmap: Heatmap, blueprint: HeatmapBlueprintCell[]) => {
-       // Create a map of current cell values for quick lookup
-       const currentValues = new Map(
-           heatmap.cells.map(cell => [cell.cellId, cell.featureCount])
-       );
-       
-       // Calculate max count from existing cells
-       const maxCount = Math.max(...heatmap.cells.map(cell => cell.featureCount), 1);  // Prevent division by zero
-       
-       // Update ALL blueprint cells, whether they have current values or not
-       blueprint.forEach(cell => {
-           const featureCount = currentValues.get(cell.cellId) ?? 0;
-           const value = featureCount ? Math.max(featureCount / maxCount, 0.1) : 0;
-           
-           // Always set the state, even for cells with no values
-           map.setFeatureState(
-               { source: 'grid', id: cell.cellId },
-               { 
-                   value,
-                   count: featureCount
-               }
-           );
-       });
-   }, 16);
+// Debounced function to update feature states - simplified now
+const updateFeatureStates = debounce((map: Map, heatmap: Heatmap, blueprint: HeatmapBlueprintCell[]) => {
+    // Create a map of current cell values for quick lookup
+    const currentValues = new Map(
+        heatmap.cells.map(cell => [cell.cellId, {
+            count: cell.featureCount,
+            density: cell.countDensity
+        }])
+    );
+    
+    // Update ALL blueprint cells, whether they have current values or not
+    blueprint.forEach(cell => {
+        const cellData = currentValues.get(cell.cellId) ?? { count: 0, density: 0 };
+        
+        // Always set the state, even for cells with no values
+        map.setFeatureState(
+            { source: 'grid', id: cell.cellId },
+            { 
+                value: cellData.density,  // Use pre-computed density
+                count: cellData.count
+            }
+        );
+    });
+}, 16);
 
    // Update feature states when heatmap changes
    $: if (isMapLoaded && map && heatmap) {
@@ -137,26 +136,26 @@
 
            // Event handlers
            map.on('mousemove', 'heatmap-squares', (e) => {
-               if (e.features?.[0]) {
+                   if (e.features?.[0]) {
                    const feature = e.features[0];
                    const featureState = map.getFeatureState({ source: 'grid', id: feature.properties.id });
-                   
+
                    // Only dispatch if the cell has a value
                    if (featureState.count > 0) {
-                       dispatch('cellHover', {
-                           id: feature.properties.id,
-                           coordinates: feature.geometry.coordinates,
-                           mouseX: e.point.x,
-                           mouseY: e.point.y,
-                           value: featureState.value || 0,
-                           count: featureState.count || 0
-                       });
-                       map.getCanvas().style.cursor = 'pointer';
+                   dispatch('cellHover', {
+id: feature.properties.id,
+coordinates: feature.geometry.coordinates,
+mouseX: e.point.x,
+mouseY: e.point.y,
+value: featureState.value || 0,  // This is now using the pre-computed density
+count: featureState.count || 0
+});
+                   map.getCanvas().style.cursor = 'pointer';
                    } else {
-                       map.getCanvas().style.cursor = '';
+                   map.getCanvas().style.cursor = '';
                    }
-               }
-           });
+                   }
+                   });
 
            map.on('mouseleave', 'heatmap-squares', () => {
                dispatch('cellLeave');

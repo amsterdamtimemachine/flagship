@@ -7,7 +7,9 @@
     <span>{feature?.properties.start_date}</span> -  <span> {feature?.properties.end_date} </span> 
    </div>
    <a href="{feature?.properties.url}"> {feature?.properties.url} </a> 
-   <a href="{feature?.properties.thumb}"> {feature?.properties.thumb} </a> 
+   {#if feature?.properties?.thumb}
+        <img src="{feature?.properties.thumb}"/>
+   {/if}
 </div>
 
 

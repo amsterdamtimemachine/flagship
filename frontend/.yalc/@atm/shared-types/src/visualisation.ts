@@ -40,6 +40,7 @@ export interface HeatmapCell {
     row: number;
     col: number;
     featureCount: number;
+    countDensity: number;  
     bounds: {
         minLon: number;
         maxLon: number;
@@ -49,7 +50,7 @@ export interface HeatmapCell {
 }
 
 
-export interface HeatmapBlueprintCell extends Omit<HeatmapCell, 'featureCount'> {}
+export interface HeatmapBlueprintCell extends Omit<HeatmapCell, 'featureCount' | 'countDensity'> {}
 
 export interface Heatmap {
     period: string,
