@@ -53,11 +53,12 @@ export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 't
 
 export interface CellFeaturesResponse {
     cellId: string;
+    currentPage: number;   
+    totalPages: number;    
+    featureCount: number;
     period: string;
     features: GeoFeature[];
-    featureCount: number;
-    currentPage: number;   // New: which page this is
-    totalPages: number;    // New: total number of pages for this cell
+
 }
 
 // this is only necessary for the /heatmap api endpoint
