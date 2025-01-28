@@ -38,8 +38,10 @@
 		"@atm/shared-types": "file:.yalc/@atm/shared-types",
 		"@melt-ui/svelte": "^0.86.2",
 		"bits-ui": "^0.22.0",
+		"clsx": "^2.1.1",
 		"lodash.debounce": "^4.0.8",
 		"mapbox-gl": "^3.5.2",
-		"maplibre-gl": "^4.5.1"
+		"maplibre-gl": "^4.5.1",
+		"tailwind-merge": "^2.6.0"
 	}
 }

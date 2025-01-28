@@ -3,10 +3,12 @@
    import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
    import { onMount, onDestroy, createEventDispatcher } from 'svelte';
    import maplibre, { type Map } from 'maplibre-gl';
-   import type { Heatmap, HeatmapCell, GridDimensions } from '@atm/shared-types';
+   import type { Heatmap, HeatmapCell, HeatmapBlueprintCell, GridDimensions } from '@atm/shared-types';
+   import debounce from 'lodash.debounce';
    import 'maplibre-gl/dist/maplibre-gl.css';
 
    export let heatmap: Heatmap;
+   export let heatmapBlueprint: HeatmapBlueprintCell[];
    export let dimensions: GridDimensions;
    
    const MIN_ZOOM = 1; 
@@ -18,23 +20,30 @@
    let mapContainer: HTMLElement;
    let isMapLoaded = false;
 
-   // Add reactive statement to update map when heatmap changes
-   $: if (isMapLoaded && map && heatmap) {
-       const source = map.getSource('grid') as maplibre.GeoJSONSource;
-       if (source) {
-           source.setData(generateGridFeatures(heatmap));
-       }
-   }
+   const dispatch = createEventDispatcher<{
+       cellHover: {
+           id: string;
+           coordinates: number[][];
+           mouseX: number;
+           mouseY: number;
+           value: number;
+           count: number;
+       };
+       cellLeave: void;
+       cellClick: {
+           id: string;
+           period:string;
+       };
+   }>();
 
-   function generateGridFeatures(heatmap: Heatmap) {
-       const maxCount = Math.max(...heatmap.cells.map(cell => cell.featureCount));
-       
-       const features = heatmap.cells.map(cell => ({
+   // Generate initial features from blueprint
+   function generateInitialFeatures(blueprint: HeatmapBlueprintCell[]) {
+       const features = blueprint.map(cell => ({
            type: 'Feature',
+           id: cell.cellId,
            properties: {
                id: cell.cellId,
-               value: Math.max(cell.featureCount / maxCount, 0.1),
-               count: cell.featureCount
+               count: 0  // Initial count is 0
            },
            geometry: {
                type: 'Polygon',
@@ -54,23 +63,35 @@
        };
    }
 
-   const dispatch = createEventDispatcher<{
-       cellHover: {
-           id: string;
-           coordinates: number[][];
-           mouseX: number;
-           mouseY: number;
-           value: number;
-           count: number;
-       };
-       cellLeave: void;
-       cellClick: {
-           id: string;
-           coordinates: number[][];
-           value: number;
-           count: number;
-       };
-   }>();
+// Debounced function to update feature states - simplified now
+const updateFeatureStates = debounce((map: Map, heatmap: Heatmap, blueprint: HeatmapBlueprintCell[]) => {
+    // Create a map of current cell values for quick lookup
+    const currentValues = new Map(
+        heatmap.cells.map(cell => [cell.cellId, {
+            count: cell.featureCount,
+            density: cell.countDensity
+        }])
+    );
+    
+    // Update ALL blueprint cells, whether they have current values or not
+    blueprint.forEach(cell => {
+        const cellData = currentValues.get(cell.cellId) ?? { count: 0, density: 0 };
+        
+        // Always set the state, even for cells with no values
+        map.setFeatureState(
+            { source: 'grid', id: cell.cellId },
+            { 
+                value: cellData.density,  // Use pre-computed density
+                count: cellData.count
+            }
+        );
+    });
+}, 16);
+
+   // Update feature states when heatmap changes
+   $: if (isMapLoaded && map && heatmap) {
+       updateFeatureStates(map, heatmap, heatmapBlueprint);
+   }
 
    onMount(() => {
        if (!mapContainer) return;
@@ -92,82 +113,85 @@
        });
 
        map.on('load', () => {
+           // Add source with blueprint features
            map.addSource('grid', {
                type: 'geojson',
-               data: generateGridFeatures(heatmap),
+               data: generateInitialFeatures(heatmapBlueprint),
                promoteId: 'id'
            });
 
+           // Add layer using feature state for opacity with transition
            map.addLayer({
                id: 'heatmap-squares',
                type: 'fill',
                source: 'grid',
                paint: {
                    'fill-color': '#0000ff',
-                   'fill-opacity': ['get', 'value']
+                   'fill-opacity': ['coalesce', ['feature-state', 'value'], 0]
                }
            });
+
+           // Initial feature state setup
+           updateFeatureStates(map, heatmap, heatmapBlueprint);
 
            // Event handlers
            map.on('mousemove', 'heatmap-squares', (e) => {
-               if (e.features?.[0]) {
+                   if (e.features?.[0]) {
                    const feature = e.features[0];
+                   const featureState = map.getFeatureState({ source: 'grid', id: feature.properties.id });
+
+                   // Only dispatch if the cell has a value
+                   if (featureState.count > 0) {
                    dispatch('cellHover', {
-                       id: feature.properties.id,
-                       coordinates: feature.geometry.coordinates,
-                       mouseX: e.point.x,
-                       mouseY: e.point.y,
-                       value: feature.properties.value,
-                       count: feature.properties.count
+                        id: feature.properties.id,
+                        coordinates: feature.geometry.coordinates,
+                        mouseX: e.point.x,
+                        mouseY: e.point.y,
+                        value: featureState.value || 0,  // This is now using the pre-computed density
+                        count: featureState.count || 0
+                        });
+                   map.getCanvas().style.cursor = 'pointer';
+                   } else {
+                   map.getCanvas().style.cursor = '';
+                   }
+                   }
                    });
-               }
-           });
 
            map.on('mouseleave', 'heatmap-squares', () => {
                dispatch('cellLeave');
+               map.getCanvas().style.cursor = '';
            });
 
            map.on('click', 'heatmap-squares', (e) => {
                if (e.features?.[0]) {
                    const feature = e.features[0];
-                   dispatch('cellClick', {
-                       id: feature.properties.id,
-                       coordinates: feature.geometry.coordinates,
-                       value: feature.properties.value,
-                       count: feature.properties.count
-                   });
+                   const featureState = map.getFeatureState({ source: 'grid', id: feature.properties.id });
+                   
+                   // Only dispatch if the cell has a value
+                   if (featureState.count > 0) {
+                       dispatch('cellClick', {
+                           id: feature.properties.id,
+                           period: heatmap.period,
+                       });
+                   }
                }
-           });
-
-           map.on('mouseenter', 'heatmap-squares', () => {
-               map.getCanvas().style.cursor = 'pointer';
-           });
-           
-           map.on('mouseleave', 'heatmap-squares', () => {
-               map.getCanvas().style.cursor = '';
            });
 
            isMapLoaded = true;
        });
    });
-
    onDestroy(() => {
        if (map) {
+           map.off('mousemove', 'heatmap-squares');
+           map.off('mouseleave', 'heatmap-squares');
+           map.off('click', 'heatmap-squares');
+           map.off('mouseenter', 'heatmap-squares');
+           updateFeatureStates.cancel();
            map.remove();
        }
    });
 </script>
 
-<div bind:this={mapContainer} class="map-container" />
+<div bind:this={mapContainer} class="h-full w-full" />
 
-<style>
-   .map-container {
-       width: 100%;
-       height: 100vh;
-       position: relative;
-   }
-   :global(.maplibregl-canvas) {
-       width: 100% !important;
-       height: 100% !important;
-   }
-</style>
+

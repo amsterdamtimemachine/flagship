@@ -43,7 +43,7 @@
     }
 </script>
 
-<div class="w-full px-4 py-2 {className}">
+<div class="w-full px-4 py-1 {className}">
     <span {...$root} use:melt={$root} class="relative flex w-full h-12 items-center">
         <!--
         <span class="h-2 w-full rounded-full bg-gray-200">

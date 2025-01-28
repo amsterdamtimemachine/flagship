@@ -1,5 +1,8 @@
 <script lang="ts">
     import {goto} from '$app/navigation';
+    import {mergeCss} from '$utils/utils';
+    let className : string | undefined = undefined;
+    export {className as class}
 
     const baseUrl = 'cells' 
 
@@ -37,11 +40,10 @@
     function handleCellClick(event: CustomEvent) {
         const { id, period } = event.detail;
         goto(`${baseUrl}/${period}/${id}`);
-        //console.log('Cell clicked:', { id, period });
     }
 </script>
 
-<div class="relative w-full h-full">
+<div class={mergeCss('', className)}>
     <slot 
         {handleCellHover}
         {handleCellLeave}
@@ -55,8 +57,7 @@
         >
             <h3 class="font-bold text-sm">Cell Info</h3>
             <p class="text-sm">
-                ID: {modalData.id}
-                <br>
+
                 {#if modalData.count !== undefined}
                     Count: {modalData.count}
                     <br>
@@ -65,7 +66,6 @@
                     Intensity: {(modalData.value * 100).toFixed(1)}%
                     <br>
                 {/if}
-                Coordinates: {modalData.coordinates[0] ? modalData.coordinates[0].map(coord => `${coord[0].toFixed(4)}, ${coord[1].toFixed(4)}`).join(' | ') : ''}
             </p>
         </div>
     {/if}
