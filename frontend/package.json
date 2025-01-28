@@ -12,6 +12,7 @@
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
+		"@melt-ui/pp": "^0.3.2",
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^3.0.0",
@@ -35,6 +36,7 @@
 	"type": "module",
 	"dependencies": {
 		"@atm/shared-types": "file:.yalc/@atm/shared-types",
+		"@melt-ui/svelte": "^0.86.2",
 		"bits-ui": "^0.22.0",
 		"lodash.debounce": "^4.0.8",
 		"mapbox-gl": "^3.5.2",
