@@ -1,69 +1,77 @@
-
 <script lang="ts">
     import { createSlider, melt } from '@melt-ui/svelte';
-    import type { Heatmap } from '@atm/shared-types';
-    
-    export let periods: string[];
-    export let heatmaps: Record<string, Heatmap>;
+
+    export let periods: string[]; // expects periods in the format of "startYear_endYear" eg: ["1500_1700", 1700_1900"]
     export let value = [0];
     export let className = '';
 
+    function createDisplayPeriods(periods: string[]): string[] {
+        // If we have no periods, return empty array
+        if (!periods.length) return [];
+     
+        return periods.map((period) => {
+                const [start, end] = period.split('_');
+                const displayPeriod = `${start} — ${end}`;
+                return displayPeriod;
+        });
+        
+    }
+
+    function getTickTranslateStyle(index: number, total: number): string {
+        if (index === 0) return 'translate-x-0';
+        if (index === total - 1) return '-translate-x-full';
+        return '-translate-x-[50%]';
+    }
+
+    const displayPeriods = createDisplayPeriods(periods);
+
     const {
         elements: { root, range, thumbs, ticks },
-        states: { value: sliderValue }  // Get the value state store
+        states: { value: sliderValue }
     } = createSlider({
         defaultValue: value,
         min: 0,
         step: 1,
-        max: periods.length - 1,
+        max: displayPeriods.length - 1,
     });
 
-    // Two-way binding between parent value and slider state
+
+    // Two-way binding
     $: value = $sliderValue;
     $: if (value !== $sliderValue) {
         sliderValue.set(value);
     }
-
-    function calculatePosition(index: number): number {
-        return (index / (periods.length - 1)) * 100;
-    }
 </script>
 
-
 <div class="w-full px-4 py-2 {className}">
-    <div 
-        use:melt={$root}
-        class="relative flex w-full touch-none select-none items-center h-12"
-    >
-        <!-- Track -->
-        <div class="absolute h-2 w-full rounded-full bg-gray-200">
-            <!-- Range -->
-            <div 
-                use:melt={$range}
-                class="absolute h-full bg-blue-500 rounded-full"
-            />
-        </div>
+    <span {...$root} use:melt={$root} class="relative flex w-full h-12 items-center">
+        <!--
+        <span class="h-2 w-full rounded-full bg-gray-200">
+            <span {...$range} use:melt={$range} class="absolute h-full bg-blue-500 rounded-full" />
+        </span>
+        -->
 
-        <!-- Thumb -->
-        <div 
-            use:melt={$thumbs[0]}
-            class="absolute w-5 h-5 bg-white border-2 border-blue-500 rounded-full cursor-pointer shadow-lg transform -translate-x-1/2 focus:ring-2 focus:ring-blue-500/40"
-        />
-
-        <!-- Ticks and Labels -->
-        {#each $ticks as tick, index}
-            <div 
-                class="absolute -translate-x-1/2"
-                style="left: {calculatePosition(index)}%"
+    <span class="h-2 w-full bg-gray-200"/>
+    {#each $ticks as tick, i}
+        <span 
+            {...tick} 
+            use:melt={tick}
+            class="absolute h-2 w-0.5 bg-gray-600"
+            class:translate-x-0={i === 0}
+            class:translate-x-full={i === $ticks.length - 1}
+        >
+            <span 
+                class="absolute top-4 text-xs text-black whitespace-nowrap {getTickTranslateStyle(i, $ticks.length)}"
             >
-                <div 
-                    use:melt={tick}
-                    class="h-2 w-0.5 bg-gray-300" 
-                />
-                <div class="mt-4 text-xs text-gray-500 whitespace-nowrap">
-                    {periods[index]}
-                </div>
-            </div>
-        {/each}
-    </div>
+                {displayPeriods[i]}
+            </span>
+        </span>
+    {/each}
+
+        <span
+            {...$thumbs[0]}
+            use:melt={$thumbs[0]}
+            class="absolute w-5 h-5 bg-white border-2 border-blue-500 rounded-full cursor-pointer shadow-lg focus:ring-2 focus:ring-blue-500/40"
+        />
+    </span>
 </div>
