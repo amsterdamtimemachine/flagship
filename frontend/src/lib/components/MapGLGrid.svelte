@@ -10,10 +10,8 @@
    export let heatmap: Heatmap;
    export let heatmapBlueprint: HeatmapBlueprintCell[];
    export let dimensions: GridDimensions;
-   
-   const MIN_ZOOM = 1; 
-   const MAX_ZOOM = 16;
-   const DEFAULT_ZOOM = 13;
+  
+
    const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
 
    let map: Map | undefined;
@@ -101,10 +99,11 @@ const updateFeatureStates = debounce((map: Map, heatmap: Heatmap, blueprint: Hea
        map = new maplibre.Map({
            container: mapContainer,
            style: STYLE_URL,
-           bounds: [[west, south], [east, north]],
-           minZoom: MIN_ZOOM,
-           maxZoom: MAX_ZOOM,
-           zoom: DEFAULT_ZOOM,
+           maxBounds: [[west, south], [east, north]], 
+           center: [4.895645, 52.372219], // amsterdam center
+           minZoom: 12,
+           maxZoom: 14,
+           zoom: 13, 
            dragRotate: false,
            touchZoomRotate: false,
            dragPan: true,

@@ -55,9 +55,9 @@
             class="absolute pointer-events-none bg-white rounded-lg shadow-lg p-4 z-50 transition-opacity duration-150"
             style="left: {modalData.position.x + 10}px; top: {modalData.position.y + 10}px"
         >
-            <h3 class="font-bold text-sm">Cell Info</h3>
             <p class="text-sm">
-
+                ID: {modalData.id}
+                <br>
                 {#if modalData.count !== undefined}
                     Count: {modalData.count}
                     <br>
