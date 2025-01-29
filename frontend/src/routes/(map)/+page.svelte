@@ -31,15 +31,13 @@
                 on:cellHover={handleCellHover}
                 on:cellLeave={handleCellLeave}
                 on:cellClick={handleCellClick}
-            />
-
-   
+            /> 
         </MapGLGridContainer>        
         {#if $page.state.selectedCell}
-            {page.state.selectedCell}
-
-            <div class="absolute inset-0 bg-white/90 m-4 rounded-lg shadow-lg overflow-y-auto">
-                <CellPage data={page.state.selectedCell}/>
+            <div class="absolute right-0 width-[50%] h-full">
+                {#key $page.state.selectedCell.cellFeatures.cellId}
+                    <CellPage data={$page.state.selectedCell}/>
+                {/key}
             </div>
         {/if}
         <HeatmapSlider 
