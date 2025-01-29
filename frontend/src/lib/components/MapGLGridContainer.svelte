@@ -1,9 +1,7 @@
 <script lang="ts">
-    import { preloadData, pushState } from '$app/navigation';  
     import { mergeCss } from '$utils/utils';
     let className: string | undefined = undefined;
     export { className as class }
-    const baseUrl = 'cells'
 
     interface ModalData {
         id: string;
@@ -12,13 +10,16 @@
         value?: number;
         count?: number;
     }
-
     let showModal = false;
     let modalData: ModalData = {
         id: '',
         coordinates: [],
         position: { x: 0, y: 0 }
     };
+
+    function handleCellClick(event: CustomEvent) {
+        dispatch('cellClick', event.detail);
+    }
 
     function handleCellHover(event: CustomEvent) {
         const { id, coordinates, mouseX, mouseY, value, count } = event.detail;
@@ -34,26 +35,6 @@
 
     function handleCellLeave() {
         showModal = false;
-    }
-
-    async function handleCellClick(event: CustomEvent) {
-        const { id, period } = event.detail;
-        const cellRoute =`/cells/${period}/${id}`; 
-        
-        const result = await preloadData(cellRoute);
-
-        if (result.type === 'loaded' && result.status === 200) {
-            pushState(`/cells/${period}/${id}`, {
-                selectedCell: result.data 
-            });
-        }
-    
-       // pushState(`/cells/${period}/${id}`, {
-       //     selectedCell: { 
-       //         cellId: id,
-       //         period 
-       //     }
-       // });
     }
 </script>
 

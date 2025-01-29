@@ -1,18 +1,28 @@
-<!-- MapGLGrid.svelte -->
 <script lang="ts">
    import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
    import { onMount, onDestroy, createEventDispatcher } from 'svelte';
    import maplibre, { type Map } from 'maplibre-gl';
    import type { Heatmap, HeatmapCell, HeatmapBlueprintCell, GridDimensions } from '@atm/shared-types';
    import debounce from 'lodash.debounce';
+   import { mergeCss } from '$utils/utils';
    import 'maplibre-gl/dist/maplibre-gl.css';
+    
+   // WIP: this should be env import
+   const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
 
    export let heatmap: Heatmap;
    export let heatmapBlueprint: HeatmapBlueprintCell[];
    export let dimensions: GridDimensions;
-  
+   export let className: string | undefined = undefined;
 
-   const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
+   let showModal = false;
+   let modalData = {
+       id: '',
+       coordinates: [] as number[][],
+       position: { x: 0, y: 0 },
+       value: undefined as number | undefined,
+       count: undefined as number | undefined
+   };
 
    let map: Map | undefined;
    let mapContainer: HTMLElement;
@@ -61,7 +71,6 @@
        };
    }
 
-// Debounced function to update feature states - simplified now
 const updateFeatureStates = debounce((map: Map, heatmap: Heatmap, blueprint: HeatmapBlueprintCell[]) => {
     // Create a map of current cell values for quick lookup
     const currentValues = new Map(
@@ -79,7 +88,7 @@ const updateFeatureStates = debounce((map: Map, heatmap: Heatmap, blueprint: Hea
         map.setFeatureState(
             { source: 'grid', id: cell.cellId },
             { 
-                value: cellData.density,  // Use pre-computed density
+                value: cellData.density, 
                 count: cellData.count
             }
         );
@@ -134,30 +143,30 @@ const updateFeatureStates = debounce((map: Map, heatmap: Heatmap, blueprint: Hea
            updateFeatureStates(map, heatmap, heatmapBlueprint);
 
            // Event handlers
-           map.on('mousemove', 'heatmap-squares', (e) => {
-                   if (e.features?.[0]) {
-                   const feature = e.features[0];
-                   const featureState = map.getFeatureState({ source: 'grid', id: feature.properties.id });
+       map.on('mousemove', 'heatmap-squares', (e) => {
+           if (e.features?.[0]) {
+               const feature = e.features[0];
+               const featureState = map.getFeatureState({ source: 'grid', id: feature.properties.id });
 
-                   // Only dispatch if the cell has a value
-                   if (featureState.count > 0) {
-                   dispatch('cellHover', {
-                        id: feature.properties.id,
-                        coordinates: feature.geometry.coordinates,
-                        mouseX: e.point.x,
-                        mouseY: e.point.y,
-                        value: featureState.value || 0,  // This is now using the pre-computed density
-                        count: featureState.count || 0
-                        });
+               if (featureState.count > 0) {
+                   showModal = true;
+                   modalData = {
+                       id: feature.properties.id,
+                       coordinates: feature.geometry.coordinates,
+                       position: { x: e.point.x, y: e.point.y },
+                       value: featureState.value || 0,
+                       count: featureState.count || 0
+                   };
                    map.getCanvas().style.cursor = 'pointer';
-                   } else {
+               } else {
+                   showModal = false;
                    map.getCanvas().style.cursor = '';
-                   }
-                   }
-                   });
+               }
+           }
+       });
 
            map.on('mouseleave', 'heatmap-squares', () => {
-               dispatch('cellLeave');
+               showModal = false;
                map.getCanvas().style.cursor = '';
            });
 
@@ -191,6 +200,28 @@ const updateFeatureStates = debounce((map: Map, heatmap: Heatmap, blueprint: Hea
    });
 </script>
 
-<div bind:this={mapContainer} class="h-full w-full" />
+<div class={mergeCss('h-full w-full', className)}>
+    <div bind:this={mapContainer} class="h-full w-full" />
+    
+    {#if showModal}
+        <div
+            class="absolute pointer-events-none bg-white rounded-lg shadow-lg p-4 z-50 transition-opacity duration-150"
+            style="left: {modalData.position.x + 10}px; top: {modalData.position.y + 10}px"
+        >
+            <p class="text-sm">
+                ID: {modalData.id}
+                <br>
+                {#if modalData.count !== undefined}
+                    Count: {modalData.count}
+                    <br>
+                {/if}
+                {#if modalData.value !== undefined}
+                    Intensity: {(modalData.value * 100).toFixed(1)}%
+                    <br>
+                {/if}
+            </p>
+        </div>
+    {/if}
+</div>
 
 
