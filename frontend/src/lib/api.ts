@@ -23,31 +23,26 @@ export async function fetchApi<T>(endpoint: string, fetchFn: FetchFunction = fet
 	}
 }
 
+export async function postApi<T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> {
+	const defaultOptions: RequestInit = {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: data ? JSON.stringify(data) : undefined
+	};
 
-export async function postApi<T>(
-  endpoint: string,
-  data?: any,
-  options?: RequestInit
-): Promise<T> {
-  const defaultOptions: RequestInit = {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: data ? JSON.stringify(data) : undefined,
-  };
+	const mergedOptions = { ...defaultOptions, ...options };
 
-  const mergedOptions = { ...defaultOptions, ...options };
+	try {
+		const response = await fetch(endpoint, mergedOptions);
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
 
-  try {
-    const response = await fetch(endpoint, mergedOptions);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json() as T;
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-    throw new Error(`API Error: ${errorMessage}`);
-  }
+		return (await response.json()) as T;
+	} catch (err) {
+		const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+		throw new Error(`API Error: ${errorMessage}`);
+	}
 }
