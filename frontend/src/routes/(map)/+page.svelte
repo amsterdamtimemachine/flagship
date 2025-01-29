@@ -16,6 +16,31 @@
     $: currentIndex = [0];
     $: currentHeatmap = heatmaps?.[periods[currentIndex[0]]];
 
+
+    let loadingNewPeriod = false;
+    $: updateCellDataForPeriod(currentIndex[0]);
+
+    async function updateCellDataForPeriod(index: number) {
+        if (!$page.state.selectedCell) return;
+        
+        loadingNewPeriod = true;
+        try {
+            const currentPeriod = periods[index];
+            const cellId = $page.state.selectedCell.cellFeatures.cellId;
+            
+            const cellRoute = `/cells/${currentPeriod}/${cellId}`;
+            const result = await preloadData(cellRoute);
+            
+            if (result.type === 'loaded' && result.status === 200) {
+                pushState(cellRoute, {
+                    selectedCell: result.data
+                });
+            }
+        } finally {
+            loadingNewPeriod = false;
+        }
+    }
+
     async function handleCellClick(event: CustomEvent) {
         const { id, period } = event.detail;
         const cellRoute = `/cells/${period}/${id}`;
@@ -38,13 +63,17 @@
             {dimensions}
             on:cellClick={handleCellClick}
         />   
-        {#if $page.state.selectedCell}
-            <div class="absolute right-0 width-[50%] h-full">
-                {#key $page.state.selectedCell.cellFeatures.cellId}
+    {#if $page.state.selectedCell}
+        <div class="absolute right-0 width-[50%] h-full">
+            {#if loadingNewPeriod}
+                <div>Loading new period data...</div>
+            {:else}
+                {#key $page.state.selectedCell.cellFeatures.cellId + periods[currentIndex[0]]}
                     <CellPage data={$page.state.selectedCell}/>
                 {/key}
-            </div>
-        {/if}
+            {/if}
+        </div>
+    {/if}
         <HeatmapSlider 
             periods={periods} 
             heatmaps={heatmaps} 
