@@ -61,6 +61,7 @@
             heatmap={currentHeatmap}
             {heatmapBlueprint}
             {dimensions}
+            selectedCellId={$page.state.selectedCell?.cellFeatures.cellId}
             on:cellClick={handleCellClick}
         />   
     {#if $page.state.selectedCell}

@@ -14,6 +14,7 @@
    export let heatmapBlueprint: HeatmapBlueprintCell[];
    export let dimensions: GridDimensions;
    export let className: string | undefined = undefined;
+   export let selectedCellId: string | null = null;
 
    let showModal = false;
    let modalData = {
@@ -29,15 +30,6 @@
    let isMapLoaded = false;
 
    const dispatch = createEventDispatcher<{
-       cellHover: {
-           id: string;
-           coordinates: number[][];
-           mouseX: number;
-           mouseY: number;
-           value: number;
-           count: number;
-       };
-       cellLeave: void;
        cellClick: {
            id: string;
            period:string;
@@ -71,34 +63,57 @@
        };
    }
 
-const updateFeatureStates = debounce((map: Map, heatmap: Heatmap, blueprint: HeatmapBlueprintCell[]) => {
-    // Create a map of current cell values for quick lookup
-    const currentValues = new Map(
-        heatmap.cells.map(cell => [cell.cellId, {
-            count: cell.featureCount,
-            density: cell.countDensity
-        }])
-    );
-    
-    // Update ALL blueprint cells, whether they have current values or not
-    blueprint.forEach(cell => {
-        const cellData = currentValues.get(cell.cellId) ?? { count: 0, density: 0 };
-        
-        // Always set the state, even for cells with no values
-        map.setFeatureState(
-            { source: 'grid', id: cell.cellId },
-            { 
-                value: cellData.density, 
-                count: cellData.count
-            }
+    const updateFeatureStates = debounce((map: Map, heatmap: Heatmap, blueprint: HeatmapBlueprintCell[]) => {
+        // Create a map of current cell values for quick lookup
+        const currentValues = new Map(
+            heatmap.cells.map(cell => [cell.cellId, {
+                count: cell.featureCount,
+                density: cell.countDensity
+            }])
         );
-    });
-}, 16);
+        
+        // Update ALL blueprint cells, whether they have current values or not
+        blueprint.forEach(cell => {
+            const cellData = currentValues.get(cell.cellId) ?? { count: 0, density: 0 };
+            
+            // Always set the state, even for cells with no values
+            map.setFeatureState(
+                { source: 'grid', id: cell.cellId },
+                { 
+                    value: cellData.density, 
+                    count: cellData.count
+                }
+            );
+        });
+    }, 16);
+
+    function updateSelectedCell(cellId: string | null) {
+        if (!isMapLoaded || !map) return;
+
+        // Clear previous highlight
+        heatmapBlueprint.forEach(cell => {
+            map.setFeatureState(
+                { source: 'grid', id: cell.cellId },
+                { selected: false }
+            );
+        });
+        
+        // Set new highlight
+        if (cellId) {
+            map.setFeatureState(
+                { source: 'grid', id: cellId },
+                { selected: true }
+            );
+        }
+    }
 
    // Update feature states when heatmap changes
    $: if (isMapLoaded && map && heatmap) {
        updateFeatureStates(map, heatmap, heatmapBlueprint);
    }
+
+    // Reactive statement calls the function
+    $: updateSelectedCell(selectedCellId);
 
    onMount(() => {
        if (!mapContainer) return;
@@ -138,6 +153,22 @@ const updateFeatureStates = debounce((map: Map, heatmap: Heatmap, blueprint: Hea
                    'fill-opacity': ['coalesce', ['feature-state', 'value'], 0]
                }
            });
+
+           map.addLayer({
+                id: 'selected-cell',
+                type: 'line',
+                source: 'grid',
+                paint: {
+                    'line-color': '#ff0000',
+                    'line-width': 2,
+                    'line-opacity': [
+                        'case',
+                        ['boolean', ['feature-state', 'selected'], false],
+                        1,
+                        0
+                    ]
+                }
+            });
 
            // Initial feature state setup
            updateFeatureStates(map, heatmap, heatmapBlueprint);
