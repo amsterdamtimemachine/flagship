@@ -1,14 +1,13 @@
 <script lang="ts">
-    import {goto} from '$app/navigation';
-    import {mergeCss} from '$utils/utils';
-    let className : string | undefined = undefined;
-    export {className as class}
-
-    const baseUrl = 'cells' 
+    import { preloadData, pushState } from '$app/navigation';  
+    import { mergeCss } from '$utils/utils';
+    let className: string | undefined = undefined;
+    export { className as class }
+    const baseUrl = 'cells'
 
     interface ModalData {
         id: string;
-        coordinates: number[][];  // Array of [longitude, latitude] pairs
+        coordinates: number[][];
         position: { x: number; y: number };
         value?: number;
         count?: number;
@@ -37,9 +36,24 @@
         showModal = false;
     }
 
-    function handleCellClick(event: CustomEvent) {
+    async function handleCellClick(event: CustomEvent) {
         const { id, period } = event.detail;
-        goto(`${baseUrl}/${period}/${id}`);
+        const cellRoute =`/cells/${period}/${id}`; 
+        
+        const result = await preloadData(cellRoute);
+
+        if (result.type === 'loaded' && result.status === 200) {
+            pushState(`/cells/${period}/${id}`, {
+                selectedCell: result.data 
+            });
+        }
+    
+       // pushState(`/cells/${period}/${id}`, {
+       //     selectedCell: { 
+       //         cellId: id,
+       //         period 
+       //     }
+       // });
     }
 </script>
 
