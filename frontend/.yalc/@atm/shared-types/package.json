@@ -1,12 +1,12 @@
 {
-	"name": "@atm/shared-types",
-	"version": "1.0.0",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
-	"scripts": {
-		"build": "tsc",
-		"dev": "tsc -w",
-		"dev-w-yalc": "tsc-watch --onSuccess 'npx yalc push --publish'"
-	},
-	"yalcSig": "4f81ed4c3051339eff3ea154d68f6a5e"
+  "name": "@atm/shared-types",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "dev-w-yalc": "tsc-watch --onSuccess 'npx yalc push --publish'"
+  },
+  "yalcSig": "4f81ed4c3051339eff3ea154d68f6a5e"
 }

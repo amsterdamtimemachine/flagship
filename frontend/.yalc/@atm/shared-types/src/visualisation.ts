@@ -1,56 +1,59 @@
 export interface GridConfig {
-	colsAmount: number;
-	rowsAmount: number;
-	padding: number;
+    colsAmount: number;
+    rowsAmount: number;
+    padding: number; 
 }
 
+
 export interface GridDimensions {
-	colsAmount: number;
-	rowsAmount: number;
-	cellWidth: number;
-	cellHeight: number;
-	minLon: number;
-	maxLon: number;
-	minLat: number;
-	maxLat: number;
+    colsAmount: number;
+    rowsAmount: number;
+    cellWidth: number;
+    cellHeight: number;
+    minLon: number;
+    maxLon: number;
+    minLat: number;
+    maxLat: number;
 }
 
 export interface GridCellBounds {
-	minLon: number;
-	maxLon: number;
-	minLat: number;
-	maxLat: number;
+    minLon: number;
+    maxLon: number;
+    minLat: number;
+    maxLat: number;
 }
 
 export interface GridCellCount {
-	cellId: string;
-	count: number;
-	bounds: GridCellBounds;
+    cellId: string;
+    count: number;
+    bounds: GridCellBounds;
 }
 
 export interface Grid {
-	cellCounts: Map<string, number>;
-	entityGridIndices: Map<string, string>;
-	dimensions: GridDimensions;
+    cellCounts: Map<string, number>;
+    entityGridIndices: Map<string, string>;
+    dimensions: GridDimensions;
 }
 
 export interface HeatmapCell {
-	cellId: string;
-	row: number;
-	col: number;
-	featureCount: number;
-	countDensity: number;
-	bounds: {
-		minLon: number;
-		maxLon: number;
-		minLat: number;
-		maxLat: number;
-	};
+    cellId: string;
+    row: number;
+    col: number;
+    featureCount: number;
+    countDensity: number;  
+    bounds: {
+        minLon: number;
+        maxLon: number;
+        minLat: number;
+        maxLat: number;
+    };
 }
+
 
 export interface HeatmapBlueprintCell extends Omit<HeatmapCell, 'featureCount' | 'countDensity'> {}
 
 export interface Heatmap {
-	period: string;
-	cells: HeatmapCell[];
+    period: string,
+    cells: HeatmapCell[];
 }
+
