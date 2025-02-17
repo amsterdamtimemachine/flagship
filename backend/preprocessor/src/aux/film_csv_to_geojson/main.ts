@@ -5,8 +5,11 @@ async function main() {
     const config: ColumnMapping = {
         title: "title",
         coordinates: "geodata",
-        content: "info",
+        info: "info",
         start_date: "programme_date",
+        street_name: "street_name",
+        city_name: "city_name",
+        venue_type: "venue_type",
         //source: , 
        // aiTags: {
        //     venueType: "venue_type",

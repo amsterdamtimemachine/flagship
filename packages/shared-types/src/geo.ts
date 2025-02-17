@@ -12,47 +12,29 @@ type FeatureClass =
   | 'PersonPublicRecord'
   | 'AudioRecording';
 
-type ClassTypeMap = {
-  'Photograph': 'image';
-  'Painting': 'image';
-  'FilmScreening': 'text';
-  'PersonPublicRecord': 'text';
-  'AudioRecording': 'audio';
-};
-
 type AITags = Record<string, string | number | boolean>;
 
-// Properties definitions
 interface BaseProperties {
-  url: string;
-  title: string;
-  start_date: string;
-  end_date: string;
-  dataType: DataType;
-  featureClass: FeatureClass;
-  aiTags?: AITags;
+    data_type: DataType;
+    title: string;
+    feature_class: FeatureClass;
+    start_date: string;
+    end_date?: string;
+    source?: string;
+    aiTags?: AITags;
 }
 
-interface ImageProperties extends BaseProperties {
-  dataType: 'image';
-  featureClass: Extract<FeatureClass, keyof ClassTypeMap>;
-  thumb: string;
+// Specific feature class interfaces
+interface FilmScreeningProperties extends BaseProperties {
+    data_type: 'text';
+    feature_class: 'FilmScreening';
+    street_name: string;
+    city_name: string;
+    info: string;
+    venue_type: string;
 }
 
-interface TextProperties extends BaseProperties {
-  dataType: 'text';
-  featureClass: Extract<FeatureClass, keyof ClassTypeMap>;
-  content: string;
-}
-
-interface AudioProperties extends BaseProperties {
-  dataType: 'audio';
-  featureClass: Extract<FeatureClass, keyof ClassTypeMap>;
-  audioUrl: string;
-  duration: number;
-}
-
-type FeatureProperties = ImageProperties | TextProperties | AudioProperties;
+type FeatureProperties = FilmScreeningProperties;
 
 interface BaseFeature {
   type: "Feature";

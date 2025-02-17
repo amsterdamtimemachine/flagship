@@ -1,11 +1,15 @@
-import type { GeoFeature } from '@atm/shared-types';
+import type { GeoFeature, FilmScreeningProperties } from '@atm/shared-types';
 import { parseCSV } from './csvParser';
 
 interface FilmScreeningMapping {
     title: string;
     coordinates: string;
-    content: string;
+    info: string;
+    street_name: string;
+    city_name: string;
+    venue_type: string;
     start_date: string;
+    end_date?: string;
     source?: string;
     aiTags?: Record<string, string>;
 }
@@ -39,20 +43,26 @@ function transformRow(
                 }
             }
         }
+        const properties: FilmScreeningProperties = {
+            data_type: "text",
+            feature_class: "FilmScreening",
+            title: String(row[config.title]),
+            start_date: String(row[config.start_date]),
+            end_date: config.end_date ? String(row[config.end_date]) : undefined,
+            source: config.source ? String(row[config.source]) : undefined,
+            street_name: String(row[config.street_name]),
+            city_name: String(row[config.city_name]),
+            info: String(row[config.info]),
+            venue_type: String(row[config.venue_type]),
+            aiTags: Object.keys(aiTags).length > 0 ? aiTags : undefined
+        };
 
         return {
             type: "Feature",
-            properties: {
-                data_type: "text",
-                feature_class: "FilmScreening",
-                title: String(row[config.title]),
-                start_date: String(row[config.start_date]),     content: String(row[config.content]),
-                source: config.source ? String(row[config.source]) : undefined,
-                aiTags: Object.keys(aiTags).length > 0 ? aiTags : undefined
-            },
+            properties,
             geometry: {
                 type: "Point",
-                coordinates: parseCoordinates(row[config.coordinates]),
+                coordinates: parseCoordinates(String(row[config.coordinates])),
             }
         };
     } catch (error) {
@@ -85,4 +95,3 @@ export async function processCSV(
 
     return result;
 }
-
