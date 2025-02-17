@@ -1,21 +1,29 @@
-import type { DataType, FeatureClass, GeoFeature, TextProperties } from '@atm/shared-types';
+import type { GeoFeature } from '@atm/shared-types';
 import { parseCSV } from './csvParser';
 
-interface ColumnMapping {
+interface FilmScreeningMapping {
     title: string;
-    url: string;
-    start_date: string;
-    end_date: string;
-    latitude: string;
-    longitude: string;
+    coordinates: string;
     content: string;
+    start_date: string;
+    source?: string;
     aiTags?: Record<string, string>;
 }
+
+export type ColumnMapping = FilmScreeningMapping;
 
 interface ProcessingResult {
     features: GeoFeature[];
     skippedRows: number;
     processedRows: number;
+}
+
+function parseCoordinates(coords: string): [number, number] {
+    const [lat, lon] = coords.split(',').map(Number);
+    if (isNaN(lat) || isNaN(lon)) {
+        throw new Error('Invalid coordinates format');
+    }
+    return [lat, lon];
 }
 
 function transformRow(
@@ -35,21 +43,16 @@ function transformRow(
         return {
             type: "Feature",
             properties: {
-                dataType: "text",
-                featureClass: "FilmScreening",
-                url: String(row[config.url]),
+                data_type: "text",
+                feature_class: "FilmScreening",
                 title: String(row[config.title]),
-                start_date: String(row[config.start_date]),
-                end_date: String(row[config.end_date]),
-                content: String(row[config.content]),
+                start_date: String(row[config.start_date]),     content: String(row[config.content]),
+                source: config.source ? String(row[config.source]) : undefined,
                 aiTags: Object.keys(aiTags).length > 0 ? aiTags : undefined
             },
             geometry: {
                 type: "Point",
-                coordinates: [
-                    Number(row[config.longitude]),
-                    Number(row[config.latitude])
-                ]
+                coordinates: parseCoordinates(row[config.coordinates]),
             }
         };
     } catch (error) {
@@ -57,7 +60,7 @@ function transformRow(
     }
 }
 
-async function processCSV(
+export async function processCSV(
     filePath: string,
     config: ColumnMapping
 ): Promise<ProcessingResult> {
@@ -83,38 +86,3 @@ async function processCSV(
     return result;
 }
 
-// Usage example
-async function main() {
-    const config: ColumnMapping = {
-        title: "event_name",
-        url: "source_url",
-        start_date: "date_start",
-        end_date: "date_end",
-        latitude: "venue_latitude",
-        longitude: "venue_longitude",
-        content: "description",
-        aiTags: {
-            venueType: "venue_type",
-            attendance: "audience_size",
-            price: "ticket_price"
-        }
-    };
-
-    try {
-        const result = await processCSV('input.csv', config);
-        console.log(`Processed ${result.processedRows} rows`);
-        console.log(`Skipped ${result.skippedRows} rows`);
-
-        if (result.features.length > 0) {
-            await Bun.write('output.geojson', JSON.stringify({
-                type: 'FeatureCollection',
-                features: result.features
-            }, null, 2));
-            console.log('Output written to output.geojson');
-        }
-    } catch (error) {
-        console.error('Processing failed:', error);
-    }
-}
-
-main().catch(console.error);
