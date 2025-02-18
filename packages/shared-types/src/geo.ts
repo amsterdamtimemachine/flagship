@@ -1,15 +1,19 @@
 type ContentType = 'image' | 'text' | 'audio' | 'video';
-type ContentClass = 'Photograph' |'FilmScreening';
+type ContentClass = 'Photograph' |'Event';
 
-interface BaseProperties {
+export interface BaseProperties {
     title: string;
     start_date: string;
     end_date?: string;
     source?: string;
-    aiTags?: Record<string, string | number | boolean>;
+    ai? : {
+      env?: string;
+      tags?: string[];
+      attributes?: string[];
+    }
 }
 
-interface FilmScreeningProperties extends BaseProperties {
+interface EventProperties extends BaseProperties {
     street_name: string;
     city_name: string;
     info: string;
@@ -58,10 +62,10 @@ export type GeoFeature<C extends ContentClass> = {
     type: "Feature";
     geometry: Geometry;
 } & (
-    C extends 'FilmScreening' ? {
+    C extends 'Event' ? {
         content_type: Extract<ContentType, 'text'>;  
-        content_class: 'FilmScreening';
-        properties: FilmScreeningProperties;
+        content_class: 'Event';
+        properties: EventProperties;
     } :
     C extends 'Photograph' ? {
         content_type: Extract<ContentType, 'image'>; 

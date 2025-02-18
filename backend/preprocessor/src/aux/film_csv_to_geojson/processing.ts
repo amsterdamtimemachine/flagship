@@ -1,4 +1,4 @@
-import type { GeoFeature } from '@atm/shared-types';
+import type { GeoFeature, BaseProperties } from '@atm/shared-types';
 import { parseCSV } from './csvParser';
 
 interface FilmScreeningMapping {
@@ -11,13 +11,15 @@ interface FilmScreeningMapping {
     start_date: string;
     end_date?: string;
     source?: string;
-    aiTags?: Record<string, string>;
+    ai_env?: string;
+    ai_tags?: string;      
+    ai_attributes?: string;
 }
 
 export type ColumnMapping = FilmScreeningMapping;
 
 interface ProcessingResult {
-    features: GeoFeature[];
+    features: GeoFeature<'Event'>;
     skippedRows: number;
     processedRows: number;
 }
@@ -33,21 +35,33 @@ function parseCoordinates(coords: string): [number, number] {
 function transformRow(
     row: Record<string, unknown>,
     config: ColumnMapping
-): GeoFeature<'FilmScreening'> | null {
+): GeoFeature<'Event'> | null {
     try {
-        const aiTags: Record<string, unknown> = {};
-        if (config.aiTags) {
-            for (const [tagName, columnName] of Object.entries(config.aiTags)) {
-                if (columnName in row) {
-                    aiTags[tagName] = row[columnName];
-                }
-            }
+        // Process AI fields
+        const ai: BaseProperties['ai'] = {};
+        
+        if (config.ai_env && row[config.ai_env]) {
+            ai.env = String(row[config.ai_env]);
+        }
+        
+        if (config.ai_tags && row[config.ai_tags]) {
+            ai.tags = String(row[config.ai_tags])
+                .split(',')
+                .map(tag => tag.trim())
+                .filter(Boolean);
+        }
+        
+        if (config.ai_attributes && row[config.ai_attributes]) {
+            ai.attributes = String(row[config.ai_attributes])
+                .split(',')
+                .map(attr => attr.trim())
+                .filter(Boolean);
         }
 
         return {
             type: "Feature",
             content_type: 'text',
-            content_class: 'FilmScreening',
+            content_class: 'Event',
             properties: {
                 title: String(row[config.title]),
                 start_date: String(row[config.start_date]),
@@ -57,7 +71,7 @@ function transformRow(
                 city_name: String(row[config.city_name]),
                 info: String(row[config.info]),
                 venue_type: String(row[config.venue_type]),
-                aiTags: Object.keys(aiTags).length > 0 ? aiTags : undefined
+                ai: Object.keys(ai).length > 0 ? ai : undefined
             },
             geometry: {
                 type: "Point",
@@ -68,7 +82,6 @@ function transformRow(
         return null;
     }
 }
-
 export async function processCSV(
     filePath: string,
     config: ColumnMapping
