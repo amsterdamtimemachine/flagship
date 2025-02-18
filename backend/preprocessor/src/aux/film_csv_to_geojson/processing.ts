@@ -1,4 +1,4 @@
-import type { GeoFeature, FilmScreeningProperties } from '@atm/shared-types';
+import type { GeoFeature } from '@atm/shared-types';
 import { parseCSV } from './csvParser';
 
 interface FilmScreeningMapping {
@@ -33,7 +33,7 @@ function parseCoordinates(coords: string): [number, number] {
 function transformRow(
     row: Record<string, unknown>,
     config: ColumnMapping
-): GeoFeature | null {
+): GeoFeature<'FilmScreening'> | null {
     try {
         const aiTags: Record<string, unknown> = {};
         if (config.aiTags) {
@@ -43,23 +43,22 @@ function transformRow(
                 }
             }
         }
-        const properties: FilmScreeningProperties = {
-            data_type: "text",
-            feature_class: "FilmScreening",
-            title: String(row[config.title]),
-            start_date: String(row[config.start_date]),
-            end_date: config.end_date ? String(row[config.end_date]) : undefined,
-            source: config.source ? String(row[config.source]) : undefined,
-            street_name: String(row[config.street_name]),
-            city_name: String(row[config.city_name]),
-            info: String(row[config.info]),
-            venue_type: String(row[config.venue_type]),
-            aiTags: Object.keys(aiTags).length > 0 ? aiTags : undefined
-        };
 
         return {
             type: "Feature",
-            properties,
+            content_type: 'text',
+            content_class: 'FilmScreening',
+            properties: {
+                title: String(row[config.title]),
+                start_date: String(row[config.start_date]),
+                end_date: config.end_date ? String(row[config.end_date]) : undefined,
+                source: config.source ? String(row[config.source]) : undefined,
+                street_name: String(row[config.street_name]),
+                city_name: String(row[config.city_name]),
+                info: String(row[config.info]),
+                venue_type: String(row[config.venue_type]),
+                aiTags: Object.keys(aiTags).length > 0 ? aiTags : undefined
+            },
             geometry: {
                 type: "Point",
                 coordinates: parseCoordinates(String(row[config.coordinates])),
@@ -76,7 +75,6 @@ export async function processCSV(
 ): Promise<ProcessingResult> {
     const csvContent = await Bun.file(filePath).text();
     const { data, headers } = parseCSV(csvContent);
-
     const result: ProcessingResult = {
         features: [],
         processedRows: 0,

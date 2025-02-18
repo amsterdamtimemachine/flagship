@@ -1,75 +1,74 @@
-export interface Point2D {
-    x: number;
-    y: number;
-}
-
-type DataType = 'image' | 'text' | 'audio' | 'video';
-
-type FeatureClass = 
-  | 'Photograph' 
-  | 'Painting' 
-  | 'FilmScreening'
-  | 'PersonPublicRecord'
-  | 'AudioRecording';
-
-type AITags = Record<string, string | number | boolean>;
+type ContentType = 'image' | 'text' | 'audio' | 'video';
+type ContentClass = 'Photograph' |'FilmScreening';
 
 interface BaseProperties {
-    data_type: DataType;
     title: string;
-    feature_class: FeatureClass;
     start_date: string;
     end_date?: string;
     source?: string;
-    aiTags?: AITags;
+    aiTags?: Record<string, string | number | boolean>;
 }
 
-// Specific feature class interfaces
 interface FilmScreeningProperties extends BaseProperties {
-    data_type: 'text';
-    feature_class: 'FilmScreening';
     street_name: string;
     city_name: string;
     info: string;
     venue_type: string;
 }
 
-type FeatureProperties = FilmScreeningProperties;
-
-interface BaseFeature {
-  type: "Feature";
-  properties: FeatureProperties;
+interface PhotographProperties extends BaseProperties {
+    image_url: string;
+    photographer?: string;
+    camera_type?: string;
 }
 
-export interface PointFeature extends BaseFeature {
-  geometry: {
+type Coordinates = [number, number];
+
+interface Point2D {
+    x: number;
+    y: number;
+}
+
+interface PointGeometry {
     type: "Point";
-    coordinates: [number, number];
-  };
+    coordinates: Coordinates;
 }
 
-export interface MultiLineStringFeature extends BaseFeature {
-  geometry: {
+interface MultiLineStringGeometry {
     type: "MultiLineString";
-    coordinates: [number, number][][];
+    coordinates: Coordinates[][];
     centroid: Point2D;
-  };
 }
 
-export interface LineStringFeature extends BaseFeature {
-  geometry: {
+interface LineStringGeometry {
     type: "LineString";
-    coordinates: [number, number][];
+    coordinates: Coordinates[];
     centroid: Point2D;
-  };
 }
 
-export interface PolygonFeature extends BaseFeature {
-  geometry: {
+interface PolygonGeometry {
     type: "Polygon";
-    coordinates: [number, number, number][][];
+    coordinates: Coordinates[];
     centroid: Point2D;
-  };
 }
 
-export type GeoFeature = PointFeature | MultiLineStringFeature | LineStringFeature | PolygonFeature;
+type Geometry = PointGeometry | MultiLineStringGeometry | LineStringGeometry | PolygonGeometry;
+
+export type GeoFeature<C extends ContentClass> = {
+    type: "Feature";
+    geometry: Geometry;
+} & (
+    C extends 'FilmScreening' ? {
+        content_type: Extract<ContentType, 'text'>;  
+        content_class: 'FilmScreening';
+        properties: FilmScreeningProperties;
+    } :
+    C extends 'Photograph' ? {
+        content_type: Extract<ContentType, 'image'>; 
+        content_class: 'Photograph';
+        properties: PhotographProperties;
+    } : 
+    never
+);
+
+export type GeoFeatures = GeoFeature<ContentClass>;
