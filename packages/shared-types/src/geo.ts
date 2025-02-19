@@ -1,5 +1,5 @@
 type ContentType = 'image' | 'text' | 'audio' | 'video';
-type ContentClass = 'Photograph' |'Event';
+export type ContentClass = 'Image' |'Event';
 
 export interface BaseProperties {
     title: string;
@@ -7,7 +7,7 @@ export interface BaseProperties {
     end_date?: string;
     source?: string;
     ai? : {
-      env?: string;
+      environment?: string;
       tags?: string[];
       attributes?: string[];
     }
@@ -20,43 +20,42 @@ interface EventProperties extends BaseProperties {
     venue_type: string;
 }
 
-interface PhotographProperties extends BaseProperties {
-    image_url: string;
-    photographer?: string;
-    camera_type?: string;
+interface ImageProperties extends BaseProperties {
+    url: string;
+    thumb: string;
 }
 
 type Coordinates = [number, number];
 
-interface Point2D {
+export interface Point2D {
     x: number;
     y: number;
 }
 
-interface PointGeometry {
+export interface PointGeometry {
     type: "Point";
     coordinates: Coordinates;
 }
 
-interface MultiLineStringGeometry {
+export interface MultiLineStringGeometry {
     type: "MultiLineString";
     coordinates: Coordinates[][];
     centroid: Point2D;
 }
 
-interface LineStringGeometry {
+export interface LineStringGeometry {
     type: "LineString";
     coordinates: Coordinates[];
     centroid: Point2D;
 }
 
-interface PolygonGeometry {
+export interface PolygonGeometry {
     type: "Polygon";
     coordinates: Coordinates[];
     centroid: Point2D;
 }
 
-type Geometry = PointGeometry | MultiLineStringGeometry | LineStringGeometry | PolygonGeometry;
+export type Geometry = PointGeometry | MultiLineStringGeometry | LineStringGeometry | PolygonGeometry;
 
 export type GeoFeature<C extends ContentClass> = {
     type: "Feature";
@@ -67,10 +66,10 @@ export type GeoFeature<C extends ContentClass> = {
         content_class: 'Event';
         properties: EventProperties;
     } :
-    C extends 'Photograph' ? {
+    C extends 'Image' ? {
         content_type: Extract<ContentType, 'image'>; 
-        content_class: 'Photograph';
-        properties: PhotographProperties;
+        content_class: 'Image';
+        properties: ImageProperties;
     } : 
     never
 );

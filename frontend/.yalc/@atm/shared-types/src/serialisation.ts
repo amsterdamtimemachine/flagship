@@ -1,4 +1,4 @@
-import { GeoFeature } from "./geo";
+import { GeoFeatures } from "./geo";
 import type { GridDimensions, Heatmap, HeatmapBlueprintCell } from "./visualisation";
 
 export interface BinaryMetadata {
@@ -36,7 +36,7 @@ export interface TimeSliceFeatures {
         [cellId: string]: {
             count: number;
             pages: {
-                [pageNum: string]: GeoFeature[]
+                [pageNum: string]: GeoFeatures[]
             }
         }
     }
@@ -57,7 +57,7 @@ export interface CellFeaturesResponse {
     totalPages: number;    
     featureCount: number;
     period: string;
-    features: GeoFeature[];
+    features: GeoFeatures[];
 
 }
 

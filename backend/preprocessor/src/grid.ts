@@ -19,6 +19,7 @@ import type {
    LineStringFeature,
    PolygonFeature,
    GeoFeature,
+   GeoFeatures,
    GridConfig,
    GridDimensions,
    GridCellBounds,
@@ -63,7 +64,7 @@ async function calculateGridDimensions(
         await new Promise((resolve, reject) => {
             jsonReadStream
                 .pipe(jsonParser)
-                .on('data', (feature: GeoFeature) => {
+                .on('data', (feature: GeoFeatures) => {
                     let point: Point2D | undefined;
                     
                     if (feature.geometry.type === "Point") {
@@ -109,9 +110,9 @@ async function calculateGridDimensions(
     return dimensions;
 }
 
-function validateFeature(feature: GeoFeature) {
-    const required = ['type', 'properties', 'geometry'];
-    const props = ['url', 'title', 'start_date', 'end_date'];
+function validateFeature(feature: GeoFeatures) {
+    const required = ['type', 'content_type', 'content_class', 'properties', 'geometry'];
+    const props = ['title', 'start_date'];
     
     if (!required.every(key => key in feature)) {
         throw new Error(`Missing required field: ${required.filter(k => !(k in feature)).join(', ')}`);
@@ -257,7 +258,7 @@ async function findTimeRange(processedJsonPath: string): Promise<{start: Date, e
         await new Promise((resolve, reject) => {
             jsonReadStream
                 .pipe(jsonParser)
-                .on('data', (feature: GeoFeature) => {
+                .on('data', (feature: GeoFeatures) => {
                     try {
                         const featureStart = new Date(feature.properties.start_date);
                         const featureEnd = new Date(feature.properties.end_date);
@@ -301,7 +302,7 @@ async function findTimeRange(processedJsonPath: string): Promise<{start: Date, e
 }
 
 
-function featureFitsTimeSlice(feature: GeoFeature, sliceStart: Date, sliceEnd: Date): boolean {
+function featureFitsTimeSlice(feature: GeoFeatures, sliceStart: Date, sliceEnd: Date): boolean {
     const start = feature.properties.start_date ? new Date(feature.properties.start_date) : null;
     const end = feature.properties.end_date ? new Date(feature.properties.end_date) : null;
 
@@ -324,7 +325,7 @@ function featureFitsTimeSlice(feature: GeoFeature, sliceStart: Date, sliceEnd: D
     return true;
 }
 
-function processFeature(feature: any, options: GeoJsonProcessingOptions): GeoFeature | null { 
+function processFeature(feature: any, options: GeoJsonProcessingOptions): GeoFeatures | null { 
     /**
     * Processes a GeoJSON feature by validating coordinates, optionally converting from meters to lat/lon,
     * and computing centroids for non-point geometries.
@@ -448,7 +449,7 @@ async function processFeaturesToTimeBinary(
     // Read features
     console.log('Reading features...');
     const rawData = await fs.readFile(processedJsonPath, 'utf8');
-    const features: GeoFeature[] = JSON.parse(rawData);
+    const features: GeoFeatures[] = JSON.parse(rawData);
     
     // Find the total time range
     console.log('Computing time range...');

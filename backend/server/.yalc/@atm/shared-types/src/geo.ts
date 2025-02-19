@@ -1,48 +1,77 @@
+type ContentType = 'image' | 'text' | 'audio' | 'video';
+export type ContentClass = 'Image' |'Event';
+
+export interface BaseProperties {
+    title: string;
+    start_date: string;
+    end_date?: string;
+    source?: string;
+    ai? : {
+      environment?: string;
+      tags?: string[];
+      attributes?: string[];
+    }
+}
+
+interface EventProperties extends BaseProperties {
+    street_name: string;
+    city_name: string;
+    info: string;
+    venue_type: string;
+}
+
+interface ImageProperties extends BaseProperties {
+    url: string;
+    thumb: string;
+}
+
+type Coordinates = [number, number];
+
 export interface Point2D {
     x: number;
     y: number;
 }
 
-interface BaseFeature {
+export interface PointGeometry {
+    type: "Point";
+    coordinates: Coordinates;
+}
+
+export interface MultiLineStringGeometry {
+    type: "MultiLineString";
+    coordinates: Coordinates[][];
+    centroid: Point2D;
+}
+
+export interface LineStringGeometry {
+    type: "LineString";
+    coordinates: Coordinates[];
+    centroid: Point2D;
+}
+
+export interface PolygonGeometry {
+    type: "Polygon";
+    coordinates: Coordinates[];
+    centroid: Point2D;
+}
+
+export type Geometry = PointGeometry | MultiLineStringGeometry | LineStringGeometry | PolygonGeometry;
+
+export type GeoFeature<C extends ContentClass> = {
     type: "Feature";
-    properties: {
-        url: string;
-        title: string;
-        start_date: string;
-        end_date: string;
-        thumb: string;
-    };
-}
+    geometry: Geometry;
+} & (
+    C extends 'Event' ? {
+        content_type: Extract<ContentType, 'text'>;  
+        content_class: 'Event';
+        properties: EventProperties;
+    } :
+    C extends 'Image' ? {
+        content_type: Extract<ContentType, 'image'>; 
+        content_class: 'Image';
+        properties: ImageProperties;
+    } : 
+    never
+);
 
-export interface PointFeature extends BaseFeature {
-    geometry: {
-        type: "Point";
-        coordinates: [number, number];
-    };
-}
-
-export interface MultiLineStringFeature extends BaseFeature {
-    geometry: {
-        type: "MultiLineString";
-        coordinates: [number, number][][];
-        centroid: Point2D;
-    };
-}
-
-export interface LineStringFeature extends BaseFeature {
-    geometry: {
-        type: "LineString";
-        coordinates: [number, number][];
-        centroid: Point2D;
-    };
-}
-
-export interface PolygonFeature extends BaseFeature {
-    geometry: {
-        type: "Polygon";
-        coordinates: [number, number, number][][];
-        centroid: Point2D;
-    };
-}
-
-export type GeoFeature = PointFeature | MultiLineStringFeature | LineStringFeature | PolygonFeature;
+export type GeoFeatures = GeoFeature<ContentClass>;

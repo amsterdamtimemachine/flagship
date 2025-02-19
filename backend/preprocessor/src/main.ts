@@ -1,20 +1,24 @@
 import { processGeoJsonFolderToFeatures, 
          type GeoJsonProcessingOptions,
-         processFeaturesToTimeBinary,
+         //processFeaturesToTimeBinary,
          calculateGridDimensions } from './grid'; 
+
+import { printObjectFields } from './utils';
+
+import { processFeatures, saveFeaturesToBinary } from './grid_grains';
 
 const PREPROCESS = false;
 
 async function preprocessAndSaveData() {
-    const geoJsonFeaturesFolder = '/home/m/Downloads/reprojections/3857';
-    const processedJsonPath = './temp/processed_features.json';
+    const geoJsonFeaturesFolder = '/atm/data/tagged';
+    const processedJsonPath = '/atm/data/tagged/processed.json';
     
     if (PREPROCESS) {
         console.log(`Starting geojson folder ${geoJsonFeaturesFolder} processing.`);
         const options: GeoJsonProcessingOptions = { 
             dropNulls: true, 
             dropUndated: true,
-            convertMetersToLatLon: true 
+            convertMetersToLatLon: false 
         };
         
         await processGeoJsonFolderToFeatures(
@@ -25,24 +29,38 @@ async function preprocessAndSaveData() {
         console.log("Finished geojson processing");
     }
     
-    console.log("Starting bin processing");
+   // console.log("Starting bin processing");
     const gridDimensions = await calculateGridDimensions(processedJsonPath, {
-        colsAmount: 1000,
-        rowsAmount: 1000,
+        colsAmount: 10,
+        rowsAmount: 10,
         padding: 0.0,
     });
-    
-    const gridBinaryFilePath = '/atm/public/timegeodata3.bin';
+   // 
+   // const gridBinaryFilePath = '/atm/public/timegeodata3.bin';
 
-    await processFeaturesToTimeBinary(
-        processedJsonPath,
-        gridBinaryFilePath,
-        gridDimensions,
-        { pageSize: 25, sliceYears: 50 },
-    );
+   // await processFeaturesToTimeBinary(
+   //     processedJsonPath,
+   //     gridBinaryFilePath,
+   //     gridDimensions,
+   //     { pageSize: 25, sliceYears: 50 },
+   // );
 
     
-    console.log(`Finished processing, bin saved to ${gridBinaryFilePath}`);
+  // const res = await processFeaturesToTimeBinary(
+  //      processedJsonPath,
+  //      gridDimensions,
+  //      { pageSize: 25, sliceYears: 50 },
+  //  );
+    //
+    //
+    console.log("processing!");
+    let features = await processFeatures(processedJsonPath, gridDimensions, {sliceYears: 10, pageSize: 25})
+    saveFeaturesToBinary(features, 'test.bin');
+    console.log("done");
+    //await testBinaryOffsets(processedJsonPath, "test.bin", gridDimensions, { sliceYears: 10, pageSize: 25 });
+
+  //  console.log(printObjectFields(res.timeSlices["1600_1650"]));
+    //console.log(`Finished processing, bin saved to ${gridBinaryFilePath}`);
 }
 
 

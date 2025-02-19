@@ -8,5 +8,5 @@
     "dev": "tsc -w",
     "dev-w-yalc": "tsc-watch --onSuccess 'npx yalc push --publish'"
   },
-  "yalcSig": "4f81ed4c3051339eff3ea154d68f6a5e"
+  "yalcSig": "d3ed0b1986ac39c55e9448ef4a0b7e5a"
 }

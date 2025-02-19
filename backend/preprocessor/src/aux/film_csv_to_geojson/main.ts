@@ -24,7 +24,7 @@ async function main() {
         console.log(`Skipped ${result.skippedRows} rows`);
 
         if (result.features.length > 0) {
-            await Bun.write('tblFilm.geojson', JSON.stringify({
+            await Bun.write('/atm/data/tagged/tblFilm.geojson', JSON.stringify({
                 type: 'FeatureCollection',
                 features: result.features
             }, null, 2));

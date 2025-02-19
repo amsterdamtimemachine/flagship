@@ -25,7 +25,6 @@ function processFeature(feature: any) {
     if (feature.properties) {
         const props = feature.properties;
         
-        // Restructure AI tags
         if (props.tags) {
             processedFeature.properties = {
                 ...props,              // Keep all other properties
