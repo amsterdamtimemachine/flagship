@@ -109,7 +109,27 @@ type CellData = {
     };
 }
 
-export interface BinaryMetadata {
+interface TagStats {
+    total: number;
+    tags: {
+        [tagName: string]: number;
+    };
+}
+
+interface AiStats {
+    environment?: {
+        [envType: string]: number;
+    };
+    tags?: TagStats;
+    attributes?: TagStats;
+}
+
+interface ContentClassStats {
+    total: number;
+    ai?: AiStats; 
+}
+
+interface BinaryMetadata {
     dimensions: GridDimensions;
     timeRange: {
         start: string;
@@ -122,7 +142,14 @@ export interface BinaryMetadata {
     heatmapBlueprint: {
         cells: HeatmapBlueprintCell[];
     };
+    statistics: {
+        contentClasses: {
+            [K in ContentClass]: ContentClassStats;
+        };
+        totalFeatures: number;
+    };
 }
+
 
 
 interface ProcessingOptions {
@@ -133,6 +160,7 @@ interface ProcessingOptions {
 
 interface ProcessingResult {
     gridDimensions: GridDimensions;
+    statistics: BinaryMetadata['statistics'],
     timeSlices: Record<string, TimeSlice>;
     timeRange: {
         start: Date;
@@ -236,6 +264,67 @@ function addFeatureToCell(
     cell.count++;
 }
 
+
+function collectFeaturesStatistics(features: GeoFeatures[]): BinaryMetadata['statistics'] {
+    const stats: BinaryMetadata['statistics'] = {
+        contentClasses: {
+            Image: {
+                total: 0,
+                ai: {  // Initialize if we have AI data
+                    environment: {},
+                    tags: { total: 0, tags: {} },
+                    attributes: { total: 0, tags: {} }
+                }
+            },
+            Event: {
+                total: 0  // No ai field initialized by default
+            }
+        },
+        totalFeatures: features.length
+    };
+
+    for (const feature of features) {
+        const contentClass = feature.content_class;
+        stats.contentClasses[contentClass].total++;
+
+        if (feature.properties.ai) {
+            // Initialize ai stats object if it doesn't exist
+            if (!stats.contentClasses[contentClass].ai) {
+                stats.contentClasses[contentClass].ai = {
+                    environment: {},
+                    tags: { total: 0, tags: {} },
+                    attributes: { total: 0, tags: {} }
+                };
+            }
+
+            // Now safely process AI data
+            if (feature.properties.ai.environment) {
+                const env = feature.properties.ai.environment;
+                stats.contentClasses[contentClass].ai!.environment![env] = 
+                    (stats.contentClasses[contentClass].ai!.environment![env] || 0) + 1;
+            }
+
+            if (feature.properties.ai.tags) {
+                feature.properties.ai.tags.forEach(tag => {
+                    stats.contentClasses[contentClass].ai!.tags!.total++;
+                    stats.contentClasses[contentClass].ai!.tags!.tags[tag] = 
+                        (stats.contentClasses[contentClass].ai!.tags!.tags[tag] || 0) + 1;
+                });
+            }
+
+            if (feature.properties.ai.attributes) {
+                feature.properties.ai.attributes.forEach(attr => {
+                    stats.contentClasses[contentClass].ai!.attributes!.total++;
+                    stats.contentClasses[contentClass].ai!.attributes!.tags[attr] = 
+                        (stats.contentClasses[contentClass].ai!.attributes!.tags[attr] || 0) + 1;
+                });
+            }
+        }
+    }
+
+    return stats;
+}
+
 export async function processFeatures(
     processedJsonPath: string,
     gridDimensions: GridDimensions,
@@ -249,6 +338,8 @@ export async function processFeatures(
     const contentClasses = Array.from(
         new Set(features.map(f => f.content_class))
     ) as ContentClass[];
+
+    const statistics = collectFeaturesStatistics(features);
 
     // Initialize time slices
    const timeRange = getTotalTimeRange(features);
@@ -307,65 +398,65 @@ export async function processFeatures(
     // Generate heatmaps
     const heatmaps: Record<string, Heatmap> = {};
     for (const [period, slice] of Object.entries(timeSlices)) {
-        const cells: HeatmapCell[] = [];
-        
-        // Find max counts for each content class
-        const maxCounts = contentClasses.reduce((acc, content_class) => ({
-            ...acc,
-            [content_class]: Math.max(
-                ...Object.values(slice.cells)
-                    .map(cell => cell.contentIndex[content_class].count)
-            )
-        }), {} as Record<ContentClass, number>);
+       const cells: HeatmapCell[] = [];
 
-        const maxTotal = Math.max(
-            ...Object.values(slice.cells)
-                .map(cell => cell.count)
-        );
+       // Find max counts for each content class
+       const maxCounts = contentClasses.reduce((acc, cls) => ({
+          ...acc,
+          [cls]: Math.max(
+             ...Object.values(slice.cells)
+             .map(cell => cell.contentIndex[cls].count)
+          )
+       }), {} as Record<ContentClass, number>);
 
-        // Calculate log-scaled max values
-        const maxTransformed = {
-            ...contentClasses.reduce((acc, cls) => ({
+       const maxTotal = Math.max(
+          ...Object.values(slice.cells)
+          .map(cell => cell.count)
+       );
+
+       // Calculate log-scaled max values, handle zero case
+       const maxTransformed = {
+          ...contentClasses.reduce((acc, cls) => ({
+             ...acc,
+             [cls]: maxCounts[cls] > 0 ? Math.log(maxCounts[cls] + 1) : 1  // Use 1 if no features
+          }), {}),
+       total: maxTotal > 0 ? Math.log(maxTotal + 1) : 1
+       };
+
+       for (const [cellId, cellData] of Object.entries(slice.cells)) {
+          if (cellData.count === 0) continue;
+
+          const [row, col] = cellId.split('_').map(Number);
+          const bounds = calculateCellBounds(row, col, gridDimensions);
+
+          // Calculate counts and densities
+          const counts = {
+             ...contentClasses.reduce((acc, cls) => ({
                 ...acc,
-                [cls]: Math.log(maxCounts[cls] + 1)
-            }), {}),
-            total: Math.log(maxTotal + 1)
-        };
+                [cls]: cellData.contentIndex[cls].count
+             }), {}),
+             total: cellData.count
+          };
 
-        for (const [cellId, cellData] of Object.entries(slice.cells)) {
-            if (cellData.count === 0) continue;
-            
-            const [row, col] = cellId.split('_').map(Number);
-            const bounds = calculateCellBounds(row, col, gridDimensions);
-            
-            // Calculate counts and densities
-            const counts = {
-                ...contentClasses.reduce((acc, cls) => ({
-                    ...acc,
-                    [cls]: cellData.contentIndex[cls].count
-                }), {}),
-                total: cellData.count
-            };
+          const densities = {
+             ...contentClasses.reduce((acc, cls) => ({
+                ...acc,
+                [cls]: maxTransformed[cls] > 0 ? Math.log(counts[cls] + 1) / maxTransformed[cls] : 0  // Return 0 for empty content class
+             }), {}),
+          total: maxTransformed.total > 0 ? Math.log(counts.total + 1) / maxTransformed.total : 0
+          };
 
-            const densities = {
-                ...contentClasses.reduce((acc, cls) => ({
-                    ...acc,
-                    [cls]: Math.log(counts[cls] + 1) / maxTransformed[cls]
-                }), {}),
-                total: Math.log(counts.total + 1) / maxTransformed.total
-            };
-            
-            cells.push({
-                cellId,
-                row,
-                col,
-                counts,
-                densities,
-                bounds
-            } as HeatmapCell);
-        }
+          cells.push({
+             cellId,
+             row,
+             col,
+             counts,
+             densities,
+             bounds
+          } as HeatmapCell);
+       }
 
-        heatmaps[period] = { period, cells };
+       heatmaps[period] = { period, cells };
     }
 
     // Generate heatmap blueprint
@@ -387,12 +478,13 @@ export async function processFeatures(
         timeSlices,
         gridDimensions,
         timeRange,
+        statistics,
         heatmaps,
         heatmapBlueprint: {
             cells: Array.from(blueprintCells.values())
         }
     };
-}
+   }
 
 
 export async function saveFeaturesToBinary(
@@ -417,19 +509,26 @@ export async function saveFeaturesToBinary(
             }>;
         }> = {};
 
-        for (const [cellId, cell] of Object.entries(slice.cells)) {
-            // Calculate content offsets
-            const contentOffsets = Object.entries(cell.contentIndex).reduce((acc, [className, content]) => {
-                const encoded = encode(content.features);
-                const offset = currentOffset;
-                const length = encoded.byteLength;
-                currentOffset += length;
-                
-                return {
-                    ...acc,
-                    [className]: { offset, length }
-                };
-            }, {} as ContentOffsets);
+       for (const [cellId, cell] of Object.entries(slice.cells)) {
+           // Calculate content offsets
+           const contentOffsets = Object.entries(cell.contentIndex).reduce((acc, [className, content]) => {
+               if (content.features.length === 0) {
+                   return {
+                       ...acc,
+                       [className]: { offset: 0, length: 0 }  // Zero for empty features
+                   };
+               }
+               
+               const encoded = encode(content.features);
+               const offset = currentOffset;
+               const length = encoded.byteLength;
+               currentOffset += length;
+               
+               return {
+                   ...acc,
+                   [className]: { offset, length }
+               };
+           }, {} as ContentOffsets);
 
             // Calculate page offsets
             const pageOffsets = Object.entries(cell.pages).reduce((acc, [pageNum, page]) => {
@@ -469,6 +568,7 @@ export async function saveFeaturesToBinary(
     // Write metadata first
     const metadata: BinaryMetadata = {
         dimensions: processingResult.gridDimensions,
+        statistics: processingResult.statistics,
         timeRange: {
             start: processingResult.timeRange.start.toISOString(),
             end: processingResult.timeRange.end.toISOString()
@@ -508,4 +608,114 @@ export async function saveFeaturesToBinary(
     }
 
     await writer.end();
+}
+
+
+export async function testBinaryLoading(binaryPath: string) {
+   console.log("Testing binary loading...");
+   const mmap = Bun.mmap(binaryPath);
+   const buffer = mmap.buffer;
+   
+   // Read metadata
+   const dataView = new DataView(buffer);
+   const metadataSize = dataView.getUint32(0, false);
+   console.log("Metadata size:", metadataSize);
+   
+   const metadataBytesRead = new Uint8Array(buffer, 4, metadataSize);
+   const metadata = decode(metadataBytesRead) as BinaryMetadata;
+   
+   // Print metadata overview
+   console.log("\nMetadata Overview:");
+   console.log("Time range:", metadata.timeRange.start, "to", metadata.timeRange.end);
+   console.log("Number of time periods:", Object.keys(metadata.timeSliceIndex).length);
+   
+   // Print statistics for each content class
+   console.log("\nContent Class Statistics:");
+   for (const [className, stats] of Object.entries(metadata.statistics.contentClasses)) {
+       console.log(`\n${className}:`);
+       console.log(`Total features: ${stats.total}`);
+
+       if (stats.ai) {
+           // Print environment stats if they exist
+           if (stats.ai.environment && Object.keys(stats.ai.environment).length > 0) {
+               console.log("\nEnvironments:");
+               Object.entries(stats.ai.environment)
+                   .sort(([,a], [,b]) => b - a)
+                   .forEach(([env, count]) => {
+                       console.log(`${env}: ${count}`);
+                   });
+           }
+
+           // Print top tags if they exist
+           if (stats.ai.tags && Object.keys(stats.ai.tags.tags).length > 0) {
+               console.log("\nTop 5 tags:");
+               Object.entries(stats.ai.tags.tags)
+                   .sort(([,a], [,b]) => b - a)
+                   .slice(0, 5)
+                   .forEach(([tag, count]) => {
+                       console.log(`${tag}: ${count}`);
+                   });
+           }
+
+           // Print top attributes if they exist
+           if (stats.ai.attributes && Object.keys(stats.ai.attributes.tags).length > 0) {
+               console.log("\nTop 5 attributes:");
+               Object.entries(stats.ai.attributes.tags)
+                   .sort(([,a], [,b]) => b - a)
+                   .slice(0, 5)
+                   .forEach(([attr, count]) => {
+                       console.log(`${attr}: ${count}`);
+                   });
+           }
+       }
+   }
+
+   // Test reading features from first time slice
+   const firstPeriod = Object.keys(metadata.timeSliceIndex)[0];
+   const firstSlice = metadata.timeSliceIndex[firstPeriod];
+   const firstCellId = Object.keys(firstSlice.cells)[0];
+   
+   if (firstCellId) {
+       console.log("\nReading features from first cell:", firstCellId);
+       const cellData = firstSlice.cells[firstCellId];
+
+       // Try reading each content class
+       for (const contentClass of ['Image', 'Event'] as ContentClass[]) {
+           const contentOffset = cellData.contentOffsets[contentClass];
+           console.log(`\n${contentClass} features:`);
+           console.log(`Offset: ${contentOffset.offset}, Length: ${contentOffset.length}`);
+           
+           if (contentOffset.length === 0) {
+               console.log(`No ${contentClass} features found`);
+               continue;
+           }
+
+           try {
+               const featureBytes = new Uint8Array(
+                   buffer, 
+                   4 + metadataSize + contentOffset.offset, 
+                   contentOffset.length
+               );
+               const features = decode(featureBytes) as GeoFeatures[];
+               
+               console.log(`Found ${features.length} ${contentClass} features`);
+               if (features.length > 0) {
+                   console.log("First feature title:", features[0].properties.title);
+                   console.log("First feature date:", features[0].properties.start_date);
+                   
+                   // Print AI info if it exists
+                   if (features[0].properties.ai) {
+                       const ai = features[0].properties.ai;
+                       if (ai.environment) console.log("Environment:", ai.environment);
+                       if (ai.tags) console.log("Tags:", ai.tags);
+                       if (ai.attributes) console.log("Attributes:", ai.attributes);
+                   }
+               }
+           } catch (error) {
+               console.error(`Error reading ${contentClass} features:`, error);
+           }
+       }
+   }
+
+   console.log("\nTotal features:", metadata.statistics.totalFeatures);
 }

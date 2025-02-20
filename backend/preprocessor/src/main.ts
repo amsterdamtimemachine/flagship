@@ -5,7 +5,7 @@ import { processGeoJsonFolderToFeatures,
 
 import { printObjectFields } from './utils';
 
-import { processFeatures, saveFeaturesToBinary } from './grid_grains';
+import { processFeatures, saveFeaturesToBinary, testBinaryLoading } from './grid_grains';
 
 const PREPROCESS = false;
 
@@ -57,6 +57,7 @@ async function preprocessAndSaveData() {
     let features = await processFeatures(processedJsonPath, gridDimensions, {sliceYears: 10, pageSize: 25})
     saveFeaturesToBinary(features, 'test.bin');
     console.log("done");
+    testBinaryLoading('test.bin');
     //await testBinaryOffsets(processedJsonPath, "test.bin", gridDimensions, { sliceYears: 10, pageSize: 25 });
 
   //  console.log(printObjectFields(res.timeSlices["1600_1650"]));
