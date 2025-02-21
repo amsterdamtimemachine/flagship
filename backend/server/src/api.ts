@@ -182,68 +182,80 @@ export class GridApi {
             
             // If content classes are specified, fetch features by content class and tags
             if (contentClasses.length > 0) {
-                for (const contentClass of contentClasses) {
+                // If we're only querying one content class with no tags, we can use direct assignment
+                if (contentClasses.length === 1 && tags.length === 0) {
+                    const contentClass = contentClasses[0];
                     // Skip if this cell has no features for this content class
                     if (!cell.contentOffsets[contentClass] || cell.contentOffsets[contentClass].length === 0) {
-                        continue;
+                        features = []; // Empty array if no features found
+                    } else {
+                        const contentOffset = cell.contentOffsets[contentClass];
+                        const contentFeaturesBytes = new Uint8Array(
+                            this.binaryBuffer!,
+                            this.dataStartOffset + contentOffset.offset,
+                            contentOffset.length
+                        );
+                        features = decode(contentFeaturesBytes) as GeoFeatures[];
                     }
-                    
-                    if (tags.length > 0) {
-                        // Fetch features that match content class + tags
-                        for (const tag of tags) {
-                            if (cell.contentTagOffsets[contentClass]?.[tag]) {
-                                const tagOffset = cell.contentTagOffsets[contentClass][tag];
-                                
-                                if (tagOffset.length > 0) {
-                                    const taggedFeaturesBytes = new Uint8Array(
-                                        this.binaryBuffer!,
-                                        this.dataStartOffset + tagOffset.offset,
-                                        tagOffset.length
-                                    );
-                                    
-                                    const taggedFeatures = decode(taggedFeaturesBytes) as GeoFeatures[];
-                                    features.push(...taggedFeatures);
+                }
+                // If we're only querying one content class with one tag, still use direct assignment
+                else if (contentClasses.length === 1 && tags.length === 1) {
+                    const contentClass = contentClasses[0];
+                    const tag = tags[0];
+                    if (cell.contentTagOffsets[contentClass]?.[tag] && 
+                        cell.contentTagOffsets[contentClass][tag].length > 0) {
+                        const tagOffset = cell.contentTagOffsets[contentClass][tag];
+                    const taggedFeaturesBytes = new Uint8Array(
+                        this.binaryBuffer!,
+                        this.dataStartOffset + tagOffset.offset,
+                        tagOffset.length
+                    );
+                    features = decode(taggedFeaturesBytes) as GeoFeatures[];
+                    } else {
+                        features = []; // Empty array if no features found
+                    }
+                }
+                // For multiple content classes or tags, we need to accumulate features
+                else {
+                    for (const contentClass of contentClasses) {
+                        // Skip if this cell has no features for this content class
+                        if (!cell.contentOffsets[contentClass] || cell.contentOffsets[contentClass].length === 0) {
+                            continue;
+                        }
+
+                        if (tags.length > 0) {
+                            // Fetch features that match content class + tags
+                            for (const tag of tags) {
+                                if (cell.contentTagOffsets[contentClass]?.[tag]) {
+                                    const tagOffset = cell.contentTagOffsets[contentClass][tag];
+
+                                    if (tagOffset.length > 0) {
+                                        const taggedFeaturesBytes = new Uint8Array(
+                                            this.binaryBuffer!,
+                                            this.dataStartOffset + tagOffset.offset,
+                                            tagOffset.length
+                                        );
+
+                                        const taggedFeatures = decode(taggedFeaturesBytes) as GeoFeatures[];
+                                        features.push(...taggedFeatures);
+                                    }
                                 }
                             }
-                        }
-                    } else {
-                        // No tags specified, fetch all features for this content class
-                        const contentOffset = cell.contentOffsets[contentClass];
-                        
+                        } else {
+                            // No tags specified, fetch all features for this content class
+                            const contentOffset = cell.contentOffsets[contentClass];
+
                         if (contentOffset.length > 0) {
                             const contentFeaturesBytes = new Uint8Array(
                                 this.binaryBuffer!,
                                 this.dataStartOffset + contentOffset.offset,
                                 contentOffset.length
                             );
-                            
+
                             const contentFeatures = decode(contentFeaturesBytes) as GeoFeatures[];
                             features.push(...contentFeatures);
                         }
-                    }
-                }
-            } else {
-                // No content classes specified, use pagination
-                const pageKey = `page${page}`;
-                const pageLocation = cell.pages[pageKey];
-                
-                if (!pageLocation) {
-                    return errorResponse("Page not found", 404);
-                }
-                
-                // Read all content classes from this page
-                for (const contentClass of Object.keys(pageLocation) as ContentClass[]) {
-                    const contentOffset = pageLocation[contentClass];
-                    
-                    if (contentOffset.length > 0) {
-                        const contentFeaturesBytes = new Uint8Array(
-                            this.binaryBuffer!,
-                            this.dataStartOffset + contentOffset.offset,
-                            contentOffset.length
-                        );
-                        
-                        const contentFeatures = decode(contentFeaturesBytes) as GeoFeatures[];
-                        features.push(...contentFeatures);
+                        }
                     }
                 }
             }
