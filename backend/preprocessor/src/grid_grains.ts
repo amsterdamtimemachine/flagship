@@ -7,150 +7,20 @@ import * as fs from 'node:fs/promises';
 
 import type { 
    Point2D,
-   GeoFeature,
    GeoFeatures,
-   GridConfig,
    GridDimensions,
-   GridCellBounds,
-   //BinaryMetadata,
-   CellPages,
-   //TimeSliceIndex,
-   TimeSliceFeatures,
-   //HeatmapCell,
-   HeatmapBlueprintCell,
-   //Heatmap,
+   CellContentIndex,
+   TimeSliceIndex,
+   TimeSlice,
    ContentClass,
+   ContentOffsets,
+   ContentClassPage,
+   Heatmap,
+   HeatmapCell,
+   HeatmapBlueprintCell,
+   CellData,
+   BinaryMetadata,
 } from '@atm/shared-types';
-
-
-type CellContentIndex = {
-    [T in ContentClass]: {
-        features: GeoFeature<T>[];
-        count: number;
-    }
-};
-
-
-
-type ContentFeatures = {
-    [T in ContentClass]: {
-        features: GeoFeature<T>[];
-        count: number;
-    }
-};
-
-
-
-interface TimeSliceIndex {
-    offset: number;
-    cells: {
-        [cellId: string]: {
-            contentOffsets: ContentOffsets;
-            pages: {
-                [pageNum: string]: {
-                    [T in ContentClass]: {
-                        offset: number;
-                        length: number;
-                    }
-                }
-            }
-        }
-    }
-}
-
-interface TimeSlice {
-    cells: {
-        [cellId: string]: {
-            count: number;
-            contentIndex: ContentFeatures;
-            pages: {
-                [pageNum: string]: {
-                    [T in ContentClass]: GeoFeature<T>[];
-                }
-            }
-        }
-    }
-}
-
-type ContentOffsets = {
-    [T in ContentClass]: {
-        offset: number;
-        length: number;
-    }
-};
-
-type ContentClassPage = {
-    [K in ContentClass]: GeoFeature<K>[];
-}
-
-interface HeatmapCell {
-    cellId: string;
-    row: number;
-    col: number;
-    counts: {
-        [T in ContentClass | 'total']: number;
-    };
-    densities: {
-        [T in ContentClass | 'total']: number;
-    };
-    bounds: GridCellBounds;
-}
-
-interface Heatmap {
-    period: string;
-    cells: HeatmapCell[];
-}
-
-type CellData = {
-    count: number;
-    contentIndex: CellContentIndex;
-    pages: {
-        [pageNum: string]: ContentClassPage;
-    };
-}
-
-interface TagStats {
-    total: number;
-    tags: {
-        [tagName: string]: number;
-    };
-}
-
-interface AiStats {
-    environment?: {
-        [envType: string]: number;
-    };
-    tags?: TagStats;
-    attributes?: TagStats;
-}
-
-interface ContentClassStats {
-    total: number;
-    ai?: AiStats; 
-}
-
-interface BinaryMetadata {
-    dimensions: GridDimensions;
-    timeRange: {
-        start: string;
-        end: string;
-    };
-    timeSliceIndex: {
-        [period: string]: TimeSliceIndex;
-    };
-    heatmaps: Record<string, Heatmap>;
-    heatmapBlueprint: {
-        cells: HeatmapBlueprintCell[];
-    };
-    statistics: {
-        contentClasses: {
-            [K in ContentClass]: ContentClassStats;
-        };
-        totalFeatures: number;
-    };
-}
-
-
 
 interface ProcessingOptions {
     sliceYears: number;
@@ -160,7 +30,7 @@ interface ProcessingOptions {
 
 interface ProcessingResult {
     gridDimensions: GridDimensions;
-    statistics: BinaryMetadata['statistics'],
+    featuresStatistics: BinaryMetadata['statistics'],
     timeSlices: Record<string, TimeSlice>;
     timeRange: {
         start: Date;
@@ -266,7 +136,7 @@ function addFeatureToCell(
 
 
 function collectFeaturesStatistics(features: GeoFeatures[]): BinaryMetadata['statistics'] {
-    const stats: BinaryMetadata['statistics'] = {
+    const featuresStatistics: BinaryMetadata['statistics'] = {
         contentClasses: {
             Image: {
                 total: 0,
@@ -285,12 +155,12 @@ function collectFeaturesStatistics(features: GeoFeatures[]): BinaryMetadata['sta
 
     for (const feature of features) {
         const contentClass = feature.content_class;
-        stats.contentClasses[contentClass].total++;
+        featuresStatistics.contentClasses[contentClass].total++;
 
         if (feature.properties.ai) {
-            // Initialize ai stats object if it doesn't exist
-            if (!stats.contentClasses[contentClass].ai) {
-                stats.contentClasses[contentClass].ai = {
+            // Initialize ai featuresStatistics object if it doesn't exist
+            if (!featuresStatistics.contentClasses[contentClass].ai) {
+                featuresStatistics.contentClasses[contentClass].ai = {
                     environment: {},
                     tags: { total: 0, tags: {} },
                     attributes: { total: 0, tags: {} }
@@ -300,29 +170,29 @@ function collectFeaturesStatistics(features: GeoFeatures[]): BinaryMetadata['sta
             // Now safely process AI data
             if (feature.properties.ai.environment) {
                 const env = feature.properties.ai.environment;
-                stats.contentClasses[contentClass].ai!.environment![env] = 
-                    (stats.contentClasses[contentClass].ai!.environment![env] || 0) + 1;
+                featuresStatistics.contentClasses[contentClass].ai!.environment![env] = 
+                    (featuresStatistics.contentClasses[contentClass].ai!.environment![env] || 0) + 1;
             }
 
             if (feature.properties.ai.tags) {
                 feature.properties.ai.tags.forEach(tag => {
-                    stats.contentClasses[contentClass].ai!.tags!.total++;
-                    stats.contentClasses[contentClass].ai!.tags!.tags[tag] = 
-                        (stats.contentClasses[contentClass].ai!.tags!.tags[tag] || 0) + 1;
+                    featuresStatistics.contentClasses[contentClass].ai!.tags!.total++;
+                    featuresStatistics.contentClasses[contentClass].ai!.tags!.tags[tag] = 
+                        (featuresStatistics.contentClasses[contentClass].ai!.tags!.tags[tag] || 0) + 1;
                 });
             }
 
             if (feature.properties.ai.attributes) {
                 feature.properties.ai.attributes.forEach(attr => {
-                    stats.contentClasses[contentClass].ai!.attributes!.total++;
-                    stats.contentClasses[contentClass].ai!.attributes!.tags[attr] = 
-                        (stats.contentClasses[contentClass].ai!.attributes!.tags[attr] || 0) + 1;
+                    featuresStatistics.contentClasses[contentClass].ai!.attributes!.total++;
+                    featuresStatistics.contentClasses[contentClass].ai!.attributes!.tags[attr] = 
+                        (featuresStatistics.contentClasses[contentClass].ai!.attributes!.tags[attr] || 0) + 1;
                 });
             }
         }
     }
 
-    return stats;
+    return featuresStatistics;
 }
 
 export async function processFeatures(
@@ -339,7 +209,7 @@ export async function processFeatures(
         new Set(features.map(f => f.content_class))
     ) as ContentClass[];
 
-    const statistics = collectFeaturesStatistics(features);
+    const featuresStatistics = collectFeaturesStatistics(features);
 
     // Initialize time slices
    const timeRange = getTotalTimeRange(features);
@@ -478,7 +348,7 @@ export async function processFeatures(
         timeSlices,
         gridDimensions,
         timeRange,
-        statistics,
+        featuresStatistics,
         heatmaps,
         heatmapBlueprint: {
             cells: Array.from(blueprintCells.values())
@@ -568,7 +438,7 @@ export async function saveFeaturesToBinary(
     // Write metadata first
     const metadata: BinaryMetadata = {
         dimensions: processingResult.gridDimensions,
-        statistics: processingResult.statistics,
+        featuresStatistics: processingResult.featuresStatistics,
         timeRange: {
             start: processingResult.timeRange.start.toISOString(),
             end: processingResult.timeRange.end.toISOString()
@@ -631,15 +501,15 @@ export async function testBinaryLoading(binaryPath: string) {
    
    // Print statistics for each content class
    console.log("\nContent Class Statistics:");
-   for (const [className, stats] of Object.entries(metadata.statistics.contentClasses)) {
+   for (const [className, featuresStatistics] of Object.entries(metadata.featuresStatistics.contentClasses)) {
        console.log(`\n${className}:`);
-       console.log(`Total features: ${stats.total}`);
+       console.log(`Total features: ${featuresStatistics.total}`);
 
-       if (stats.ai) {
-           // Print environment stats if they exist
-           if (stats.ai.environment && Object.keys(stats.ai.environment).length > 0) {
+       if (featuresStatistics.ai) {
+           // Print environment featuresStatistics if they exist
+           if (featuresStatistics.ai.environment && Object.keys(featuresStatistics.ai.environment).length > 0) {
                console.log("\nEnvironments:");
-               Object.entries(stats.ai.environment)
+               Object.entries(featuresStatistics.ai.environment)
                    .sort(([,a], [,b]) => b - a)
                    .forEach(([env, count]) => {
                        console.log(`${env}: ${count}`);
@@ -647,9 +517,9 @@ export async function testBinaryLoading(binaryPath: string) {
            }
 
            // Print top tags if they exist
-           if (stats.ai.tags && Object.keys(stats.ai.tags.tags).length > 0) {
+           if (featuresStatistics.ai.tags && Object.keys(featuresStatistics.ai.tags.tags).length > 0) {
                console.log("\nTop 5 tags:");
-               Object.entries(stats.ai.tags.tags)
+               Object.entries(featuresStatistics.ai.tags.tags)
                    .sort(([,a], [,b]) => b - a)
                    .slice(0, 5)
                    .forEach(([tag, count]) => {
@@ -658,9 +528,9 @@ export async function testBinaryLoading(binaryPath: string) {
            }
 
            // Print top attributes if they exist
-           if (stats.ai.attributes && Object.keys(stats.ai.attributes.tags).length > 0) {
+           if (featuresStatistics.ai.attributes && Object.keys(featuresStatistics.ai.attributes.tags).length > 0) {
                console.log("\nTop 5 attributes:");
-               Object.entries(stats.ai.attributes.tags)
+               Object.entries(featuresStatistics.ai.attributes.tags)
                    .sort(([,a], [,b]) => b - a)
                    .slice(0, 5)
                    .forEach(([attr, count]) => {
@@ -717,5 +587,5 @@ export async function testBinaryLoading(binaryPath: string) {
        }
    }
 
-   console.log("\nTotal features:", metadata.statistics.totalFeatures);
+   console.log("\nTotal features:", metadata.featuresStatistics.totalFeatures);
 }

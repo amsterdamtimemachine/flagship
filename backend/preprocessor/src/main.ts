@@ -12,6 +12,7 @@ const PREPROCESS = false;
 async function preprocessAndSaveData() {
     const geoJsonFeaturesFolder = '/atm/data/tagged';
     const processedJsonPath = '/atm/data/tagged/processed.json';
+    const binaryPath = '/atm/data/tagged/dataset.bin';
     
     if (PREPROCESS) {
         console.log(`Starting geojson folder ${geoJsonFeaturesFolder} processing.`);
@@ -55,9 +56,9 @@ async function preprocessAndSaveData() {
     //
     console.log("processing!");
     let features = await processFeatures(processedJsonPath, gridDimensions, {sliceYears: 10, pageSize: 25})
-    saveFeaturesToBinary(features, 'test.bin');
+    saveFeaturesToBinary(features, binaryPath);
     console.log("done");
-    testBinaryLoading('test.bin');
+    testBinaryLoading(binaryPath);
     //await testBinaryOffsets(processedJsonPath, "test.bin", gridDimensions, { sliceYears: 10, pageSize: 25 });
 
   //  console.log(printObjectFields(res.timeSlices["1600_1650"]));

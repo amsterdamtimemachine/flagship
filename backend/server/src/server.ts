@@ -2,7 +2,8 @@ import { GridApi } from './api';
 import { config } from './config';
 
 async function startServer() {
-    const api = new GridApi(config.dataPath);
+    console.log(config.dataPath);
+    const api = new GridApi('/atm/data/tagged/dataset.bin');
     await api.initialize();
 
     const server = Bun.serve({

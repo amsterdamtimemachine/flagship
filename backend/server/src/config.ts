@@ -1,4 +1,3 @@
-// Required environment variables validation
 const requiredEnvVars = ['BASE_URL', 'PORT', 'DATA_PATH'] as const;
 for (const envVar of requiredEnvVars) {
     if (!process.env[envVar]) {

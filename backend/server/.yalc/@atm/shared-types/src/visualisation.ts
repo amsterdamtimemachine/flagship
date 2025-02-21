@@ -1,3 +1,5 @@
+import { type ContentClass } from './geo';
+
 export interface GridConfig {
     colsAmount: number;
     rowsAmount: number;
@@ -39,18 +41,16 @@ export interface HeatmapCell {
     cellId: string;
     row: number;
     col: number;
-    featureCount: number;
-    countDensity: number;  
-    bounds: {
-        minLon: number;
-        maxLon: number;
-        minLat: number;
-        maxLat: number;
+    counts: {
+        [T in ContentClass | 'total']: number;
     };
+    densities: {
+        [T in ContentClass | 'total']: number;
+    };
+    bounds: GridCellBounds;
 }
 
-
-export interface HeatmapBlueprintCell extends Omit<HeatmapCell, 'featureCount' | 'countDensity'> {}
+export interface HeatmapBlueprintCell extends Pick<HeatmapCell, 'cellId' | 'row' | 'col' | 'bounds' > {}
 
 export interface Heatmap {
     period: string,

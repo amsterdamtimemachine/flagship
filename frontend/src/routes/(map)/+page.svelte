@@ -4,20 +4,43 @@
 	import { preloadData, pushState } from '$app/navigation';
 	import { page } from '$app/stores';
 	import CellPage from '$routes/(map)/cells/[period]/[cellId]/+page.svelte';
+	import RadioGroupContentClasses from '$components/RadioGroupContentClasses.svelte';
 	import MapGLGrid from '$components/MapGLGrid.svelte';
 	import HeatmapSlider from '$components/HeatmapSlider.svelte';
-	import type { Heatmap } from '@atm/shared-types';
+	import type { ContentClass, Heatmap } from '@atm/shared-types';
 
 	export let data;
-	$: heatmaps = data?.metadata?.heatmaps;
+	$: heatmaps = data?.metadata?.heatmaps as Heatmap[];
 	$: dimensions = data?.metadata?.dimensions;
 	$: heatmapBlueprint = data?.metadata?.heatmapBlueprint?.cells;
+	$: featuresStatistics = data?.metadata?.featuresStatistics;
 	$: periods = heatmaps ? Object.keys(heatmaps).sort() : [];
 	$: currentIndex = [0];
 	$: currentHeatmap = heatmaps?.[periods[currentIndex[0]]];
 
+
+  $: currentHeatmap = selectedClasses.size > 0 && heatmaps?.[periods[currentIndex[0]]] 
+    ? {
+        ...heatmaps[periods[currentIndex[0]]],
+        cells: heatmaps[periods[currentIndex[0]]].cells.map(cell => ({
+          ...cell,
+          counts: {
+            ...cell.counts,
+            total: Array.from(selectedClasses).reduce((sum, cls) => sum + (cell.counts[cls] || 0), 0)
+          },
+          densities: {
+            ...cell.densities,
+            total: Array.from(selectedClasses).reduce((sum, cls) => sum + (cell.densities[cls] || 0), 0)
+          }
+        }))
+      } 
+    : heatmaps?.[periods[currentIndex[0]]];
+
+  let selectedClasses = new Set<ContentClass>();
+
 	let loadingNewPeriod = false;
 	$: updateCellDataForPeriod(currentIndex[0]);
+	$: console.log( data?.metadata ); 
 
 	async function updateCellDataForPeriod(index: number) {
 		if (!$page.state.selectedCell) return;
@@ -32,7 +55,6 @@
 
 			console.log('Preload result:', result);
 			if (result.type === 'loaded' && result.status === 200) {
-				// Always update state, even with empty data
 				pushState(cellRoute, {
 					selectedCell: result.data
 				});
@@ -56,6 +78,9 @@
 </script>
 
 <div class="relative flex flex-col w-screen h-screen">
+<RadioGroupContentClasses bind:selected={selectedClasses} {featuresStatistics}/>
+
+			<!--
 	{#if heatmaps}
 		<div class="relative flex-1">
 			<MapGLGrid
@@ -82,4 +107,6 @@
 		</div>
 		<HeatmapSlider {periods} {heatmaps} bind:value={currentIndex} />
 	{/if}
+
+		-->
 </div>

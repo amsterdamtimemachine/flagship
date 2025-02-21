@@ -84,6 +84,7 @@ async initialize() {
             timeRange: this.metadata.timeRange,
             heatmaps: this.metadata.heatmaps,
             heatmapBlueprint: this.metadata.heatmapBlueprint,
+            featuresStatistics: this.metadata.featuresStatistics
         } as MetadataResponse);
     }
 
