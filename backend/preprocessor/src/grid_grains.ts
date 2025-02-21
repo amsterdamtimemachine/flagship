@@ -7,20 +7,158 @@ import * as fs from 'node:fs/promises';
 
 import type { 
    Point2D,
+   GeoFeature,
    GeoFeatures,
    GridDimensions,
+   GridCellBounds,
    CellContentIndex,
-   TimeSliceIndex,
-   TimeSlice,
    ContentClass,
-   ContentOffsets,
-   ContentClassPage,
-   Heatmap,
-   HeatmapCell,
+   ContentClassStats,
+  // TimeSliceIndex,
+  // TimeSlice,
+  // ContentClass,
+  // ContentOffsets,
+  // ContentClassPage,
+  // Heatmap,
+  // HeatmapCell,
    HeatmapBlueprintCell,
    CellData,
-   BinaryMetadata,
+  // BinaryMetadata,
 } from '@atm/shared-types';
+
+
+// Heatmap types
+export interface HeatmapCell {
+    cellId: string;
+    row: number;
+    col: number;
+    bounds: GridCellBounds;
+}
+
+export interface HeatmapBlueprint {
+    rows: number;
+    cols: number;
+    cells: HeatmapCell[];
+}
+
+export interface Heatmap {
+    densityArray: Float32Array;
+    countArray: Float32Array;
+}
+
+export interface HeatmapStack {
+    contentClasses: {
+        [K in ContentClass]: {
+            base: Heatmap;
+            tags: {
+                [tagName: string]: Heatmap;
+            };
+        }
+    };
+}
+
+
+export type Heatmaps = Record<string, HeatmapStack>;
+
+// Feature storage types
+export type ContentFeatures = {
+    [T in ContentClass]: {
+        features: GeoFeature<T>[];
+        count: number;
+    }
+}
+
+export type ContentOffsets = {
+    [T in ContentClass]: {
+        offset: number;
+        length: number;
+    }
+}
+
+
+export type ContentTagOffsets = {
+    [T in ContentClass]: {
+        [tagName: string]: {
+            offset: number;
+            length: number;
+        }
+    }
+}
+
+export type ContentClassPage = {
+    [K in ContentClass]: GeoFeature<K>[];
+}
+
+export interface TimeSliceIndex {
+    offset: number;
+    cells: {
+        [cellId: string]: {
+            contentOffsets: ContentOffsets;
+            contentTagOffsets: ContentTagOffsets;
+            pages: {
+                [pageNum: string]: {
+                    [T in ContentClass]: {
+                        offset: number;
+                        length: number;
+                    }
+                }
+            }
+        }
+    }
+}
+
+export interface TimeSlice {
+    cells: {
+        [cellId: string]: {
+            count: number;
+            contentIndex: ContentFeatures;
+            pages: {
+                [pageNum: string]: ContentClassPage;
+            }
+        }
+    }
+}
+
+
+
+export interface BinaryMetadata {
+    dimensions: GridDimensions;
+    timeRange: {
+        start: string;
+        end: string;
+    };
+    timeSliceIndex: {
+        [period: string]: TimeSliceIndex;
+    };
+    heatmaps: Heatmaps;
+    heatmapBlueprint: HeatmapBlueprint;
+    featuresStatistics: {
+        contentClasses: {
+            [K in ContentClass]: ContentClassStats;
+        };
+        totalFeatures: number;
+    };
+}
+
+export interface BinaryFileStructure {
+    // Header - Size of metadata (4 bytes)
+    metadataSize: number;
+    
+    // Metadata section
+    metadata: BinaryMetadata;
+    
+    // Feature data section - all binary blobs referenced by offsets in the metadata
+    featureData: {
+        // Content class features (referenced by contentOffsets)
+        contentClassFeatures: Array<Uint8Array>;
+        
+        // Content class + tag features (referenced by contentTagOffsets)
+        contentTagFeatures: Array<Uint8Array>;
+        
+        // Paginated features (referenced by page offsets)
+        pageFeatures: Array<Uint8Array>;
+    };
+}
 
 interface ProcessingOptions {
     sliceYears: number;
@@ -30,16 +168,23 @@ interface ProcessingOptions {
 
 interface ProcessingResult {
     gridDimensions: GridDimensions;
-    featuresStatistics: BinaryMetadata['statistics'],
+    featuresStatistics: BinaryMetadata['featuresStatistics'],
     timeSlices: Record<string, TimeSlice>;
     timeRange: {
         start: Date;
         end: Date;
     };
-    heatmaps: Record<string, Heatmap>;
-    heatmapBlueprint: {
-        cells: HeatmapBlueprintCell[];
-    };
+    heatmaps: Record<string, {
+        contentClasses: {
+            [K in ContentClass]: {
+                base: Heatmap;
+                tags: {
+                    [tagName: string]: Heatmap;
+                }
+            }
+        }
+    }>;
+    heatmapBlueprint: HeatmapBlueprint;
 }
 
 
@@ -135,19 +280,19 @@ function addFeatureToCell(
 }
 
 
-function collectFeaturesStatistics(features: GeoFeatures[]): BinaryMetadata['statistics'] {
-    const featuresStatistics: BinaryMetadata['statistics'] = {
+function collectFeaturesStatistics(features: GeoFeatures[]): BinaryMetadata['featuresStatistics'] {
+    const featuresStatistics: BinaryMetadata['featuresStatistics'] = {
         contentClasses: {
             Image: {
                 total: 0,
-                ai: {  // Initialize if we have AI data
+                ai: {
                     environment: {},
                     tags: { total: 0, tags: {} },
                     attributes: { total: 0, tags: {} }
                 }
             },
             Event: {
-                total: 0  // No ai field initialized by default
+                total: 0
             }
         },
         totalFeatures: features.length
@@ -158,7 +303,7 @@ function collectFeaturesStatistics(features: GeoFeatures[]): BinaryMetadata['sta
         featuresStatistics.contentClasses[contentClass].total++;
 
         if (feature.properties.ai) {
-            // Initialize ai featuresStatistics object if it doesn't exist
+            // Initialize ai statistics object if it doesn't exist
             if (!featuresStatistics.contentClasses[contentClass].ai) {
                 featuresStatistics.contentClasses[contentClass].ai = {
                     environment: {},
@@ -167,7 +312,7 @@ function collectFeaturesStatistics(features: GeoFeatures[]): BinaryMetadata['sta
                 };
             }
 
-            // Now safely process AI data
+            // Process AI data
             if (feature.properties.ai.environment) {
                 const env = feature.properties.ai.environment;
                 featuresStatistics.contentClasses[contentClass].ai!.environment![env] = 
@@ -194,7 +339,6 @@ function collectFeaturesStatistics(features: GeoFeatures[]): BinaryMetadata['sta
 
     return featuresStatistics;
 }
-
 export async function processFeatures(
     processedJsonPath: string,
     gridDimensions: GridDimensions,
@@ -212,8 +356,10 @@ export async function processFeatures(
     const featuresStatistics = collectFeaturesStatistics(features);
 
     // Initialize time slices
-   const timeRange = getTotalTimeRange(features);
+    const timeRange = getTotalTimeRange(features);
     const timeSlices: Record<string, TimeSlice> = {};
+    
+    // Initialize period slices based on options.sliceYears
     for (let year = timeRange.start.getFullYear(); year < timeRange.end.getFullYear(); year += options.sliceYears) {
         const period = `${year}_${year + options.sliceYears}`;
         timeSlices[period] = {
@@ -241,108 +387,157 @@ export async function processFeatures(
                if (!slice.cells[cellId]) {
                   slice.cells[cellId] = {
                      count: 0,
-                     contentIndex: contentClasses.reduce((acc, content_class) => ({
-                        ...acc,
-                        [content_class]: { features: [], count: 0 }
-                     }), {} as CellContentIndex),
+                     contentIndex: Object.fromEntries(
+                        contentClasses.map(cls => [
+                           cls, 
+                           { features: [], count: 0 }
+                        ])
+                     ) as ContentFeatures,
                      pages: {}
                   };
                }
 
-               const cell = slice.cells[cellId];
-               const pageNum = Math.floor(cell.count / options.pageSize) + 1;
-               const pageKey = `page${pageNum}`;
+                const cell = slice.cells[cellId];
+                
+                // Add to content class index
+                const contentClass = feature.content_class;
+                (cell.contentIndex[contentClass].features as GeoFeatures[]).push(feature);
+                cell.contentIndex[contentClass].count++;
+                
+                // Add to pagination
+                const pageNum = Math.floor(cell.count / options.pageSize) + 1;
+                const pageKey = `page${pageNum}`;
 
-               if (!cell.pages[pageKey]) {
-                  cell.pages[pageKey] = contentClasses.reduce((acc, cls) => ({
-                     ...acc,
-                     [cls]: []
-                  }), {} as ContentClassPage);
-               }
-
-               addFeatureToCell(feature, cell, pageKey);
+                if (!cell.pages[pageKey]) {
+                   cell.pages[pageKey] = Object.fromEntries(
+                      contentClasses.map(cls => [cls, []])
+                   ) as ContentClassPage;
+                }
+                
+               (cell.pages[pageKey][contentClass] as GeoFeatures[]).push(feature);
+                cell.count++;
             }
         }
     }
 
-    // Generate heatmaps
-    const heatmaps: Record<string, Heatmap> = {};
+    const totalCells = gridDimensions.rowsAmount * gridDimensions.colsAmount;
+    const heatmaps: Record<string, any> = {};
+    
     for (const [period, slice] of Object.entries(timeSlices)) {
-       const cells: HeatmapCell[] = [];
-
-       // Find max counts for each content class
-       const maxCounts = contentClasses.reduce((acc, cls) => ({
-          ...acc,
-          [cls]: Math.max(
-             ...Object.values(slice.cells)
-             .map(cell => cell.contentIndex[cls].count)
-          )
-       }), {} as Record<ContentClass, number>);
-
-       const maxTotal = Math.max(
-          ...Object.values(slice.cells)
-          .map(cell => cell.count)
-       );
-
-       // Calculate log-scaled max values, handle zero case
-       const maxTransformed = {
-          ...contentClasses.reduce((acc, cls) => ({
-             ...acc,
-             [cls]: maxCounts[cls] > 0 ? Math.log(maxCounts[cls] + 1) : 1  // Use 1 if no features
-          }), {}),
-       total: maxTotal > 0 ? Math.log(maxTotal + 1) : 1
-       };
-
-       for (const [cellId, cellData] of Object.entries(slice.cells)) {
-          if (cellData.count === 0) continue;
-
-          const [row, col] = cellId.split('_').map(Number);
-          const bounds = calculateCellBounds(row, col, gridDimensions);
-
-          // Calculate counts and densities
-          const counts = {
-             ...contentClasses.reduce((acc, cls) => ({
-                ...acc,
-                [cls]: cellData.contentIndex[cls].count
-             }), {}),
-             total: cellData.count
-          };
-
-          const densities = {
-             ...contentClasses.reduce((acc, cls) => ({
-                ...acc,
-                [cls]: maxTransformed[cls] > 0 ? Math.log(counts[cls] + 1) / maxTransformed[cls] : 0  // Return 0 for empty content class
-             }), {}),
-          total: maxTransformed.total > 0 ? Math.log(counts.total + 1) / maxTransformed.total : 0
-          };
-
-          cells.push({
-             cellId,
-             row,
-             col,
-             counts,
-             densities,
-             bounds
-          } as HeatmapCell);
-       }
-
-       heatmaps[period] = { period, cells };
+        // Initialize heatmap structure for this period
+        heatmaps[period] = {
+            contentClasses: {} as any
+        };
+        
+        // Process each content class
+        for (const contentClass of contentClasses) {
+            // Create base arrays for this content class
+            const baseCountArray = new Float32Array(totalCells);
+            
+            // Collect tag names for this content class
+            const tagNames = new Set<string>();
+            
+            // Fill content class arrays and collect tags
+            for (const [cellId, cellData] of Object.entries(slice.cells)) {
+                if (cellData.contentIndex[contentClass].count > 0) {
+                    const [row, col] = cellId.split('_').map(Number);
+                    const index = row * gridDimensions.colsAmount + col;
+                    
+                    // Set count value
+                    baseCountArray[index] = cellData.contentIndex[contentClass].count;
+                    
+                    // Collect tags from features
+                    for (const feature of cellData.contentIndex[contentClass].features) {
+                        if (feature.properties.ai?.tags) {
+                            feature.properties.ai.tags.forEach(tag => tagNames.add(tag));
+                        }
+                    }
+                }
+            }
+            
+            // Calculate base density array
+            const maxBaseCount = Math.max(...baseCountArray);
+            const baseDensityArray = new Float32Array(totalCells);
+            
+            if (maxBaseCount > 0) {
+                const maxTransformed = Math.log(maxBaseCount + 1);
+                for (let i = 0; i < totalCells; i++) {
+                    baseDensityArray[i] = baseCountArray[i] > 0 ? 
+                        Math.log(baseCountArray[i] + 1) / maxTransformed : 0;
+                }
+            }
+            
+            // Create heatmap entry for this content class
+            heatmaps[period].contentClasses[contentClass] = {
+                base: {
+                    countArray: baseCountArray,
+                    densityArray: baseDensityArray
+                },
+                tags: {}
+            };
+            
+            // Process each tag for this content class
+            for (const tagName of tagNames) {
+                const tagCountArray = new Float32Array(totalCells);
+                
+                // Fill tag count array
+                for (const [cellId, cellData] of Object.entries(slice.cells)) {
+                    if (cellData.contentIndex[contentClass].count > 0) {
+                        const [row, col] = cellId.split('_').map(Number);
+                        const index = row * gridDimensions.colsAmount + col;
+                        
+                        // Count features with this tag
+                        const taggedFeatures = cellData.contentIndex[contentClass].features.filter(
+                            f => f.properties.ai?.tags?.includes(tagName)
+                        );
+                        
+                        tagCountArray[index] = taggedFeatures.length;
+                    }
+                }
+                
+                // Calculate tag density array
+                const maxTagCount = Math.max(...tagCountArray);
+                const tagDensityArray = new Float32Array(totalCells);
+                
+                if (maxTagCount > 0) {
+                    const maxTransformed = Math.log(maxTagCount + 1);
+                    for (let i = 0; i < totalCells; i++) {
+                        tagDensityArray[i] = tagCountArray[i] > 0 ? 
+                            Math.log(tagCountArray[i] + 1) / maxTransformed : 0;
+                    }
+                }
+                
+                // Store tag heatmap
+                heatmaps[period].contentClasses[contentClass].tags[tagName] = {
+                    countArray: tagCountArray,
+                    densityArray: tagDensityArray
+                };
+            }
+        }
     }
 
     // Generate heatmap blueprint
-    const blueprintCells = new Map<string, HeatmapBlueprintCell>();
-    for (const heatmap of Object.values(heatmaps)) {
-        for (const cell of heatmap.cells) {
-            if (!blueprintCells.has(cell.cellId)) {
-                blueprintCells.set(cell.cellId, {
-                    cellId: cell.cellId,
-                    row: cell.row,
-                    col: cell.col,
-                    bounds: cell.bounds
-                });
-            }
+    const blueprintCells: HeatmapCell[] = [];
+    
+    for (let row = 0; row < gridDimensions.rowsAmount; row++) {
+        for (let col = 0; col < gridDimensions.colsAmount; col++) {
+            const cellId = `${row}_${col}`;
+            const bounds = calculateCellBounds(row, col, gridDimensions);
+            
+            blueprintCells.push({
+                cellId,
+                row,
+                col,
+                bounds
+            });
         }
     }
+
+    const heatmapBlueprint: HeatmapBlueprint = {
+        rows: gridDimensions.rowsAmount,
+        cols: gridDimensions.colsAmount,
+        cells: blueprintCells
+    };
 
     return {
         timeSlices,
@@ -350,12 +545,9 @@ export async function processFeatures(
         timeRange,
         featuresStatistics,
         heatmaps,
-        heatmapBlueprint: {
-            cells: Array.from(blueprintCells.values())
-        }
+        heatmapBlueprint
     };
-   }
-
+}
 
 export async function saveFeaturesToBinary(
     processingResult: ProcessingResult,  
@@ -369,8 +561,9 @@ export async function saveFeaturesToBinary(
     for (const [period, slice] of Object.entries(processingResult.timeSlices)) {
         const sliceStartOffset = currentOffset;
         
-        const cellOffsets: Record<string, {
+        const cellIndices: Record<string, {
             contentOffsets: ContentOffsets;
+            contentTagOffsets: ContentTagOffsets;
             pages: Record<string, {
                 [T in ContentClass]: {
                     offset: number;
@@ -379,30 +572,74 @@ export async function saveFeaturesToBinary(
             }>;
         }> = {};
 
-       for (const [cellId, cell] of Object.entries(slice.cells)) {
-           // Calculate content offsets
-           const contentOffsets = Object.entries(cell.contentIndex).reduce((acc, [className, content]) => {
-               if (content.features.length === 0) {
-                   return {
-                       ...acc,
-                       [className]: { offset: 0, length: 0 }  // Zero for empty features
-                   };
-               }
-               
-               const encoded = encode(content.features);
-               const offset = currentOffset;
-               const length = encoded.byteLength;
-               currentOffset += length;
-               
-               return {
-                   ...acc,
-                   [className]: { offset, length }
-               };
-           }, {} as ContentOffsets);
+        for (const [cellId, cell] of Object.entries(slice.cells)) {
+            // Calculate content class offsets
+            const contentOffsets = Object.entries(cell.contentIndex).reduce((acc, [className, content]) => {
+                const contentClass = className as ContentClass;
+                if (content.features.length === 0) {
+                    return {
+                        ...acc,
+                        [contentClass]: { offset: 0, length: 0 }  // Zero for empty features
+                    };
+                }
+                
+                const encoded = encode(content.features);
+                const offset = currentOffset;
+                const length = encoded.byteLength;
+                currentOffset += length;
+                
+                return {
+                    ...acc,
+                    [contentClass]: { offset, length }
+                };
+            }, {} as ContentOffsets);
 
-            // Calculate page offsets
+            // Calculate content class + tag offsets
+            const contentTagOffsets = {} as ContentTagOffsets;
+            
+            for (const [className, content] of Object.entries(cell.contentIndex)) {
+                const contentClass = className as ContentClass;
+                contentTagOffsets[contentClass] = {};
+                
+                // Skip if no features
+                if (content.features.length === 0) continue;
+                
+                // Collect all tags for this content class
+                const tagMap = new Map<string, GeoFeatures[]>();
+                
+                for (const feature of content.features) {
+                    if (feature.properties.ai?.tags) {
+                        for (const tag of feature.properties.ai.tags) {
+                            if (!tagMap.has(tag)) {
+                                tagMap.set(tag, []);
+                            }
+                            tagMap.get(tag)!.push(feature);
+                        }
+                    }
+                }
+                
+                // Calculate offsets for each tag
+                for (const [tag, taggedFeatures] of tagMap.entries()) {
+                    const encoded = encode(taggedFeatures);
+                    const offset = currentOffset;
+                    const length = encoded.byteLength;
+                    currentOffset += length;
+                    
+                    contentTagOffsets[contentClass][tag] = { offset, length };
+                }
+            }
+
+            // Calculate page offsets (unchanged from your original code)
             const pageOffsets = Object.entries(cell.pages).reduce((acc, [pageNum, page]) => {
                 const pageContentOffsets = Object.entries(page).reduce((innerAcc, [className, features]) => {
+                    const contentClass = className as ContentClass;
+                    if (features.length === 0) {
+                        return {
+                            ...innerAcc,
+                            [contentClass]: { offset: 0, length: 0 }
+                        };
+                    }
+                    
                     const encoded = encode(features);
                     const offset = currentOffset;
                     const length = encoded.byteLength;
@@ -410,9 +647,9 @@ export async function saveFeaturesToBinary(
                     
                     return {
                         ...innerAcc,
-                        [className]: { offset, length }
+                        [contentClass]: { offset, length }
                     };
-                }, {});
+                }, {} as any);
 
                 return {
                     ...acc,
@@ -420,15 +657,16 @@ export async function saveFeaturesToBinary(
                 };
             }, {});
 
-            cellOffsets[cellId] = {
+            cellIndices[cellId] = {
                 contentOffsets,
+                contentTagOffsets,
                 pages: pageOffsets
             };
         }
 
         timeSliceIndex[period] = {
             offset: sliceStartOffset,
-            cells: cellOffsets
+            cells: cellIndices
         };
     }
 
@@ -457,18 +695,45 @@ export async function saveFeaturesToBinary(
     writer.write(metadataBytes);
 
     // Write features in exact same order we calculated offsets
-    for (const [_, slice] of Object.entries(processingResult.timeSlices)) {
-        for (const [_, cell] of Object.entries(slice.cells)) {
+    for (const [period, slice] of Object.entries(processingResult.timeSlices)) {
+        for (const [cellId, cell] of Object.entries(slice.cells)) {
             // Write content class features
-            for (const content of Object.values(cell.contentIndex)) {
+            for (const [className, content] of Object.entries(cell.contentIndex)) {
                 if (content.features.length > 0) {
                     writer.write(encode(content.features));
                 }
             }
+            
+            // Write content class + tag features
+            for (const [className, content] of Object.entries(cell.contentIndex)) {
+                const contentClass = className as ContentClass;
+                if (content.features.length === 0) continue;
+                
+                // Process each tag
+                const tagMap = new Map<string, GeoFeatures[]>();
+                
+                for (const feature of content.features) {
+                    if (feature.properties.ai?.tags) {
+                        for (const tag of feature.properties.ai.tags) {
+                            if (!tagMap.has(tag)) {
+                                tagMap.set(tag, []);
+                            }
+                            tagMap.get(tag)!.push(feature);
+                        }
+                    }
+                }
+                
+                // Write each tag's features
+                for (const taggedFeatures of tagMap.values()) {
+                    if (taggedFeatures.length > 0) {
+                        writer.write(encode(taggedFeatures));
+                    }
+                }
+            }
 
             // Write paged features
-            for (const page of Object.values(cell.pages)) {
-                for (const features of Object.values(page)) {
+            for (const [_, page] of Object.entries(cell.pages)) {
+                for (const [className, features] of Object.entries(page)) {
                     if (features.length > 0) {
                         writer.write(encode(features));
                     }
@@ -478,114 +743,89 @@ export async function saveFeaturesToBinary(
     }
 
     await writer.end();
+    console.log(`Binary file written to ${binaryPath}`);
 }
 
-
 export async function testBinaryLoading(binaryPath: string) {
-   console.log("Testing binary loading...");
-   const mmap = Bun.mmap(binaryPath);
-   const buffer = mmap.buffer;
-   
-   // Read metadata
-   const dataView = new DataView(buffer);
-   const metadataSize = dataView.getUint32(0, false);
-   console.log("Metadata size:", metadataSize);
-   
-   const metadataBytesRead = new Uint8Array(buffer, 4, metadataSize);
-   const metadata = decode(metadataBytesRead) as BinaryMetadata;
-   
-   // Print metadata overview
-   console.log("\nMetadata Overview:");
-   console.log("Time range:", metadata.timeRange.start, "to", metadata.timeRange.end);
-   console.log("Number of time periods:", Object.keys(metadata.timeSliceIndex).length);
-   
-   // Print statistics for each content class
-   console.log("\nContent Class Statistics:");
-   for (const [className, featuresStatistics] of Object.entries(metadata.featuresStatistics.contentClasses)) {
-       console.log(`\n${className}:`);
-       console.log(`Total features: ${featuresStatistics.total}`);
-
-       if (featuresStatistics.ai) {
-           // Print environment featuresStatistics if they exist
-           if (featuresStatistics.ai.environment && Object.keys(featuresStatistics.ai.environment).length > 0) {
-               console.log("\nEnvironments:");
-               Object.entries(featuresStatistics.ai.environment)
-                   .sort(([,a], [,b]) => b - a)
-                   .forEach(([env, count]) => {
-                       console.log(`${env}: ${count}`);
-                   });
-           }
-
-           // Print top tags if they exist
-           if (featuresStatistics.ai.tags && Object.keys(featuresStatistics.ai.tags.tags).length > 0) {
-               console.log("\nTop 5 tags:");
-               Object.entries(featuresStatistics.ai.tags.tags)
-                   .sort(([,a], [,b]) => b - a)
-                   .slice(0, 5)
-                   .forEach(([tag, count]) => {
-                       console.log(`${tag}: ${count}`);
-                   });
-           }
-
-           // Print top attributes if they exist
-           if (featuresStatistics.ai.attributes && Object.keys(featuresStatistics.ai.attributes.tags).length > 0) {
-               console.log("\nTop 5 attributes:");
-               Object.entries(featuresStatistics.ai.attributes.tags)
-                   .sort(([,a], [,b]) => b - a)
-                   .slice(0, 5)
-                   .forEach(([attr, count]) => {
-                       console.log(`${attr}: ${count}`);
-                   });
-           }
-       }
-   }
-
-   // Test reading features from first time slice
-   const firstPeriod = Object.keys(metadata.timeSliceIndex)[0];
-   const firstSlice = metadata.timeSliceIndex[firstPeriod];
-   const firstCellId = Object.keys(firstSlice.cells)[0];
-   
-   if (firstCellId) {
-       console.log("\nReading features from first cell:", firstCellId);
-       const cellData = firstSlice.cells[firstCellId];
-
-       // Try reading each content class
-       for (const contentClass of ['Image', 'Event'] as ContentClass[]) {
-           const contentOffset = cellData.contentOffsets[contentClass];
-           console.log(`\n${contentClass} features:`);
-           console.log(`Offset: ${contentOffset.offset}, Length: ${contentOffset.length}`);
-           
-           if (contentOffset.length === 0) {
-               console.log(`No ${contentClass} features found`);
-               continue;
-           }
-
-           try {
-               const featureBytes = new Uint8Array(
-                   buffer, 
-                   4 + metadataSize + contentOffset.offset, 
-                   contentOffset.length
-               );
-               const features = decode(featureBytes) as GeoFeatures[];
-               
-               console.log(`Found ${features.length} ${contentClass} features`);
-               if (features.length > 0) {
-                   console.log("First feature title:", features[0].properties.title);
-                   console.log("First feature date:", features[0].properties.start_date);
-                   
-                   // Print AI info if it exists
-                   if (features[0].properties.ai) {
-                       const ai = features[0].properties.ai;
-                       if (ai.environment) console.log("Environment:", ai.environment);
-                       if (ai.tags) console.log("Tags:", ai.tags);
-                       if (ai.attributes) console.log("Attributes:", ai.attributes);
-                   }
-               }
-           } catch (error) {
-               console.error(`Error reading ${contentClass} features:`, error);
-           }
-       }
-   }
-
-   console.log("\nTotal features:", metadata.featuresStatistics.totalFeatures);
+    console.log("Testing binary loading...");
+    const mmap = Bun.mmap(binaryPath);
+    const buffer = mmap.buffer;
+    
+    // Read metadata
+    const dataView = new DataView(buffer);
+    const metadataSize = dataView.getUint32(0, false);
+    console.log("Metadata size:", metadataSize);
+    
+    const metadataBytesRead = new Uint8Array(buffer, 4, metadataSize);
+    const metadata = decode(metadataBytesRead) as BinaryMetadata;
+    
+    // Print metadata overview
+    console.log("\nMetadata Overview:");
+    console.log("Time range:", metadata.timeRange.start, "to", metadata.timeRange.end);
+    console.log("Number of time periods:", Object.keys(metadata.timeSliceIndex).length);
+    
+    // Test heatmaps
+    const firstPeriod = Object.keys(metadata.heatmaps)[0];
+    if (firstPeriod) {
+        console.log("\nTesting heatmap for period:", firstPeriod);
+        const heatmap = metadata.heatmaps[firstPeriod];
+        
+        for (const contentClass of Object.keys(heatmap.contentClasses) as ContentClass[]) {
+            console.log(`\nContent class: ${contentClass}`);
+            console.log(`Base heatmap has ${heatmap.contentClasses[contentClass].base.countArray.length} cells`);
+            
+            const tags = Object.keys(heatmap.contentClasses[contentClass].tags);
+            console.log(`Has ${tags.length} tag heatmaps:`, tags.slice(0, 5));
+        }
+    }
+    
+    // Test feature retrieval
+    const firstTimeSlicePeriod = Object.keys(metadata.timeSliceIndex)[0];
+    if (firstTimeSlicePeriod) {
+        const timeSlice = metadata.timeSliceIndex[firstTimeSlicePeriod];
+        const firstCellId = Object.keys(timeSlice.cells)[0];
+        
+        if (firstCellId) {
+            console.log(`\nTesting feature retrieval for cell ${firstCellId} in period ${firstTimeSlicePeriod}`);
+            const cell = timeSlice.cells[firstCellId];
+            
+            // Test content class retrieval
+            for (const contentClass of Object.keys(cell.contentOffsets) as ContentClass[]) {
+                const contentOffset = cell.contentOffsets[contentClass];
+                
+                if (contentOffset.length > 0) {
+                    console.log(`\nRetrieving ${contentClass} features:`);
+                    const featuresBytes = new Uint8Array(
+                        buffer,
+                        4 + metadataSize + contentOffset.offset,
+                        contentOffset.length
+                    );
+                    
+                    const features = decode(featuresBytes) as GeoFeatures[];
+                    console.log(`Found ${features.length} ${contentClass} features`);
+                    
+                    // Test tag retrieval if tags exist
+                    if (cell.contentTagOffsets[contentClass]) {
+                        const firstTag = Object.keys(cell.contentTagOffsets[contentClass])[0];
+                        
+                        if (firstTag) {
+                            const tagOffset = cell.contentTagOffsets[contentClass][firstTag];
+                            
+                            console.log(`\nRetrieving ${contentClass} features with tag "${firstTag}":`);
+                            const taggedFeaturesBytes = new Uint8Array(
+                                buffer,
+                                4 + metadataSize + tagOffset.offset,
+                                tagOffset.length
+                            );
+                            
+                            const taggedFeatures = decode(taggedFeaturesBytes) as GeoFeatures[];
+                            console.log(`Found ${taggedFeatures.length} ${contentClass} features with tag "${firstTag}"`);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    console.log("\nBinary loading test complete");
 }
