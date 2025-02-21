@@ -4,8 +4,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "bun run src/server.ts"
+    "start": "bun run src/server.ts",
+    "dev": "bun --watch src/server.ts",
+    "test": "bun test src/test/server.test.ts",
+    "test:watch": "bun test --watch src/test/server.test.ts",
+    "test:debug": "bun test --inspect src/test/server.test.ts"
   },
   "author": "",
   "license": "ISC",

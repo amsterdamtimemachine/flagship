@@ -1,299 +1,423 @@
-import { expect, test } from "bun:test";
-import type { GeoFeature, BinaryMetadata, Heatmap, HeatmapResponse } from '@atm/shared-types';
+import { expect, test, describe } from "bun:test";
+import type { 
+  GeoFeatures, 
+  BinaryMetadata, 
+  Heatmap, 
+  HeatmapResponse, 
+  CellFeaturesResponse,
+  MetadataResponse,
+  ContentClass
+} from '@atm/shared-types';
 import { config } from '../config';
 
-async function testGridCell(cellId: string): Promise<{
-    status: number;
-    data?: {
-        cellId: string;
-        featureCount: number;
-        features: GeoFeature[];
-    };
-    error?: string;
+// Base endpoints
+const baseUrl = config.baseUrl;
+const metadataUrl = `${baseUrl}/grid/metadata`;
+const heatmapUrl = `${baseUrl}/grid/heatmap`;
+const cellUrl = `${baseUrl}/grid/cell`;
+
+// Test helpers
+async function testGridCell(
+  cellId: string, 
+  options: {
+    period?: string;
+    page?: number;
+    contentClasses?: ContentClass[];
+    tags?: string[];
+  } = {}
+): Promise<{
+  status: number;
+  data?: CellFeaturesResponse;
+  error?: string;
 }> {
-    const response = await fetch(`${config.baseUrl}/grid/cell/${cellId}`);
-    const data = await response.json();
-    return {
-        status: response.status,
-        ...(response.ok ? { data } : { error: data.error })
-    };
+  // Build URL with query parameters
+  let url = `${cellUrl}/${cellId}`;
+  const params = new URLSearchParams();
+  
+  if (options.period) params.append('period', options.period);
+  if (options.page) params.append('page', options.page.toString());
+  if (options.contentClasses?.length) params.append('contentClasses', options.contentClasses.join(','));
+  if (options.tags?.length) params.append('tags', options.tags.join(','));
+  
+  const queryString = params.toString();
+  if (queryString) url += `?${queryString}`;
+
+  const response = await fetch(url);
+  const data = await response.json();
+  
+  return {
+    status: response.status,
+    ...(response.ok ? { data: data as CellFeaturesResponse } : { error: data.error })
+  };
 }
 
 async function testMetadata(): Promise<{
-    status: number;
-    data?: BinaryMetadata,
-    error?: string;
+  status: number;
+  data?: MetadataResponse;
+  error?: string;
 }> {
-    const response = await fetch(`${config.baseUrl}/grid/metadata`);
-    const data = await response.json();
-    return {
-        status: response.status,
-        ...(response.ok ? { data } : { error: data.error })
-    };
+  const response = await fetch(metadataUrl);
+  const data = await response.json();
+  
+  return {
+    status: response.status,
+    ...(response.ok ? { data: data as MetadataResponse } : { error: data.error })
+  };
 }
 
-async function testHeatmap(): Promise<{
-    status: number;
-    data?: HeatmapResponse;
-    error?: string;
+async function testHeatmap(options: {
+  period?: string;
+  contentClasses?: ContentClass[];
+  tags?: string[];
+} = {}): Promise<{
+  status: number;
+  data?: HeatmapResponse;
+  error?: string;
 }> {
-    const response = await fetch(`${config.baseUrl}/grid/heatmap`);
-    const data = await response.json();
-    return {
-        status: response.status,
-        ...(response.ok ? { data } : { error: data.error })
-    };
+  // Build URL with query parameters
+  let url = heatmapUrl;
+  const params = new URLSearchParams();
+  
+  if (options.period) params.append('period', options.period);
+  if (options.contentClasses?.length) params.append('contentClasses', options.contentClasses.join(','));
+  if (options.tags?.length) params.append('tags', options.tags.join(','));
+  
+  const queryString = params.toString();
+  if (queryString) url += `?${queryString}`;
+
+  const response = await fetch(url);
+  const data = await response.json();
+  
+  return {
+    status: response.status,
+    ...(response.ok ? { data: data as HeatmapResponse } : { error: data.error })
+  };
 }
 
-// Helper function to get a valid cell ID
-async function getValidCellId(): Promise<string> {
-    const metadata = await testMetadata();
-    if (!metadata.data) throw new Error("Could not fetch metadata");
-    if (!metadata.data.cellIndices) throw new Error("No cell indices in metadata");
-    
-    // Get the first few cell IDs from metadata and log them for debugging
-    const metadataCells = Object.keys(metadata.data.cellIndices);
-    console.log("Available cells:", metadataCells.slice(0, 5), `(total: ${metadataCells.length})`);
-    
-    const firstThreeCells = metadataCells.slice(0, 3);
-    
-    for (const cellId of firstThreeCells) {
-        const result = await testGridCell(cellId);
-        if (result.status === 200 && result.data?.features.length! > 0) {
-            return cellId;
-        }
-    }
-    
-    // If none of the first cells work, try the rest
-    for (const cellId of metadataCells.slice(3)) {
-        const result = await testGridCell(cellId);
-        if (result.status === 200 && result.data?.features.length! > 0) {
-            return cellId;
-        }
-    }
-    
-    throw new Error("No valid cell ID found with features");
-}
-
-// Store validCellId in module scope
-let validCellId: string;
-
-test("setup", async () => {
-    validCellId = await getValidCellId();
-    console.log(`Using valid cell ID for tests: ${validCellId}`);
-});
-
-test("metadata endpoint returns correct structure", async () => {
-    const result = await testMetadata();
-    console.log("Metadata response:", JSON.stringify(result.data, null, 2));
-    
-    expect(result.status).toBe(200);
-    expect(result.data).toBeDefined();
-    expect(result.data?.dimensions).toBeDefined();
-    expect(result.data?.cellIndices).toBeDefined();
-    
-    const { dimensions } = result.data!;
-    expect(dimensions.colsAmount).toBeGreaterThan(0);
-    expect(dimensions.rowsAmount).toBeGreaterThan(0);
-    expect(dimensions.minLon).toBeDefined();
-    expect(dimensions.maxLon).toBeDefined();
-    expect(dimensions.minLat).toBeDefined();
-    expect(dimensions.maxLat).toBeDefined();
-
-});test("grid cell endpoint returns valid data for existing cell", async () => {
-    const result = await testGridCell(validCellId);
-    
-    expect(result.status).toBe(200);
-    expect(result.data).toBeDefined();
-    expect(Array.isArray(result.data?.features)).toBe(true);
-    expect(typeof result.data?.featureCount).toBe('number');
-    
-    if (result.data && result.data.features && result.data.features.length > 0) {
-        const feature = result.data.features[0];
-        expect(feature).toBeDefined();
-        expect(feature?.type).toBe('Feature');
-        expect(feature?.properties).toBeDefined();
-        expect(feature?.properties?.url).toBeDefined();
-        expect(feature?.properties?.title).toBeDefined();
-        expect(feature?.geometry).toBeDefined();
-        
-        if (feature) {
-            expect('type' in feature).toBe(true);
-            expect('properties' in feature).toBe(true);
-            expect('geometry' in feature).toBe(true);
-            
-            if ('geometry' in feature && feature.geometry) {
-                expect('type' in feature.geometry).toBe(true);
-                expect('coordinates' in feature.geometry).toBe(true);
-            }
-        }
-    }
-});
-
-test("grid cell endpoint handles invalid cell ID", async () => {
-    const result = await testGridCell('invalid_id');
-    expect(result.status).toBe(400);
-    expect(result.error).toBeDefined();
-});
-
-test("grid cell endpoint handles non-existent cell", async () => {
-    const result = await testGridCell('99_99');
-    expect(result.status).toBe(404);
-    expect(result.error).toBeDefined();
-});
-
-test("handles multiple concurrent requests", async () => {
-    // Use the same valid cell ID for all requests since we know it works
-    const promises = Array(5).fill(validCellId).map(cellId => testGridCell(cellId));
-    const results = await Promise.all(promises);
-    
-    results.forEach(result => {
-        expect(result.status).toBe(200);
-        expect(result.data).toBeDefined();
+// Tests
+describe("Grid API", () => {
+  // Metadata tests
+  describe("Metadata Endpoint", () => {
+    test("should return metadata with 200 status", async () => {
+      const result = await testMetadata();
+      
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(result.data?.dimensions).toBeDefined();
+      expect(result.data?.timeRange).toBeDefined();
+      expect(result.data?.heatmaps).toBeDefined();
+      expect(result.data?.heatmapBlueprint).toBeDefined();
+      expect(result.data?.featuresStatistics).toBeDefined();
     });
-});
-
-// Update heatmap tests
-test("heatmap endpoint basic response", async () => {
-    const response = await testHeatmap();
-    expect(response.status).toBe(200);
-    expect(response.data).toBeDefined();
-    expect(response.data?.cells).toBeDefined();
-    expect(Array.isArray(response.data?.cells)).toBe(true);
-});
-
-test("heatmap cells array has correct structure", async () => {
-   const response = await testHeatmap();
-   const { cells } = response.data!;
-
-   cells.forEach(cell => {
-       expect(cell).toHaveProperty('cellId');
-       expect(cell).toHaveProperty('row');
-       expect(cell).toHaveProperty('col');
-       expect(cell).toHaveProperty('featureCount');
-       expect(cell).toHaveProperty('bounds');
-       expect(cell.featureCount).toBeGreaterThan(0);
-       
-       expect(cell.bounds).toEqual({
-           minLon: expect.any(Number),
-           maxLon: expect.any(Number),
-           minLat: expect.any(Number),
-           maxLat: expect.any(Number)
-       });
-   });
-});
-
-test("cell indices have correct structure", async () => {
-   const result = await testMetadata();
-   const cellIndices = result.data!.cellIndices;
-
-   Object.values(cellIndices).forEach(index => {
-       expect(index).toHaveProperty('startOffset');
-       expect(index).toHaveProperty('endOffset');
-       expect(index).toHaveProperty('featureCount');
-       expect(index).not.toHaveProperty('bounds');
-   });
-});
-
-// Remove or modify tests that assume empty cells
-test("heatmap only includes non-empty cells", async () => {
-    const response = await testHeatmap();
-    const { cells } = response.data!;
-
-    // All cells should have features
-    expect(cells.every(cell => cell.featureCount > 0)).toBe(true);
     
-    // Should have some cells with data
-    expect(cells.length).toBeGreaterThan(0);
-});
-
-test("heatmap endpoint returns time-related metadata", async () => {
-    const response = await testHeatmap();
-    expect(response.status).toBe(200);
-    expect(response.data).toBeDefined();
-    expect(response.data?.timeRange).toBeDefined();
-    expect(response.data?.availablePeriods).toBeDefined();
-    expect(Array.isArray(response.data?.availablePeriods)).toBe(true);
-    expect(response.data?.availablePeriods.length).toBeGreaterThan(0);
-});
-
-test("heatmap endpoint handles period parameter", async () => {
-    // First get available periods
-    const initialResponse = await testHeatmap();
-    const firstPeriod = initialResponse.data?.availablePeriods[0];
-    expect(firstPeriod).toBeDefined();
-
-    // Test with specific period
-    const response = await fetch(`${config.baseUrl}/grid/heatmap?period=${firstPeriod}`);
-    const data = await response.json();
-    expect(response.status).toBe(200);
-    expect(data.period).toBe(firstPeriod);
-    expect(Array.isArray(data.cells)).toBe(true);
-});
-
-test("heatmap response structure matches interface", async () => {
-    const response = await testHeatmap();
-    expect(response.data).toMatchObject({
-        period: expect.any(String),
-        cells: expect.any(Array),
-        timeRange: {
-            start: expect.any(String),
-            end: expect.any(String)
-        },
-        availablePeriods: expect.any(Array)
+    test("metadata should contain expected time periods", async () => {
+      const result = await testMetadata();
+      
+      // Assuming our dataset has data from 1600 to 2010
+      const periods = Object.keys(result.data?.heatmaps || {});
+      expect(periods.length).toBeGreaterThan(0);
+      
+      // Check for some expected periods
+      expect(periods).toContain("1600_1610");
+      expect(periods).toContain("1900_1910");
     });
-
-    // Check cell structure
-    if (response.data?.cells.length) {
-        const cell = response.data.cells[0];
-        expect(cell).toMatchObject({
-            cellId: expect.any(String),
-            row: expect.any(Number),
-            col: expect.any(Number),
-            featureCount: expect.any(Number),
-            bounds: {
-                minLon: expect.any(Number),
-                maxLon: expect.any(Number),
-                minLat: expect.any(Number),
-                maxLat: expect.any(Number)
-            }
+    
+    test("metadata should contain valid blueprint", async () => {
+      const result = await testMetadata();
+      
+      const blueprint = result.data?.heatmapBlueprint;
+      expect(blueprint).toBeDefined();
+      expect(blueprint?.rows).toBeGreaterThan(0);
+      expect(blueprint?.cols).toBeGreaterThan(0);
+      expect(blueprint?.cells.length).toBe(blueprint?.rows * blueprint?.cols);
+      
+      // Check first cell structure
+      const firstCell = blueprint?.cells[0];
+      expect(firstCell?.cellId).toBeDefined();
+      expect(firstCell?.row).toBeDefined();
+      expect(firstCell?.col).toBeDefined();
+      expect(firstCell?.bounds).toBeDefined();
+    });
+  });
+  
+  // Heatmap tests
+  describe("Heatmap Endpoint", () => {
+    test("should return default heatmap with 200 status", async () => {
+      const result = await testHeatmap();
+      
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(result.data?.heatmap).toBeDefined();
+      expect(result.data?.timeRange).toBeDefined();
+      expect(result.data?.availablePeriods).toBeDefined();
+    });
+    
+    test("should return heatmap for specific period", async () => {
+      const period = "1600_1610";
+      const result = await testHeatmap({ period });
+      
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(result.data?.heatmap).toBeDefined();
+    });
+    
+    test("should return heatmap for specific content class", async () => {
+      const contentClasses: ContentClass[] = ["Image"];
+      const result = await testHeatmap({ contentClasses });
+      
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(result.data?.heatmap).toBeDefined();
+      
+      // TypedArrays will be serialized as arrays
+      expect(Array.isArray(result.data?.heatmap.countArray)).toBe(true);
+      expect(Array.isArray(result.data?.heatmap.densityArray)).toBe(true);
+    });
+    
+    test("should return combined heatmap for multiple content classes", async () => {
+      const contentClasses: ContentClass[] = ["Image", "Event"];
+      const result = await testHeatmap({ contentClasses });
+      
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(result.data?.heatmap).toBeDefined();
+    });
+    
+    test("should return heatmap for content class + tag", async () => {
+      const contentClasses: ContentClass[] = ["Image"];
+      const tags = ["museum/indoor"];
+      const result = await testHeatmap({ contentClasses, tags });
+      
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(result.data?.heatmap).toBeDefined();
+    });
+    
+    test("should return heatmap for multiple content classes + tags", async () => {
+      const contentClasses: ContentClass[] = ["Image", "Event"];
+      const tags = ["museum/indoor", "art_gallery"];
+      const result = await testHeatmap({ contentClasses, tags });
+      
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(result.data?.heatmap).toBeDefined();
+    });
+    
+    test("non-existent period should return default period", async () => {
+      const period = "9999_9999"; // Non-existent period
+      const result = await testHeatmap({ period });
+      
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(result.data?.heatmap).toBeDefined();
+    });
+  });
+  
+  // Cell features tests
+  describe("Cell Features Endpoint", () => {
+    test("should return error when period is missing", async () => {
+      const result = await testGridCell("10_10");
+      
+      expect(result.status).toBe(400);
+      expect(result.error).toBeDefined();
+    });
+    
+    test("should return features for valid cell", async () => {
+      // Use a cell ID we know exists from the heatmap tests
+      const result = await testGridCell("9_0", { period: "1600_1610" });
+      
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(result.data?.cellId).toBe("9_0");
+      expect(result.data?.period).toBe("1600_1610");
+      expect(Array.isArray(result.data?.features)).toBe(true);
+    });
+    
+    test("should return empty features for non-existent cell", async () => {
+      const result = await testGridCell("999_999", { period: "1600_1610" });
+      
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(result.data?.features.length).toBe(0);
+      expect(result.data?.featureCount).toBe(0);
+    });
+    
+    test("should return features filtered by content class", async () => {
+      const result = await testGridCell("9_0", { 
+        period: "1600_1610", 
+        contentClasses: ["Image"] 
+      });
+      
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(Array.isArray(result.data?.features)).toBe(true);
+      
+      // All features should be of the requested content class
+      if (result.data?.features.length) {
+        const allMatchingClass = result.data?.features.every(f => f.content_class === "Image");
+        expect(allMatchingClass).toBe(true);
+      }
+    });
+    
+    test("should return features filtered by content class + tag", async () => {
+      const result = await testGridCell("9_0", { 
+        period: "1600_1610", 
+        contentClasses: ["Image"],
+        tags: ["museum/indoor"]
+      });
+      
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(Array.isArray(result.data?.features)).toBe(true);
+      
+      // All features should be of the requested content class and have the tag
+      if (result.data?.features.length) {
+        const allMatchingClassAndTag = result.data?.features.every(f => 
+          f.content_class === "Image" && 
+          f.properties.ai?.tags?.includes("museum/indoor")
+        );
+        expect(allMatchingClassAndTag).toBe(true);
+      }
+    });
+    
+    test("should return features filtered by multiple content classes", async () => {
+      const result = await testGridCell("9_0", { 
+        period: "1600_1610", 
+        contentClasses: ["Image", "Event"] 
+      });
+      
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(Array.isArray(result.data?.features)).toBe(true);
+      
+      // All features should be of one of the requested content classes
+      if (result.data?.features.length) {
+        const allMatchingClasses = result.data?.features.every(f => 
+          ["Image", "Event"].includes(f.content_class)
+        );
+        expect(allMatchingClasses).toBe(true);
+      }
+    });
+    
+    test("should paginate features properly", async () => {
+      // First page
+      const result1 = await testGridCell("9_0", { 
+        period: "1600_1610", 
+        page: 1
+      });
+      
+      expect(result1.status).toBe(200);
+      expect(result1.data).toBeDefined();
+      expect(result1.data?.currentPage).toBe(1);
+      
+      // If there's more than one page, test the second page
+      if (result1.data?.totalPages && result1.data?.totalPages > 1) {
+        const result2 = await testGridCell("9_0", { 
+          period: "1600_1610", 
+          page: 2
         });
-    }
-});
-
-test("heatmap endpoint handles invalid period", async () => {
-    const response = await fetch(`${config.baseUrl}/grid/heatmap?period=invalid-period`);
-    expect(response.status).toBe(400);
-    const data = await response.json();
-    expect(data.error).toBeDefined();
-});
-
-test("heatmap cells are consistent within a period", async () => {
-    const response = await testHeatmap();
-    const period = response.data?.availablePeriods[0];
+        
+        expect(result2.status).toBe(200);
+        expect(result2.data).toBeDefined();
+        expect(result2.data?.currentPage).toBe(2);
+        
+        // Features from page 1 and page 2 should be different
+        const page1Features = result1.data?.features.map(f => f.properties.title);
+        const page2Features = result2.data?.features.map(f => f.properties.title);
+        
+        const noDuplicates = page1Features.every(title => !page2Features.includes(title));
+        expect(noDuplicates).toBe(true);
+      }
+    });
     
-    const [response1, response2] = await Promise.all([
-        fetch(`${config.baseUrl}/grid/heatmap?period=${period}`),
-        fetch(`${config.baseUrl}/grid/heatmap?period=${period}`)
-    ]);
-
-    const data1 = await response1.json();
-    const data2 = await response2.json();
-
-    expect(data1.cells).toEqual(data2.cells);
-});
-
-test("heatmap periods are chronologically ordered", async () => {
-    const response = await testHeatmap();
-    const periods = response.data?.availablePeriods;
-
-    expect(periods).toBeDefined();
+    test("should return 404 for non-existent page", async () => {
+      const result = await testGridCell("9_0", { 
+        period: "1600_1610", 
+        page: 999 // Assuming this page doesn't exist
+      });
+      
+      expect(result.status).toBe(404);
+      expect(result.error).toBeDefined();
+    });
+  });
+  
+  // Edge cases and error handling
+  describe("Edge Cases and Error Handling", () => {
+    test("should handle non-existent period gracefully", async () => {
+      const result = await testGridCell("9_0", { period: "9999_9999" });
+      
+      expect(result.status).toBe(404);
+      expect(result.error).toBeDefined();
+    });
     
-    const extractYear = (period: string) => parseInt(period.split('-')[0]);
+    test("should handle invalid content class", async () => {
+      const result = await testHeatmap({ 
+        contentClasses: ["InvalidClass" as ContentClass] 
+      });
+      
+      // Should still return 200 but with an empty or default heatmap
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(result.data?.heatmap).toBeDefined();
+    });
     
-    for (let i = 1; i < periods.length; i++) {
-        const prevYear = extractYear(periods[i - 1]);
-        const currentYear = extractYear(periods[i]);
-        expect(currentYear).toBeGreaterThan(prevYear);
-    }
+    test("should handle invalid tag", async () => {
+      const result = await testHeatmap({ 
+        contentClasses: ["Image"],
+        tags: ["non_existent_tag"]  
+      });
+      
+      // Should still return 200 but with an empty or default heatmap
+      expect(result.status).toBe(200);
+      expect(result.data).toBeDefined();
+      expect(result.data?.heatmap).toBeDefined();
+    });
+  });
+  
+  // Performance tests
+  describe("Performance", () => {
+    test("should handle multiple requests efficiently", async () => {
+      const startTime = performance.now();
+      
+      const promises = [
+        testMetadata(),
+        testHeatmap(),
+        testHeatmap({ contentClasses: ["Image"] }),
+        testHeatmap({ contentClasses: ["Event"] }),
+        testGridCell("9_0", { period: "1600_1610" })
+      ];
+      
+      const results = await Promise.all(promises);
+      
+      const endTime = performance.now();
+      const totalTime = endTime - startTime;
+      
+      // All requests should succeed
+      results.forEach(result => {
+        expect(result.status).toBe(200);
+      });
+      
+      // This is an arbitrary threshold that might need adjustment
+      console.log(`Multiple requests completed in ${totalTime}ms`);
+      expect(totalTime).toBeLessThan(5000); // 5 seconds max for all requests
+    });
+    
+    test("combined heatmaps should be reasonably fast", async () => {
+      const startTime = performance.now();
+      
+      const result = await testHeatmap({ 
+        contentClasses: ["Image", "Event"],
+        tags: ["museum/indoor", "art_gallery"]
+      });
+      
+      const endTime = performance.now();
+      const totalTime = endTime - startTime;
+      
+      expect(result.status).toBe(200);
+      
+      // Again, arbitrary threshold
+      console.log(`Combined heatmap request completed in ${totalTime}ms`);
+      expect(totalTime).toBeLessThan(1000); // 1 second max for complex query
+    });
+  });
 });
