@@ -41,19 +41,29 @@ export interface HeatmapCell {
     cellId: string;
     row: number;
     col: number;
-    counts: {
-        [T in ContentClass | 'total']: number;
-    };
-    densities: {
-        [T in ContentClass | 'total']: number;
-    };
     bounds: GridCellBounds;
 }
 
-export interface HeatmapBlueprintCell extends Pick<HeatmapCell, 'cellId' | 'row' | 'col' | 'bounds' > {}
-
-export interface Heatmap {
-    period: string,
+export interface HeatmapBlueprint {
+    rows: number;
+    cols: number;
     cells: HeatmapCell[];
 }
 
+export interface Heatmap {
+    densityArray: Float32Array;
+    countArray: Float32Array;
+}
+
+export interface HeatmapStack {
+    contentClasses: {
+        [K in ContentClass]: {
+            base: Heatmap;
+            tags: {
+                [tagName: string]: Heatmap;
+            };
+        }
+    };
+}
+
+export type Heatmaps = Record<string, HeatmapStack>;

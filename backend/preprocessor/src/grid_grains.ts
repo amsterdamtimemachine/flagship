@@ -7,158 +7,21 @@ import * as fs from 'node:fs/promises';
 
 import type { 
    Point2D,
-   GeoFeature,
    GeoFeatures,
    GridDimensions,
-   GridCellBounds,
-   CellContentIndex,
+   TimeSlice,
+   TimeSliceIndex,
    ContentClass,
-   ContentClassStats,
-  // TimeSliceIndex,
-  // TimeSlice,
-  // ContentClass,
-  // ContentOffsets,
-  // ContentClassPage,
-  // Heatmap,
-  // HeatmapCell,
-   HeatmapBlueprintCell,
+   ContentFeatures,
+   ContentOffsets,
+   ContentTagOffsets,
+   ContentClassPage,
+   Heatmap,
+   HeatmapCell,
+   HeatmapBlueprint,
    CellData,
-  // BinaryMetadata,
+   BinaryMetadata,
 } from '@atm/shared-types';
-
-
-// Heatmap types
-export interface HeatmapCell {
-    cellId: string;
-    row: number;
-    col: number;
-    bounds: GridCellBounds;
-}
-
-export interface HeatmapBlueprint {
-    rows: number;
-    cols: number;
-    cells: HeatmapCell[];
-}
-
-export interface Heatmap {
-    densityArray: Float32Array;
-    countArray: Float32Array;
-}
-
-export interface HeatmapStack {
-    contentClasses: {
-        [K in ContentClass]: {
-            base: Heatmap;
-            tags: {
-                [tagName: string]: Heatmap;
-            };
-        }
-    };
-}
-
-
-export type Heatmaps = Record<string, HeatmapStack>;
-
-// Feature storage types
-export type ContentFeatures = {
-    [T in ContentClass]: {
-        features: GeoFeature<T>[];
-        count: number;
-    }
-}
-
-export type ContentOffsets = {
-    [T in ContentClass]: {
-        offset: number;
-        length: number;
-    }
-}
-
-
-export type ContentTagOffsets = {
-    [T in ContentClass]: {
-        [tagName: string]: {
-            offset: number;
-            length: number;
-        }
-    }
-}
-
-export type ContentClassPage = {
-    [K in ContentClass]: GeoFeature<K>[];
-}
-
-export interface TimeSliceIndex {
-    offset: number;
-    cells: {
-        [cellId: string]: {
-            contentOffsets: ContentOffsets;
-            contentTagOffsets: ContentTagOffsets;
-            pages: {
-                [pageNum: string]: {
-                    [T in ContentClass]: {
-                        offset: number;
-                        length: number;
-                    }
-                }
-            }
-        }
-    }
-}
-
-export interface TimeSlice {
-    cells: {
-        [cellId: string]: {
-            count: number;
-            contentIndex: ContentFeatures;
-            pages: {
-                [pageNum: string]: ContentClassPage;
-            }
-        }
-    }
-}
-
-
-
-export interface BinaryMetadata {
-    dimensions: GridDimensions;
-    timeRange: {
-        start: string;
-        end: string;
-    };
-    timeSliceIndex: {
-        [period: string]: TimeSliceIndex;
-    };
-    heatmaps: Heatmaps;
-    heatmapBlueprint: HeatmapBlueprint;
-    featuresStatistics: {
-        contentClasses: {
-            [K in ContentClass]: ContentClassStats;
-        };
-        totalFeatures: number;
-    };
-}
-
-export interface BinaryFileStructure {
-    // Header - Size of metadata (4 bytes)
-    metadataSize: number;
-    
-    // Metadata section
-    metadata: BinaryMetadata;
-    
-    // Feature data section - all binary blobs referenced by offsets in the metadata
-    featureData: {
-        // Content class features (referenced by contentOffsets)
-        contentClassFeatures: Array<Uint8Array>;
-        
-        // Content class + tag features (referenced by contentTagOffsets)
-        contentTagFeatures: Array<Uint8Array>;
-        
-        // Paginated features (referenced by page offsets)
-        pageFeatures: Array<Uint8Array>;
-    };
-}
 
 interface ProcessingOptions {
     sliceYears: number;

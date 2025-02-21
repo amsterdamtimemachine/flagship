@@ -1,5 +1,5 @@
 import { GeoFeature, GeoFeatures, ContentClass } from "./geo";
-import type { GridDimensions, Heatmap, HeatmapBlueprintCell } from "./visualisation";
+import type { GridDimensions, Heatmap, Heatmaps, HeatmapBlueprint  } from "./visualisation";
 
 
 export type CellContentIndex = {
@@ -10,55 +10,6 @@ export type CellContentIndex = {
 };
 
 
-
-export type ContentFeatures = {
-    [T in ContentClass]: {
-        features: GeoFeature<T>[];
-        count: number;
-    }
-};
-
-export interface TimeSliceIndex {
-    offset: number;
-    cells: {
-        [cellId: string]: {
-            contentOffsets: ContentOffsets;
-            pages: {
-                [pageNum: string]: {
-                    [T in ContentClass]: {
-                        offset: number;
-                        length: number;
-                    }
-                }
-            }
-        }
-    }
-}
-
-export interface TimeSlice {
-    cells: {
-        [cellId: string]: {
-            count: number;
-            contentIndex: ContentFeatures;
-            pages: {
-                [pageNum: string]: {
-                    [T in ContentClass]: GeoFeature<T>[];
-                }
-            }
-        }
-    }
-}
-
-export type ContentOffsets = {
-    [T in ContentClass]: {
-        offset: number;
-        length: number;
-    }
-};
-
-export type ContentClassPage = {
-    [K in ContentClass]: GeoFeature<K>[];
-}
 
 export type CellData = {
     count: number;
@@ -102,6 +53,63 @@ export interface BinaryCellIndex {
     featureCount: number;
 
 }
+export type ContentFeatures = {
+    [T in ContentClass]: {
+        features: GeoFeature<T>[];
+        count: number;
+    }
+}
+
+export type ContentOffsets = {
+    [T in ContentClass]: {
+        offset: number;
+        length: number;
+    }
+}
+
+
+export type ContentTagOffsets = {
+    [T in ContentClass]: {
+        [tagName: string]: {
+            offset: number;
+            length: number;
+        }
+    }
+}
+
+export type ContentClassPage = {
+    [K in ContentClass]: GeoFeature<K>[];
+}
+
+export interface TimeSliceIndex {
+    offset: number;
+    cells: {
+        [cellId: string]: {
+            contentOffsets: ContentOffsets;
+            contentTagOffsets: ContentTagOffsets;
+            pages: {
+                [pageNum: string]: {
+                    [T in ContentClass]: {
+                        offset: number;
+                        length: number;
+                    }
+                }
+            }
+        }
+    }
+}
+
+export interface TimeSlice {
+    cells: {
+        [cellId: string]: {
+            count: number;
+            contentIndex: ContentFeatures;
+            pages: {
+                [pageNum: string]: ContentClassPage;
+            }
+        }
+    }
+}
 
 export interface BinaryMetadata {
     dimensions: GridDimensions;
@@ -112,10 +120,8 @@ export interface BinaryMetadata {
     timeSliceIndex: {
         [period: string]: TimeSliceIndex;
     };
-    heatmaps: Record<string, Heatmap>;
-    heatmapBlueprint: {
-        cells: HeatmapBlueprintCell[];
-    };
+    heatmaps: Heatmaps;
+    heatmapBlueprint: HeatmapBlueprint;
     featuresStatistics: {
         contentClasses: {
             [K in ContentClass]: ContentClassStats;
@@ -124,29 +130,45 @@ export interface BinaryMetadata {
     };
 }
 
+interface BinaryFileStructure {
+    // Header - Size of metadata (4 bytes)
+    metadataSize: number;
+    
+    // Metadata section
+    metadata: BinaryMetadata;
+    
+    // Feature data section - all binary blobs referenced by offsets in the metadata
+    featureData: {
+        // Content class features (referenced by contentOffsets)
+        contentClassFeatures: Array<Uint8Array>;
+        
+        // Content class + tag features (referenced by contentTagOffsets)
+        contentTagFeatures: Array<Uint8Array>;
+        
+        // Paginated features (referenced by page offsets)
+        pageFeatures: Array<Uint8Array>;
+    };
+}
+
+
 // api 
 
 export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'timeRange' | 'heatmaps' | 'heatmapBlueprint' | 'featuresStatistics'> {}
 
-
 export interface CellFeaturesResponse {
     cellId: string;
-    currentPage: number;   
-    totalPages: number;    
+    currentPage: number;
+    totalPages: number;
     featureCount: number;
     period: string;
     features: GeoFeatures[];
-
 }
 
-// this is only necessary for the /heatmap api endpoint
-// delete this if if the /heatmap isn't used
-export interface HeatmapResponse extends Heatmap {
-    heatmap: Heatmap,
+export interface HeatmapResponse {
+    heatmap: Heatmap;
     timeRange: {
         start: string;
         end: string;
     };
     availablePeriods: string[];
 }
-
