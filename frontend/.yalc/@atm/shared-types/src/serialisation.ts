@@ -153,7 +153,7 @@ interface BinaryFileStructure {
 
 // api 
 
-export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'timeRange' | 'heatmaps' | 'heatmapBlueprint' | 'featuresStatistics'> {}
+export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'timeRange' | 'heatmapBlueprint' | 'featuresStatistics'> {}
 
 export interface CellFeaturesResponse {
     cellId: string;
@@ -166,6 +166,16 @@ export interface CellFeaturesResponse {
 
 export interface HeatmapResponse {
     heatmap: Heatmap;
+    timeRange: {
+        start: string;
+        end: string;
+    };
+    availablePeriods: string[];
+}
+
+
+export interface HeatmapsResponse {
+    heatmaps: Record<string, Heatmap>;  // period -> heatmap
     timeRange: {
         start: string;
         end: string;
