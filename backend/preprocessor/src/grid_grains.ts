@@ -21,6 +21,8 @@ import type {
    HeatmapBlueprint,
    CellData,
    BinaryMetadata,
+   HeatmapStack,
+   Heatmaps,
 } from '@atm/shared-types';
 
 interface ProcessingOptions {
@@ -37,6 +39,7 @@ interface ProcessingResult {
         start: Date;
         end: Date;
     };
+    timePeriods: string[],
     heatmaps: Record<string, {
         contentClasses: {
             [K in ContentClass]: {
@@ -221,6 +224,7 @@ export async function processFeatures(
     // Initialize time slices
     const timeRange = getTotalTimeRange(features);
     const timeSlices: Record<string, TimeSlice> = {};
+    let timePeriods: string[] = [];
     
     // Initialize period slices based on options.sliceYears
     for (let year = timeRange.start.getFullYear(); year < timeRange.end.getFullYear(); year += options.sliceYears) {
@@ -228,6 +232,7 @@ export async function processFeatures(
         timeSlices[period] = {
             cells: {}
         };
+        timePeriods.push(period);
     }
 
     // Process features into time slices
@@ -284,12 +289,12 @@ export async function processFeatures(
     }
 
     const totalCells = gridDimensions.rowsAmount * gridDimensions.colsAmount;
-    const heatmaps: Record<string, any> = {};
+    const heatmaps: Heatmaps = {};
     
     for (const [period, slice] of Object.entries(timeSlices)) {
         // Initialize heatmap structure for this period
         heatmaps[period] = {
-            contentClasses: {} as any
+            contentClasses: {} as HeatmapStack
         };
         
         // Process each content class
@@ -406,6 +411,7 @@ export async function processFeatures(
         timeSlices,
         gridDimensions,
         timeRange,
+        timePeriods,
         featuresStatistics,
         heatmaps,
         heatmapBlueprint
@@ -544,6 +550,7 @@ export async function saveFeaturesToBinary(
             start: processingResult.timeRange.start.toISOString(),
             end: processingResult.timeRange.end.toISOString()
         },
+        timePeriods: processingResult.timePeriods,
         timeSliceIndex,
         heatmaps: processingResult.heatmaps,
         heatmapBlueprint: processingResult.heatmapBlueprint
@@ -625,6 +632,8 @@ export async function testBinaryLoading(binaryPath: string) {
     // Print metadata overview
     console.log("\nMetadata Overview:");
     console.log("Time range:", metadata.timeRange.start, "to", metadata.timeRange.end);
+
+    console.log("Time periods", metadata.timePeriods);
     console.log("Number of time periods:", Object.keys(metadata.timeSliceIndex).length);
     
     // Test heatmaps

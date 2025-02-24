@@ -1,29 +1,11 @@
 <script lang="ts">
 	import { createSlider, melt } from '@melt-ui/svelte';
+	import {formatDate} from '$utils/utils';
 
-	export let periods: string[]; // expects periods in the format of "startYear_endYear" eg: ["1500_1700", 1700_1900"]
+	// expects periods in the format of "startYear_endYear" eg: ["1500_1700", 1700_1900"]
+	export let timePeriods: string[] = [];
 	export let value = [0];
-	//export let className = '';
-
-	function createDisplayPeriods(periods: string[]): string[] {
-		// If we have no periods, return empty array
-		if (!periods.length) return [];
-
-		return periods.map((period) => {
-			const [start, end] = period.split('_');
-			const displayPeriod = `${start} — ${end}`;
-			return displayPeriod;
-		});
-	}
-
-	function getTickTranslateStyle(index: number, total: number): string {
-		if (index === 0) return 'translate-x-0';
-		if (index === total - 1) return '-translate-x-full';
-		return '-translate-x-[50%]';
-	}
-
-	const displayPeriods = createDisplayPeriods(periods);
-
+	const displayPeriods = createDisplayPeriods(timePeriods);
 	const {
 		elements: { root, range, thumbs, ticks },
 		states: { value: sliderValue }
@@ -33,22 +15,27 @@
 		step: 1,
 		max: displayPeriods.length - 1
 	});
+	
 
-	// Two-way binding
 	$: value = $sliderValue;
 	$: if (value !== $sliderValue) {
 		sliderValue.set(value);
+	}
+
+	function createDisplayPeriods(periods: string[]): string[] {
+		if (!periods.length) return [];
+		return periods.map((period) => formatDate);
+	}
+
+	function getTickTranslateStyle(index: number, total: number): string {
+		if (index === 0) return 'translate-x-0';
+		if (index === total - 1) return '-translate-x-full';
+		return '-translate-x-[50%]';
 	}
 </script>
 
 <div class="w-full px-4 py-1 border-t border-solid border-gray-300">
 	<span {...$root} use:melt={$root} class="relative flex w-full h-12 items-center">
-		<!--
-        <span class="h-2 w-full rounded-full bg-gray-200">
-            <span {...$range} use:melt={$range} class="absolute h-full bg-blue-500 rounded-full" />
-        </span>
-        -->
-
 		<span class="h-2 w-full bg-gray-200" />
 		{#each $ticks as tick, i}
 			<span

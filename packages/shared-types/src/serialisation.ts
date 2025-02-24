@@ -67,7 +67,6 @@ export type ContentOffsets = {
     }
 }
 
-
 export type ContentTagOffsets = {
     [T in ContentClass]: {
         [tagName: string]: {
@@ -117,6 +116,7 @@ export interface BinaryMetadata {
         start: string;
         end: string;
     };
+    timePeriods: string[]; 
     timeSliceIndex: {
         [period: string]: TimeSliceIndex;
     };
@@ -130,30 +130,30 @@ export interface BinaryMetadata {
     };
 }
 
-//interface BinaryFileStructure {
-//    // Header - Size of metadata (4 bytes)
-//    metadataSize: number;
-//    
-//    // Metadata section
-//    metadata: BinaryMetadata;
-//    
-//    // Feature data section - all binary blobs referenced by offsets in the metadata
-//    featureData: {
-//        // Content class features (referenced by contentOffsets)
-//        contentClassFeatures: Array<Uint8Array>;
-//        
-//        // Content class + tag features (referenced by contentTagOffsets)
-//        contentTagFeatures: Array<Uint8Array>;
-//        
-//        // Paginated features (referenced by page offsets)
-//        pageFeatures: Array<Uint8Array>;
-//    };
-//}
+interface BinaryFileStructure {
+    // Header - Size of metadata (4 bytes)
+    metadataSize: number;
+    
+    // Metadata section
+    metadata: BinaryMetadata;
+    
+    // Feature data section - all binary blobs referenced by offsets in the metadata
+    featureData: {
+        // Content class features (referenced by contentOffsets)
+        contentClassFeatures: Array<Uint8Array>;
+        
+        // Content class + tag features (referenced by contentTagOffsets)
+        contentTagFeatures: Array<Uint8Array>;
+        
+        // Paginated features (referenced by page offsets)
+        pageFeatures: Array<Uint8Array>;
+    };
+}
 
 
 // api 
 
-export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'timeRange' | 'heatmapBlueprint' | 'featuresStatistics'> {}
+export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'timeRange'  | 'heatmapBlueprint' | 'featuresStatistics'> { timePeriods: string[] }
 
 export interface CellFeaturesResponse {
     cellId: string;

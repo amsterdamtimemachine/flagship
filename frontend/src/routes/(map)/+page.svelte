@@ -3,51 +3,30 @@
 	import { onMount } from 'svelte';
 	import { preloadData, pushState } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { PUBLIC_DEFAULT_CONTENT_CLASS } from '$env/static/public';
 	import CellPage from '$routes/(map)/cells/[period]/[cellId]/+page.svelte';
 	import ToggleGroupSelector from '$components/ToggleGroupSelector.svelte';
 	import MapGLGrid from '$components/MapGLGrid.svelte';
 	import HeatmapSlider from '$components/HeatmapSlider.svelte';
-	import type { ContentClass, Heatmap } from '@atm/shared-types';
+	import type { ContentClass, Heatmap, HeatmapStack } from '@atm/shared-types';
 
 	export let data;
-	//$: heatmaps = data?.metadata?.heatmaps as Heatmap[];
 	$: dimensions = data?.metadata?.dimensions;
+	$: heatmaps = (data?.heatmaps as Record<string, Heatmap>); 
 	$: heatmapBlueprint = data?.metadata?.heatmapBlueprint?.cells;
 	$: featuresStatistics = data?.metadata?.featuresStatistics;
-	//$: periods = heatmaps ? Object.keys(heatmaps).sort() : [];
-	$: currentIndex = [0];
-//	$: currentHeatmap = heatmaps?.[periods[currentIndex[0]]];
-//
-//
-//  $: currentHeatmap = selectedClasses.size > 0 && heatmaps?.[periods[currentIndex[0]]] 
-//    ? {
-//        ...heatmaps[periods[currentIndex[0]]],
-//        cells: heatmaps[periods[currentIndex[0]]].cells.map(cell => ({
-//          ...cell,
-//          counts: {
-//            ...cell.counts,
-//            total: Array.from(selectedClasses).reduce((sum, cls) => sum + (cell.counts[cls] || 0), 0)
-//          },
-//          densities: {
-//            ...cell.densities,
-//            total: Array.from(selectedClasses).reduce((sum, cls) => sum + (cell.densities[cls] || 0), 0)
-//          }
-//        }))
-//      } 
-//    : heatmaps?.[periods[currentIndex[0]]];
-//
-  let selectedClasses = new Set<ContentClass>();
+	$: timePeriods = data?.metadata?.timePeriods;
+	$: currentHeatmapIndex = [0];
 
-//	let loadingNewPeriod = false;
-//	$: updateCellDataForPeriod(currentIndex[0]);
-	$: console.log( data?.metadata ); 
+  let selectedClasses = new Set<ContentClass>();
+	let selectedTags = new Set<string>();
 
 	async function updateCellDataForPeriod(index: number) {
 		if (!$page.state.selectedCell) return;
 
 		loadingNewPeriod = true;
 		try {
-			const currentPeriod = periods[index];
+			const currentPeriod = timePeriods[index];
 			const cellId = $page.state.selectedCell.cellFeatures.cellId;
 
 			const cellRoute = `/cells/${currentPeriod}/${cellId}`;
@@ -78,7 +57,12 @@
 </script>
 
 <div class="relative flex flex-col w-screen h-screen">
-<ToggleGroupSelector class="absolute top-[100px]" bind:selected={selectedClasses} {featuresStatistics}/>
+<ToggleGroupSelector 
+	class="absolute top-[100px]" 
+	defaultContentClass={PUBLIC_DEFAULT_CONTENT_CLASS}
+	bind:selected={selectedClasses}
+	bind:selectedTags={selectedTags}
+	{featuresStatistics}/>
 
 			<!--
 	{#if heatmaps}
@@ -105,8 +89,10 @@
 				</div>
 			{/if}
 		</div>
-		<HeatmapSlider {periods} {heatmaps} bind:value={currentIndex} />
+	{/if}
+	-->
+	{#if timePeriods}
+		<HeatmapSlider periods={timePeriods}  bind:value={currentHeatmapIndex} />
 	{/if}
 
-		-->
 </div>
