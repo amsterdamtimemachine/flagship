@@ -141,6 +141,7 @@ describe("Grid API", () => {
         expect(result.data).toBeDefined();
         expect(result.data?.dimensions).toBeDefined();
         expect(result.data?.timeRange).toBeDefined();
+        expect(result.data?.timePeriods).toBeDefined();
         expect(result.data?.heatmapBlueprint).toBeDefined();
         expect(result.data?.featuresStatistics).toBeDefined();
       });
@@ -153,6 +154,15 @@ describe("Grid API", () => {
         expect(timeRange?.end).toBeDefined();
         expect(new Date(timeRange?.start!).getFullYear()).toBeLessThanOrEqual(1610);
         expect(new Date(timeRange?.end!).getFullYear()).toBeGreaterThanOrEqual(1900);
+      });
+
+      test("metadata should contain time periods", async () => {
+        const result = await testMetadata();
+        
+        const timePeriods = result.data?.timePeriods;
+        console.log(timePeriods);
+        expect(timePeriods?.length).toBeDefined();
+        expect(timePeriods.length).toBeGreaterThan(0);
       });
       
       test("metadata should contain valid blueprint", async () => {

@@ -117,6 +117,7 @@ export interface BinaryMetadata {
         start: string;
         end: string;
     };
+    timePeriods: string[]; 
     timeSliceIndex: {
         [period: string]: TimeSliceIndex;
     };
@@ -153,7 +154,7 @@ interface BinaryFileStructure {
 
 // api 
 
-export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'timeRange' | 'heatmapBlueprint' | 'featuresStatistics'> {}
+export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'timeRange'  | 'heatmapBlueprint' | 'featuresStatistics'> { timePeriods: string[] }
 
 export interface CellFeaturesResponse {
     cellId: string;

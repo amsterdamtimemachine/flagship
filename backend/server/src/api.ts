@@ -73,7 +73,6 @@ export class GridApi {
                     console.log("Successfully decoded metadata");
                     console.log("Data start offset:", this.dataStartOffset);
                     console.log("Number of periods:", Object.keys(this.metadata.timeSliceIndex).length);
-                    console.log("Number of heatmaps:", Object.keys(this.metadata.heatmaps).length);
                 } catch (error) {
                     console.error("Failed to decode metadata:", error);
                     throw error;
@@ -89,10 +88,10 @@ export class GridApi {
         if (!this.metadata) {
             return errorResponse("Metadata not initialized", 500);
         }
-
         return jsonResponse({
             dimensions: this.metadata.dimensions,
             timeRange: this.metadata.timeRange,
+            timePeriods: this.metadata.timePeriods,
             heatmapBlueprint: this.metadata.heatmapBlueprint,
             featuresStatistics: this.metadata.featuresStatistics
         } as MetadataResponse);
@@ -210,7 +209,7 @@ getHeatmaps: ApiHandler = async (req) => {
             timeRange: this.metadata.timeRange,
             availablePeriods: periods,
             isComputed: !isPrecomputed
-        });
+        } as HeatmapsResponse);
 
     } catch (error) {
         console.error("Error generating heatmaps:", error);
