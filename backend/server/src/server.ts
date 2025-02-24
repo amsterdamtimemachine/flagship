@@ -49,6 +49,10 @@ async function startServer() {
                 if (url.pathname === '/grid/heatmap') {
                     return await api.getHeatmap(req);
                 }
+
+                if (url.pathname === '/grid/heatmaps') {
+                    return await api.getHeatmaps(req);
+                }
                 
                 // Handle 404
                 return new Response(JSON.stringify({ error: "Not found" }), {

@@ -94,51 +94,83 @@ async function testHeatmap(options: {
   };
 }
 
+async function testHeatmaps(options: {
+  contentClasses?: ContentClass[];
+  tags?: string[];
+} = {}): Promise<{
+  status: number;
+  data?: {
+    heatmaps: Record<string, Heatmap>;
+    timeRange: {
+      start: string;
+      end: string;
+    };
+    availablePeriods: string[];
+    isComputed: boolean;
+  };
+  error?: string;
+}> {
+  let url = `${baseUrl}/grid/heatmaps`;
+  const params = new URLSearchParams();
+  
+  if (options.contentClasses?.length) params.append('contentClasses', options.contentClasses.join(','));
+  if (options.tags?.length) params.append('tags', options.tags.join(','));
+  
+  const queryString = params.toString();
+  if (queryString) url += `?${queryString}`;
+
+  const response = await fetch(url);
+  const data = await response.json();
+  
+  return {
+    status: response.status,
+    ...(response.ok ? { data } : { error: data.error })
+  };
+}
+
+
+
 // Tests
 describe("Grid API", () => {
   // Metadata tests
-  describe("Metadata Endpoint", () => {
-    test("should return metadata with 200 status", async () => {
-      const result = await testMetadata();
+    describe("Metadata Endpoint", () => {
+      test("should return metadata with 200 status", async () => {
+        const result = await testMetadata();
+        
+        expect(result.status).toBe(200);
+        expect(result.data).toBeDefined();
+        expect(result.data?.dimensions).toBeDefined();
+        expect(result.data?.timeRange).toBeDefined();
+        expect(result.data?.heatmapBlueprint).toBeDefined();
+        expect(result.data?.featuresStatistics).toBeDefined();
+      });
       
-      expect(result.status).toBe(200);
-      expect(result.data).toBeDefined();
-      expect(result.data?.dimensions).toBeDefined();
-      expect(result.data?.timeRange).toBeDefined();
-      expect(result.data?.heatmaps).toBeDefined();
-      expect(result.data?.heatmapBlueprint).toBeDefined();
-      expect(result.data?.featuresStatistics).toBeDefined();
+      test("metadata should contain valid date range", async () => {
+        const result = await testMetadata();
+        
+        const timeRange = result.data?.timeRange;
+        expect(timeRange?.start).toBeDefined();
+        expect(timeRange?.end).toBeDefined();
+        expect(new Date(timeRange?.start!).getFullYear()).toBeLessThanOrEqual(1610);
+        expect(new Date(timeRange?.end!).getFullYear()).toBeGreaterThanOrEqual(1900);
+      });
+      
+      test("metadata should contain valid blueprint", async () => {
+        const result = await testMetadata();
+        
+        const blueprint = result.data?.heatmapBlueprint;
+        expect(blueprint).toBeDefined();
+        expect(blueprint?.rows).toBeGreaterThan(0);
+        expect(blueprint?.cols).toBeGreaterThan(0);
+        expect(blueprint?.cells.length).toBe(blueprint?.rows * blueprint?.cols);
+        
+        const firstCell = blueprint?.cells[0];
+        expect(firstCell?.cellId).toBeDefined();
+        expect(firstCell?.row).toBeDefined();
+        expect(firstCell?.col).toBeDefined();
+        expect(firstCell?.bounds).toBeDefined();
+      });
     });
-    
-    test("metadata should contain expected time periods", async () => {
-      const result = await testMetadata();
-      
-      // Assuming our dataset has data from 1600 to 2010
-      const periods = Object.keys(result.data?.heatmaps || {});
-      expect(periods.length).toBeGreaterThan(0);
-      
-      // Check for some expected periods
-      expect(periods).toContain("1600_1610");
-      expect(periods).toContain("1900_1910");
-    });
-    
-    test("metadata should contain valid blueprint", async () => {
-      const result = await testMetadata();
-      
-      const blueprint = result.data?.heatmapBlueprint;
-      expect(blueprint).toBeDefined();
-      expect(blueprint?.rows).toBeGreaterThan(0);
-      expect(blueprint?.cols).toBeGreaterThan(0);
-      expect(blueprint?.cells.length).toBe(blueprint?.rows * blueprint?.cols);
-      
-      // Check first cell structure
-      const firstCell = blueprint?.cells[0];
-      expect(firstCell?.cellId).toBeDefined();
-      expect(firstCell?.row).toBeDefined();
-      expect(firstCell?.col).toBeDefined();
-      expect(firstCell?.bounds).toBeDefined();
-    });
-  });
   
   // Heatmap tests
   describe("Heatmap Endpoint", () => {
@@ -211,6 +243,89 @@ describe("Grid API", () => {
       expect(result.data).toBeDefined();
       expect(result.data?.heatmap).toBeDefined();
     });
+  });
+
+  describe("Heatmaps Endpoint", () => {
+      test("should return default period stack when no filters specified", async () => {
+          const result = await testHeatmaps();
+
+          expect(result.status).toBe(200);
+          expect(result.data).toBeDefined();
+          expect(Object.keys(result.data?.heatmaps || {}).length).toBeGreaterThan(0);
+          expect(result.data?.isComputed).toBe(false);
+      });
+
+      test("should return period stack for single content class", async () => {
+          const result = await testHeatmaps({ contentClasses: ["Image"] });
+
+          expect(result.status).toBe(200);
+          expect(result.data?.isComputed).toBe(false);
+          expect(Object.values(result.data?.heatmaps || {}).every(heatmap => 
+                                                                  Array.isArray(heatmap.countArray) && Array.isArray(heatmap.densityArray)
+                                                                 )).toBe(true);
+      });
+
+      test("should return period stack for content class + tag", async () => {
+          const result = await testHeatmaps({ 
+              contentClasses: ["Image"],
+              tags: ["museum/indoor"]
+          });
+
+          expect(result.status).toBe(200);
+          expect(result.data?.isComputed).toBe(false);
+          expect(Object.keys(result.data?.heatmaps || {}).length).toBeGreaterThan(0);
+      });
+
+      test("should return computed period stack for multiple content classes", async () => {
+          const result = await testHeatmaps({ 
+              contentClasses: ["Image", "Event"]
+          });
+
+          expect(result.status).toBe(200);
+          expect(result.data?.isComputed).toBe(true);
+          expect(Object.keys(result.data?.heatmaps || {}).length).toBeGreaterThan(0);
+      });
+
+      test("should return computed period stack for multiple tags", async () => {
+          const result = await testHeatmaps({ 
+              contentClasses: ["Image"],
+              tags: ["museum/indoor", "art_gallery"]
+          });
+
+          expect(result.status).toBe(200);
+          expect(result.data?.isComputed).toBe(true);
+      });
+
+      test("should return all available periods", async () => {
+          const result = await testHeatmaps();
+
+          expect(result.data?.availablePeriods).toBeDefined();
+          expect(result.data?.availablePeriods).toContain("1600_1610");
+          expect(result.data?.availablePeriods).toContain("1900_1910");
+      });
+
+      test("should handle invalid content class gracefully", async () => {
+          const result = await testHeatmaps({ 
+              contentClasses: ["InvalidClass" as ContentClass] 
+          });
+
+          expect(result.status).toBe(200);
+          expect(Object.keys(result.data?.heatmaps || {}).length).toBeGreaterThan(0);
+      });
+
+      test("performance test for computed heatmaps", async () => {
+          const startTime = performance.now();
+
+          const result = await testHeatmaps({ 
+              contentClasses: ["Image", "Event"],
+              tags: ["museum/indoor", "art_gallery"]
+          });
+
+          const totalTime = performance.now() - startTime;
+
+          expect(result.status).toBe(200);
+          expect(totalTime).toBeLessThan(2000); // 2 seconds max for full period computation
+      });
   });
   
   // Cell features tests

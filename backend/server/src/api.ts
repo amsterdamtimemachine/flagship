@@ -3,6 +3,7 @@ import type {
     GeoFeatures, 
     BinaryMetadata, 
     HeatmapResponse, 
+    HeatmapsResponse,
     MetadataResponse, 
     CellFeaturesResponse,
     ContentClass,
@@ -92,7 +93,6 @@ export class GridApi {
         return jsonResponse({
             dimensions: this.metadata.dimensions,
             timeRange: this.metadata.timeRange,
-            heatmaps: this.metadata.heatmaps,
             heatmapBlueprint: this.metadata.heatmapBlueprint,
             featuresStatistics: this.metadata.featuresStatistics
         } as MetadataResponse);
@@ -136,161 +136,194 @@ export class GridApi {
                     heatmap: heatmap,
                     timeRange: this.metadata.timeRange,
                     availablePeriods: periods
-                });
+                } as HeatmapResponse);
             } catch (error) {
                 console.error("Error generating heatmap:", error);
                 return errorResponse(`Error generating heatmap: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
             }
     }
 
-    getCellFeatures: ApiHandler = async (req) => {
-        /**
-         * Retrieves features for a specific cell, supporting filtering by content class and tags
-         * 
-         * Direct feature access when:
-         * - Single content class is queried (uses contentOffsets)
-         * - Single content class + single tag is queried (uses contentTagOffsets)
-         * 
-         * Aggregates features when:
-         * - Multiple content classes are selected
-         * - Multiple tags are selected
-         * - No content class specified (uses pagination)
-         * 
-         * @param req Request object with:
-         *   - cellId: from URL path
-         *   - period: query param (required)
-         *   - page: query param (default: 1)
-         *   - contentClasses: query param (optional)
-         *   - tags: query param (optional)
-         * 
-         * @returns {CellFeaturesResponse}
-         * @throws 400 if period missing
-         * @throws 404 if period not found or page not found
-         * @throws 500 if internal error occurs
-         */
-        if (!this.metadata) {
-            return errorResponse("Metadata not initialized", 500);
-        }
+getHeatmaps: ApiHandler = async (req) => {
+    if (!this.metadata) {
+        return errorResponse("Metadata not initialized", 500);
+    }
 
-        const url = new URL(req.url);
-        const cellId = url.pathname.slice('/grid/cell/'.length);
-        const period = url.searchParams.get('period');
-        const page = parseInt(url.searchParams.get('page') ?? '1');
-        const contentClasses = url.searchParams.get('contentClasses')?.split(',') as ContentClass[] || [];
-        const tags = url.searchParams.get('tags')?.split(',') || [];
+    const url = new URL(req.url);
+    const contentClasses = url.searchParams.get('contentClasses')?.split(',') as ContentClass[] || [];
+    const tags = url.searchParams.get('tags')?.split(',') || [];
 
-        if (!period) {
-            return errorResponse("Period parameter is required", 400);
-        }
+    try {
+        const periodHeatmaps: Record<string, Heatmap> = {};
+        const periods = Object.keys(this.metadata.heatmaps);
+        const isPrecomputed = contentClasses.length <= 1 && (!tags.length || tags.length === 1);
 
-        try {
-            if (!this.metadata?.timeSliceIndex[period]) {
-                return errorResponse("Time period not found", 404);
-            }
+        for (const period of periods) {
+            const periodData = this.metadata.heatmaps[period];
 
-            const timeSlice = this.metadata.timeSliceIndex[period];
-            const cell = timeSlice.cells[cellId];
+            if (isPrecomputed) {
+                let selectedContentClass: ContentClass;
+                
+                if (contentClasses.length === 0) {
+                    selectedContentClass = Object.keys(periodData.contentClasses)[0] as ContentClass;
+                } else {
+                    selectedContentClass = periodData.contentClasses[contentClasses[0]] ? 
+                        contentClasses[0] : 
+                        Object.keys(periodData.contentClasses)[0] as ContentClass;
+                }
 
-            if (!cell) {
-                return jsonResponse({
-                    cellId,
-                    period,
-                    features: [],
-                    featureCount: 0,
-                    currentPage: 1,
-                    totalPages: 0
-                });
-            }
+                const contentClassData = periodData.contentClasses[selectedContentClass];
 
-            let features: GeoFeatures[] = [];
+                if (tags.length === 1) {
+                    const tag = tags[0];
+                    if (contentClassData.tags[tag]) {
+                        periodHeatmaps[period] = contentClassData.tags[tag];
+                    }
+                } else {
+                    periodHeatmaps[period] = contentClassData.base;
+                }
+            } else {
+                const heatmapsToMerge: Heatmap[] = [];
 
-            // If content classes are specified, fetch features by content class and tags
-            if (contentClasses.length > 0) {
-                // If we're only querying one content class with no tags, we can use direct assignment
-                if (contentClasses.length === 1 && tags.length === 0) {
-                    const contentClass = contentClasses[0];
-                    if (!cell.contentOffsets[contentClass] || cell.contentOffsets[contentClass].length === 0) {
-                        features = []; // Empty array if no features found
+                for (const contentClass of contentClasses) {
+                    const contentClassData = periodData.contentClasses[contentClass];
+                    if (!contentClassData) continue;
+
+                    if (tags.length > 0) {
+                        for (const tag of tags) {
+                            if (contentClassData.tags[tag]) {
+                                heatmapsToMerge.push(contentClassData.tags[tag]);
+                            }
+                        }
                     } else {
-                        const contentOffset = cell.contentOffsets[contentClass];
-                        const contentFeaturesBytes = new Uint8Array(
-                            this.binaryBuffer!,
-                            this.dataStartOffset + contentOffset.offset,
-                            contentOffset.length
-                        );
-                        features = decode(contentFeaturesBytes) as GeoFeatures[];
+                        heatmapsToMerge.push(contentClassData.base);
                     }
                 }
-                // If we're only querying one content class with one tag, still use direct assignment
-                else if (contentClasses.length === 1 && tags.length === 1) {
-                    const contentClass = contentClasses[0];
-                    const tag = tags[0];
-                    if (cell.contentTagOffsets[contentClass]?.[tag] && 
-                        cell.contentTagOffsets[contentClass][tag].length > 0) {
-                        const tagOffset = cell.contentTagOffsets[contentClass][tag];
+
+                if (heatmapsToMerge.length > 0) {
+                    periodHeatmaps[period] = this.mergeHeatmaps(heatmapsToMerge);
+                }
+            }
+        }
+
+        return jsonResponse({
+            heatmaps: periodHeatmaps,
+            timeRange: this.metadata.timeRange,
+            availablePeriods: periods,
+            isComputed: !isPrecomputed
+        });
+
+    } catch (error) {
+        console.error("Error generating heatmaps:", error);
+        return errorResponse("Internal server error", 500);
+    }
+}
+
+getCellFeatures: ApiHandler = async (req) => {
+    if (!this.metadata) {
+        return errorResponse("Metadata not initialized", 500);
+    }
+
+    const url = new URL(req.url);
+    const cellId = url.pathname.slice('/grid/cell/'.length);
+    const period = url.searchParams.get('period');
+    const page = parseInt(url.searchParams.get('page') ?? '1');
+    const contentClasses = url.searchParams.get('contentClasses')?.split(',') as ContentClass[] || [];
+    const tags = url.searchParams.get('tags')?.split(',') || [];
+
+    if (!period) {
+        return errorResponse("Period parameter is required", 400);
+    }
+
+    try {
+        if (!this.metadata?.timeSliceIndex[period]) {
+            return errorResponse("Time period not found", 404);
+        }
+
+        const timeSlice = this.metadata.timeSliceIndex[period];
+        const cell = timeSlice.cells[cellId];
+
+        if (!cell) {
+            return jsonResponse({
+                cellId,
+                period,
+                features: [],
+                featureCount: 0,
+                currentPage: 1,
+                totalPages: 0
+            });
+        }
+
+        let features: GeoFeatures[] = [];
+        let totalPages = 0;
+
+        // If content classes are specified, fetch features by content class and tags
+        if (contentClasses.length > 0) {
+            // If we're only querying one content class with no tags, use pagination
+            if (contentClasses.length === 1 && tags.length === 0) {
+                const contentClass = contentClasses[0];
+                const pageKey = `page${page}`;
+
+                // Check if the requested page exists
+                if (!cell.pages[pageKey]) {
+                    return errorResponse("Page not found", 404);
+                }
+
+                const pageLocation = cell.pages[pageKey][contentClass];
+                
+                if (pageLocation && pageLocation.length > 0) {
+                    const contentFeaturesBytes = new Uint8Array(
+                        this.binaryBuffer!,
+                        this.dataStartOffset + pageLocation.offset,
+                        pageLocation.length
+                    );
+                    features = decode(contentFeaturesBytes) as GeoFeatures[];
+                }
+
+                // Calculate total pages based on available pages for this content class
+                totalPages = Object.keys(cell.pages).length;
+            }
+            // If we're only querying one content class with one tag, still use direct assignment
+            else if (contentClasses.length === 1 && tags.length === 1) {
+                const contentClass = contentClasses[0];
+                const tag = tags[0];
+                if (cell.contentTagOffsets[contentClass]?.[tag] && 
+                    cell.contentTagOffsets[contentClass][tag].length > 0) {
+                    const tagOffset = cell.contentTagOffsets[contentClass][tag];
                     const taggedFeaturesBytes = new Uint8Array(
                         this.binaryBuffer!,
                         this.dataStartOffset + tagOffset.offset,
                         tagOffset.length
                     );
                     features = decode(taggedFeaturesBytes) as GeoFeatures[];
-                    } else {
-                        features = []; // Empty array if no features found
-                    }
                 }
-                // For multiple content classes or tags, we need to accumulate features
-                else {
-                    for (const contentClass of contentClasses) {
-                        if (!cell.contentOffsets[contentClass] || cell.contentOffsets[contentClass].length === 0) {
-                            continue;
-                        }
+                totalPages = 1; // No pagination for tag queries
+            }
+            // For multiple content classes or tags, we need to accumulate features
+            else {
+                for (const contentClass of contentClasses) {
+                    if (!cell.contentOffsets[contentClass] || cell.contentOffsets[contentClass].length === 0) {
+                        continue;
+                    }
 
-                        if (tags.length > 0) {
-                            for (const tag of tags) {
-                                if (cell.contentTagOffsets[contentClass]?.[tag]) {
-                                    const tagOffset = cell.contentTagOffsets[contentClass][tag];
+                    if (tags.length > 0) {
+                        for (const tag of tags) {
+                            if (cell.contentTagOffsets[contentClass]?.[tag]) {
+                                const tagOffset = cell.contentTagOffsets[contentClass][tag];
 
-                                    if (tagOffset.length > 0) {
-                                        const taggedFeaturesBytes = new Uint8Array(
-                                            this.binaryBuffer!,
-                                            this.dataStartOffset + tagOffset.offset,
-                                            tagOffset.length
-                                        );
+                                if (tagOffset.length > 0) {
+                                    const taggedFeaturesBytes = new Uint8Array(
+                                        this.binaryBuffer!,
+                                        this.dataStartOffset + tagOffset.offset,
+                                        tagOffset.length
+                                    );
 
-                                        const taggedFeatures = decode(taggedFeaturesBytes) as GeoFeatures[];
-                                        features.push(...taggedFeatures);
-                                    }
+                                    const taggedFeatures = decode(taggedFeaturesBytes) as GeoFeatures[];
+                                    features.push(...taggedFeatures);
                                 }
                             }
-                        } else {
-                            const contentOffset = cell.contentOffsets[contentClass];
-
-                            if (contentOffset.length > 0) {
-                                const contentFeaturesBytes = new Uint8Array(
-                                    this.binaryBuffer!,
-                                    this.dataStartOffset + contentOffset.offset,
-                                    contentOffset.length
-                                );
-
-                                const contentFeatures = decode(contentFeaturesBytes) as GeoFeatures[];
-                                features.push(...contentFeatures);
-                            }
                         }
-                    }
-                }
-            } else {
-                // No content classes specified, use pagination
-                const pageKey = `page${page}`;
-
-                // Check if the requested page exists
-                if (page > 1 && !cell.pages[pageKey]) {
-                    return errorResponse("Page not found", 404);
-                }
-
-                const pageLocation = cell.pages[pageKey];
-                if (pageLocation) {
-                    for (const contentClass of Object.keys(pageLocation) as ContentClass[]) {
-                        const contentOffset = pageLocation[contentClass];
+                    } else {
+                        const contentOffset = cell.contentOffsets[contentClass];
 
                         if (contentOffset.length > 0) {
                             const contentFeaturesBytes = new Uint8Array(
@@ -304,10 +337,39 @@ export class GridApi {
                         }
                     }
                 }
+                totalPages = 1; // No pagination for multiple filters
+            }
+        } else {
+            // No content classes specified, use pagination
+            const pageKey = `page${page}`;
+
+            // Check if the requested page exists
+            if (page > 1 && !cell.pages[pageKey]) {
+                return errorResponse("Page not found", 404);
             }
 
-            // Remove duplicates if needed
-            const uniqueFeatures = this.removeDuplicateFeatures(features);
+            const pageLocation = cell.pages[pageKey];
+            if (pageLocation) {
+                for (const contentClass of Object.keys(pageLocation) as ContentClass[]) {
+                    const contentOffset = pageLocation[contentClass];
+
+                    if (contentOffset.length > 0) {
+                        const contentFeaturesBytes = new Uint8Array(
+                            this.binaryBuffer!,
+                            this.dataStartOffset + contentOffset.offset,
+                            contentOffset.length
+                        );
+
+                        const contentFeatures = decode(contentFeaturesBytes) as GeoFeatures[];
+                        features.push(...contentFeatures);
+                    }
+                }
+            }
+            totalPages = Object.keys(cell.pages).length;
+        }
+
+        // Remove duplicates if needed
+        const uniqueFeatures = this.removeDuplicateFeatures(features);
 
         return jsonResponse({
             cellId,
@@ -315,14 +377,14 @@ export class GridApi {
             features: uniqueFeatures,
             featureCount: uniqueFeatures.length,
             currentPage: page,
-            totalPages: Object.keys(cell.pages).length
+            totalPages
         } as CellFeaturesResponse);
 
-        } catch (error) {
-            console.error("Error serving cell data:", error);
-            return errorResponse("Internal server error", 500);
-        }
+    } catch (error) {
+        console.error("Error serving cell data:", error);
+        return errorResponse("Internal server error", 500);
     }
+}
     
     private combineHeatmaps(
         period: string,
