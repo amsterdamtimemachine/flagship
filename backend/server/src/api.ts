@@ -144,6 +144,30 @@ export class GridApi {
     }
 
     getCellFeatures: ApiHandler = async (req) => {
+        /**
+         * Retrieves features for a specific cell, supporting filtering by content class and tags
+         * 
+         * Direct feature access when:
+         * - Single content class is queried (uses contentOffsets)
+         * - Single content class + single tag is queried (uses contentTagOffsets)
+         * 
+         * Aggregates features when:
+         * - Multiple content classes are selected
+         * - Multiple tags are selected
+         * - No content class specified (uses pagination)
+         * 
+         * @param req Request object with:
+         *   - cellId: from URL path
+         *   - period: query param (required)
+         *   - page: query param (default: 1)
+         *   - contentClasses: query param (optional)
+         *   - tags: query param (optional)
+         * 
+         * @returns {CellFeaturesResponse}
+         * @throws 400 if period missing
+         * @throws 404 if period not found or page not found
+         * @throws 500 if internal error occurs
+         */
         if (!this.metadata) {
             return errorResponse("Metadata not initialized", 500);
         }
@@ -154,7 +178,7 @@ export class GridApi {
         const page = parseInt(url.searchParams.get('page') ?? '1');
         const contentClasses = url.searchParams.get('contentClasses')?.split(',') as ContentClass[] || [];
         const tags = url.searchParams.get('tags')?.split(',') || [];
-        
+
         if (!period) {
             return errorResponse("Period parameter is required", 400);
         }
@@ -179,13 +203,12 @@ export class GridApi {
             }
 
             let features: GeoFeatures[] = [];
-            
+
             // If content classes are specified, fetch features by content class and tags
             if (contentClasses.length > 0) {
                 // If we're only querying one content class with no tags, we can use direct assignment
                 if (contentClasses.length === 1 && tags.length === 0) {
                     const contentClass = contentClasses[0];
-                    // Skip if this cell has no features for this content class
                     if (!cell.contentOffsets[contentClass] || cell.contentOffsets[contentClass].length === 0) {
                         features = []; // Empty array if no features found
                     } else {
@@ -218,13 +241,11 @@ export class GridApi {
                 // For multiple content classes or tags, we need to accumulate features
                 else {
                     for (const contentClass of contentClasses) {
-                        // Skip if this cell has no features for this content class
                         if (!cell.contentOffsets[contentClass] || cell.contentOffsets[contentClass].length === 0) {
                             continue;
                         }
 
                         if (tags.length > 0) {
-                            // Fetch features that match content class + tags
                             for (const tag of tags) {
                                 if (cell.contentTagOffsets[contentClass]?.[tag]) {
                                     const tagOffset = cell.contentTagOffsets[contentClass][tag];
@@ -242,8 +263,34 @@ export class GridApi {
                                 }
                             }
                         } else {
-                            // No tags specified, fetch all features for this content class
                             const contentOffset = cell.contentOffsets[contentClass];
+
+                            if (contentOffset.length > 0) {
+                                const contentFeaturesBytes = new Uint8Array(
+                                    this.binaryBuffer!,
+                                    this.dataStartOffset + contentOffset.offset,
+                                    contentOffset.length
+                                );
+
+                                const contentFeatures = decode(contentFeaturesBytes) as GeoFeatures[];
+                                features.push(...contentFeatures);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // No content classes specified, use pagination
+                const pageKey = `page${page}`;
+
+                // Check if the requested page exists
+                if (page > 1 && !cell.pages[pageKey]) {
+                    return errorResponse("Page not found", 404);
+                }
+
+                const pageLocation = cell.pages[pageKey];
+                if (pageLocation) {
+                    for (const contentClass of Object.keys(pageLocation) as ContentClass[]) {
+                        const contentOffset = pageLocation[contentClass];
 
                         if (contentOffset.length > 0) {
                             const contentFeaturesBytes = new Uint8Array(
@@ -255,22 +302,21 @@ export class GridApi {
                             const contentFeatures = decode(contentFeaturesBytes) as GeoFeatures[];
                             features.push(...contentFeatures);
                         }
-                        }
                     }
                 }
             }
-            
-            // Remove duplicates (features might be repeated if they have multiple matching tags)
+
+            // Remove duplicates if needed
             const uniqueFeatures = this.removeDuplicateFeatures(features);
-            
-            return jsonResponse({
-                cellId,
-                period,
-                features: uniqueFeatures,
-                featureCount: uniqueFeatures.length,
-                currentPage: page,
-                totalPages: Object.keys(cell.pages).length
-            } as CellFeaturesResponse);
+
+        return jsonResponse({
+            cellId,
+            period,
+            features: uniqueFeatures,
+            featureCount: uniqueFeatures.length,
+            currentPage: page,
+            totalPages: Object.keys(cell.pages).length
+        } as CellFeaturesResponse);
 
         } catch (error) {
             console.error("Error serving cell data:", error);
