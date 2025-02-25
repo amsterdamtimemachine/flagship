@@ -102,7 +102,7 @@ export interface TimeSlice {
     cells: {
         [cellId: string]: {
             count: number;
-            contentIndex: ContentFeatures;
+            contentIndex: ContentFeatures; // WIP: this field shouldn't be contentIndex but contentFeatures
             pages: {
                 [pageNum: string]: ContentClassPage;
             }
@@ -130,25 +130,25 @@ export interface BinaryMetadata {
     };
 }
 
-interface BinaryFileStructure {
-    // Header - Size of metadata (4 bytes)
-    metadataSize: number;
-    
-    // Metadata section
-    metadata: BinaryMetadata;
-    
-    // Feature data section - all binary blobs referenced by offsets in the metadata
-    featureData: {
-        // Content class features (referenced by contentOffsets)
-        contentClassFeatures: Array<Uint8Array>;
-        
-        // Content class + tag features (referenced by contentTagOffsets)
-        contentTagFeatures: Array<Uint8Array>;
-        
-        // Paginated features (referenced by page offsets)
-        pageFeatures: Array<Uint8Array>;
-    };
-}
+//interface BinaryFileStructure {
+//    // Header - Size of metadata (4 bytes)
+//    metadataSize: number;
+//    
+//    // Metadata section
+//    metadata: BinaryMetadata;
+//    
+//    // Feature data section - all binary blobs referenced by offsets in the metadata
+//    featureData: {
+//        // Content class features (referenced by contentOffsets)
+//        contentClassFeatures: Array<Uint8Array>;
+//        
+//        // Content class + tag features (referenced by contentTagOffsets)
+//        contentTagFeatures: Array<Uint8Array>;
+//        
+//        // Paginated features (referenced by page offsets)
+//        pageFeatures: Array<Uint8Array>;
+//    };
+//}
 
 
 // api 

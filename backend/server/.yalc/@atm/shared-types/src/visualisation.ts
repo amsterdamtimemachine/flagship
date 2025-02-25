@@ -52,7 +52,7 @@ export interface HeatmapBlueprint {
 
 export interface Heatmap {
     densityArray: Float32Array;
-    countArray: Float32Array;
+    countArray: Uint32Array;
 }
 
 export interface HeatmapStack {

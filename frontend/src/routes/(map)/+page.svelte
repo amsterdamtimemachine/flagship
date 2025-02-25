@@ -16,9 +16,9 @@
 	$: heatmapBlueprint = data?.metadata?.heatmapBlueprint?.cells;
 	$: featuresStatistics = data?.metadata?.featuresStatistics;
 	$: timePeriods = data?.metadata?.timePeriods;
-	$: currentHeatmapIndex = [0];
+	$: currentPeriod = undefined;
 
-  let selectedClasses = new Set<ContentClass>();
+	let selectedClasses = new Set<ContentClass>();
 	let selectedTags = new Set<string>();
 
 	async function updateCellDataForPeriod(index: number) {
@@ -58,23 +58,24 @@
 
 <div class="relative flex flex-col w-screen h-screen">
 <ToggleGroupSelector 
-	class="absolute top-[100px]" 
+	class="z-50 absolute top-[100px]" 
 	defaultContentClass={PUBLIC_DEFAULT_CONTENT_CLASS}
 	bind:selected={selectedClasses}
 	bind:selectedTags={selectedTags}
 	{featuresStatistics}/>
 
-			<!--
 	{#if heatmaps}
 		<div class="relative flex-1">
 			<MapGLGrid
 				class="w-full h-full z-10"
-				heatmap={currentHeatmap}
+				heatmap={heatmaps.heatmaps[currentPeriod]}
 				{heatmapBlueprint}
 				{dimensions}
 				selectedCellId={$page.state.selectedCell?.cellFeatures.cellId}
 				on:cellClick={handleCellClick}
 			/>
+
+			<!--
 			{#if $page.state.selectedCell}
 				<div
 					class="z-40 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300"
@@ -88,11 +89,12 @@
 					{/if}
 				</div>
 			{/if}
+			-->
 		</div>
 	{/if}
 	-->
 	{#if timePeriods}
-		<HeatmapSlider periods={timePeriods}  bind:value={currentHeatmapIndex} />
+		<HeatmapSlider {timePeriods}  bind:value={currentPeriod} />
 	{/if}
 
 </div>

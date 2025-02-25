@@ -1,4 +1,5 @@
 import { decode } from '@msgpack/msgpack';
+import { fixDecodedHeatmapsTypedArrays } from './utils';
 import type { 
     GeoFeatures, 
     BinaryMetadata, 
@@ -67,7 +68,10 @@ export class GridApi {
 
                 try {
                     const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
-                    this.metadata = decode(metadataBytes) as BinaryMetadata;
+                    //const metadata = decode(metadataBytes) as BinaryMetadata;
+                   // const gridSize = Math.floor(metadata.dimensions.colsAmount * metadata.dimensions.rowsAmount);
+                   // metadata.heatmaps = fixDecodedHeatmapsTypedArrays(metadata.heatmaps, gridSize);
+                    this.metadata = decode(metadataBytes) as BinaryMetadata;;
                     this.dataStartOffset = 4 + metadataSize;
                     
                     console.log("Successfully decoded metadata");

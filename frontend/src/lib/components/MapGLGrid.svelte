@@ -5,7 +5,6 @@
 	import type {
 		Heatmap,
 		HeatmapCell,
-		HeatmapBlueprintCell,
 		GridDimensions
 	} from '@atm/shared-types';
 	import debounce from 'lodash.debounce';
@@ -16,7 +15,8 @@
 	const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
 
 	export let heatmap: Heatmap;
-	export let heatmapBlueprint: HeatmapBlueprintCell[];
+	//export let period: string;
+	export let heatmapBlueprint: HeatmapCell[];
 	export let dimensions: GridDimensions;
 	export let className: string | undefined = undefined;
 	export let selectedCellId: string | null = null;
@@ -33,21 +33,25 @@
 	let map: Map | undefined;
 	let mapContainer: HTMLElement;
 	let isMapLoaded = false;
+	// Track which cells currently have values to optimize updates
+	let activeCellIds = new Set<string>();
 
 	const dispatch = createEventDispatcher<{
 		cellClick: {
 			id: string;
-			period: string;
+			//period: string;
 		};
 	}>();
 
 	// Generate initial features from blueprint
-	function generateInitialFeatures(blueprint: HeatmapBlueprintCell[]) {
+	function generateInitialFeatures(blueprint: HeatmapCell[]) {
 		const features = blueprint.map((cell) => ({
 			type: 'Feature',
 			id: cell.cellId,
 			properties: {
 				id: cell.cellId,
+				row: cell.row,
+				col: cell.col,
 				count: 0
 			},
 			geometry: {
@@ -71,31 +75,56 @@
 	}
 
 	const updateFeatureStates = debounce(
-		(map: Map, heatmap: Heatmap, blueprint: HeatmapBlueprintCell[]) => {
-			// Create a map of current cell values for quick lookup
-			const currentValues = new Map(
-				heatmap.cells.map((cell) => [
-					cell.cellId,
-					{
-						count: cell.featureCount,
-						density: cell.countDensity
-					}
-				])
-			);
+		(map: Map, heatmapData: Heatmap, blueprint: HeatmapCell[]) => {
 
-			// Update ALL blueprint cells, whether they have current values or not
-			blueprint.forEach((cell) => {
-				const cellData = currentValues.get(cell.cellId) ?? { count: 0, density: 0 };
+			const { densityArray, countArray } = heatmapData;
 
-				// Always set the state, even for cells with no values
-				map.setFeatureState(
-					{ source: 'grid', id: cell.cellId },
-					{
-						value: cellData.density,
-						count: cellData.count
-					}
-				);
+			const newActiveCellIds = new Set<string>();
+			
+			// Build a lookup for quick index -> cellId mapping
+
+			const cellIdMap = new Map<number, string>();
+			blueprint.forEach(cell => {
+				const index = cell.row * dimensions.colsAmount + cell.col;
+				cellIdMap.set(index, cell.cellId);
 			});
+			
+			// Only iterate through values that exist in the array
+			for (let i = 0; i < countArray.length; i++) {
+				const count = countArray[i];
+				if (count > 0) {
+
+					const cellId = cellIdMap.get(i);
+					if (cellId) {
+
+						// Set the feature state for cells with values
+						map.setFeatureState(
+							{ source: 'grid', id: cellId },
+							{
+								value: densityArray[i] || 0,
+								count
+							}
+						);
+						newActiveCellIds.add(cellId);
+					}
+				}
+			}
+			
+			// Clear cells inactive cells 
+			activeCellIds.forEach(cellId => {
+				if (!newActiveCellIds.has(cellId)) {
+					map.setFeatureState(
+						{ source: 'grid', id: cellId },
+						{
+							value: 0,
+							count: 0
+						}
+					);
+				}
+			});
+			
+			// Update the tracking set
+			activeCellIds = newActiveCellIds;
 		},
 		16
 	);
@@ -104,9 +133,9 @@
 		if (!isMapLoaded || !map) return;
 
 		// Clear previous highlight
-		heatmapBlueprint.forEach((cell) => {
-			map.setFeatureState({ source: 'grid', id: cell.cellId }, { selected: false });
-		});
+		if (selectedCellId) {
+			map.setFeatureState({ source: 'grid', id: selectedCellId }, { selected: false });
+		}
 
 		// Set new highlight
 		if (cellId) {
@@ -215,7 +244,7 @@
 					if (featureState.count > 0) {
 						dispatch('cellClick', {
 							id: feature.properties.id,
-							period: heatmap.period
+							//period
 						});
 					}
 				}
@@ -224,6 +253,7 @@
 			isMapLoaded = true;
 		});
 	});
+	
 	onDestroy(() => {
 		if (map) {
 			map.off('mousemove', 'heatmap-squares');

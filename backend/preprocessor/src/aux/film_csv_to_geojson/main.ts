@@ -19,6 +19,9 @@ async function main() {
     };
 
     try {
+
+        // node that processCSV swaps input lat lon to  output lon lat!
+        //  this should be parametrised if the script is to be used for more general csv processing
         const result = await processCSV('/home/m/Downloads/tblFilm.csv', config);
         console.log(`Processed ${result.processedRows} rows`);
         console.log(`Skipped ${result.skippedRows} rows`);

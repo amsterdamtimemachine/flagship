@@ -3,7 +3,9 @@ import { createReadStream } from 'node:fs';
 import { join } from 'node:path';
 import JSONStream from 'jsonstream';
 import { decode, encode } from '@msgpack/msgpack';
+import {fixDecodedHeatmapsTypedArrays} from './utils'; 
 import * as fs from 'node:fs/promises';
+
 
 import type { 
    Point2D,
@@ -24,6 +26,7 @@ import type {
    HeatmapStack,
    Heatmaps,
 } from '@atm/shared-types';
+import { on } from 'node:events';
 
 interface ProcessingOptions {
     sliceYears: number;
@@ -226,7 +229,7 @@ export async function processFeatures(
     const timeSlices: Record<string, TimeSlice> = {};
     let timePeriods: string[] = [];
     
-    // Initialize period slices based on options.sliceYears
+    // Initialize time slices based on options.sliceYears
     for (let year = timeRange.start.getFullYear(); year < timeRange.end.getFullYear(); year += options.sliceYears) {
         const period = `${year}_${year + options.sliceYears}`;
         timeSlices[period] = {
@@ -288,27 +291,31 @@ export async function processFeatures(
         }
     }
 
+    // generate heatmaps
     const totalCells = gridDimensions.rowsAmount * gridDimensions.colsAmount;
     const heatmaps: Heatmaps = {};
     
     for (const [period, slice] of Object.entries(timeSlices)) {
         // Initialize heatmap structure for this period
         heatmaps[period] = {
-            contentClasses: {} as HeatmapStack
-        };
+            contentClasses: {} as Record<ContentClass, {
+                base: Heatmap;
+                tags: Record<string, Heatmap>;
+            }>
+        } as HeatmapStack;
         
         // Process each content class
         for (const contentClass of contentClasses) {
             // Create base arrays for this content class
-            const baseCountArray = new Float32Array(totalCells);
-            
+            const baseCountArray : number[] = new Array(totalCells).fill(0); //new Uint32Array(totalCells); 
             // Collect tag names for this content class
             const tagNames = new Set<string>();
-            
+        
             // Fill content class arrays and collect tags
             for (const [cellId, cellData] of Object.entries(slice.cells)) {
                 if (cellData.contentIndex[contentClass].count > 0) {
                     const [row, col] = cellId.split('_').map(Number);
+
                     const index = row * gridDimensions.colsAmount + col;
                     
                     // Set count value
@@ -322,10 +329,9 @@ export async function processFeatures(
                     }
                 }
             }
-            
-            // Calculate base density array
+
             const maxBaseCount = Math.max(...baseCountArray);
-            const baseDensityArray = new Float32Array(totalCells);
+            const baseDensityArray : number [] = new Array(totalCells).fill(0); //new Float32Array(totalCells);
             
             if (maxBaseCount > 0) {
                 const maxTransformed = Math.log(maxBaseCount + 1);
@@ -334,7 +340,7 @@ export async function processFeatures(
                         Math.log(baseCountArray[i] + 1) / maxTransformed : 0;
                 }
             }
-            
+
             // Create heatmap entry for this content class
             heatmaps[period].contentClasses[contentClass] = {
                 base: {
@@ -346,7 +352,7 @@ export async function processFeatures(
             
             // Process each tag for this content class
             for (const tagName of tagNames) {
-                const tagCountArray = new Float32Array(totalCells);
+                const tagCountArray: number[] = new Array(totalCells).fill(0) //new Uint32Array(totalCells);
                 
                 // Fill tag count array
                 for (const [cellId, cellData] of Object.entries(slice.cells)) {
@@ -365,7 +371,7 @@ export async function processFeatures(
                 
                 // Calculate tag density array
                 const maxTagCount = Math.max(...tagCountArray);
-                const tagDensityArray = new Float32Array(totalCells);
+                const tagDensityArray : number[] = new Array(totalCells).fill(0) //new Float32Array(totalCells);
                 
                 if (maxTagCount > 0) {
                     const maxTransformed = Math.log(maxTagCount + 1);
@@ -374,7 +380,9 @@ export async function processFeatures(
                             Math.log(tagCountArray[i] + 1) / maxTransformed : 0;
                     }
                 }
-                
+
+
+
                 // Store tag heatmap
                 heatmaps[period].contentClasses[contentClass].tags[tagName] = {
                     countArray: tagCountArray,
@@ -498,7 +506,6 @@ export async function saveFeaturesToBinary(
                 }
             }
 
-            // Calculate page offsets (unchanged from your original code)
             const pageOffsets = Object.entries(cell.pages).reduce((acc, [pageNum, page]) => {
                 const pageContentOffsets = Object.entries(page).reduce((innerAcc, [className, features]) => {
                     const contentClass = className as ContentClass;
@@ -628,6 +635,17 @@ export async function testBinaryLoading(binaryPath: string) {
     
     const metadataBytesRead = new Uint8Array(buffer, 4, metadataSize);
     const metadata = decode(metadataBytesRead) as BinaryMetadata;
+    
+    
+   // const k = Object.keys(metadata.heatmaps)[7];
+   // const classes = metadata.heatmaps[k]["Image"] ///["2000_2500"]//.contentClasses['Image'].base
+   // console.log("CLS");
+   // console.log(classes);
+
+
+    // MessagePack doesn't know the length of typed arrays when decoding them, length needs to be set manually
+   // const gridSize = Math.floor(metadata.dimensions.colsAmount * metadata.dimensions.rowsAmount);
+   // metadata.heatmaps = fixDecodedHeatmapsTypedArrays(metadata.heatmaps, gridSize);
     
     // Print metadata overview
     console.log("\nMetadata Overview:");

@@ -103,7 +103,9 @@
       </button>
     {/each}
   </div>
-  
+
+
+  <!--
   {#if selectedClasses.length > 0 && intersectionTags.length > 0}
     <div
       use:melt={$tagRoot}
@@ -121,4 +123,5 @@
       {/each}
     </div>
   {/if}
+  -->
 </div>

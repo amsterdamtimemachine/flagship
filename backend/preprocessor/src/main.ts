@@ -32,8 +32,8 @@ async function preprocessAndSaveData() {
     
    // console.log("Starting bin processing");
     const gridDimensions = await calculateGridDimensions(processedJsonPath, {
-        colsAmount: 50,
-        rowsAmount: 50,
+        colsAmount: 200,
+        rowsAmount: 200,
         padding: 0.0,
     });
    // 
@@ -54,7 +54,7 @@ async function preprocessAndSaveData() {
   //  );
     //
     //
-    console.log("processing!");
+   // console.log("processing!");
     let features = await processFeatures(processedJsonPath, gridDimensions, {sliceYears: 50, pageSize: 25})
     saveFeaturesToBinary(features, binaryPath);
     console.log("done");

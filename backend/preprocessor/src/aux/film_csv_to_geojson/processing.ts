@@ -29,7 +29,9 @@ function parseCoordinates(coords: string): [number, number] {
     if (isNaN(lat) || isNaN(lon)) {
         throw new Error('Invalid coordinates format');
     }
-    return [lat, lon];
+
+    // SWAPPING lat lon to lon lat!
+    return [lon, lat];
 }
 
 function transformRow(
