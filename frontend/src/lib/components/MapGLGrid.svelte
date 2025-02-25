@@ -36,10 +36,15 @@
 	// Track which cells currently have values to optimize updates
 	let activeCellIds = new Set<string>();
 
+	const cellIdMap = new Map<number, string>();
+	heatmapBlueprint.forEach(cell => {
+			const index = cell.row * dimensions.colsAmount + cell.col;
+			cellIdMap.set(index, cell.cellId);
+			});
+
 	const dispatch = createEventDispatcher<{
 		cellClick: {
 			id: string;
-			//period: string;
 		};
 	}>();
 
@@ -75,20 +80,12 @@
 	}
 
 	const updateFeatureStates = debounce(
-		(map: Map, heatmapData: Heatmap, blueprint: HeatmapCell[]) => {
+		(map: Map, heatmapData: Heatmap) => {
 
 			const { densityArray, countArray } = heatmapData;
 
 			const newActiveCellIds = new Set<string>();
-			
-			// Build a lookup for quick index -> cellId mapping
-
-			const cellIdMap = new Map<number, string>();
-			blueprint.forEach(cell => {
-				const index = cell.row * dimensions.colsAmount + cell.col;
-				cellIdMap.set(index, cell.cellId);
-			});
-			
+				
 			// Only iterate through values that exist in the array
 			for (let i = 0; i < countArray.length; i++) {
 				const count = countArray[i];
@@ -145,7 +142,7 @@
 
 	// Update feature states when heatmap changes
 	$: if (isMapLoaded && map && heatmap) {
-		updateFeatureStates(map, heatmap, heatmapBlueprint);
+		updateFeatureStates(map, heatmap);
 	}
 
 	// Reactive statement calls the function
