@@ -9,12 +9,13 @@
 		PUBLIC_SERVER_PROD_URL,
 		PUBLIC_SERVER_DEV_URL
 	} from '$env/static/public';
+
+	import { fetchHeatmaps, fetchApi } from '$api';
 	import CellPage from '$routes/(map)/cells/[period]/[cellId]/+page.svelte';
 	import ToggleGroupSelector from '$components/ToggleGroupSelector.svelte';
 	import MapGLGrid from '$components/MapGLGrid.svelte';
 	import HeatmapSlider from '$components/HeatmapSlider.svelte';
 	import type { ContentClass, Heatmap } from '@atm/shared-types';
-	import { fetchHeatmaps, fetchApi } from '$api';
 
 	export let data;
 

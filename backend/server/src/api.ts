@@ -68,7 +68,7 @@ export class GridApi {
 
                 try {
                     const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
-                    //const metadata = decode(metadataBytes) as BinaryMetadata;
+                    const metadata = decode(metadataBytes) as BinaryMetadata;
                    // const gridSize = Math.floor(metadata.dimensions.colsAmount * metadata.dimensions.rowsAmount);
                    // metadata.heatmaps = fixDecodedHeatmapsTypedArrays(metadata.heatmaps, gridSize);
                     this.metadata = decode(metadataBytes) as BinaryMetadata;;
@@ -238,13 +238,15 @@ getCellFeatures: ApiHandler = async (req) => {
     }
 
     try {
+        // Check if the requested time period exists
         if (!this.metadata?.timeSliceIndex[period]) {
-            return errorResponse("Time period not found", 404);
+            return errorResponse(`Time period '${period}' not found`, 404);
         }
 
         const timeSlice = this.metadata.timeSliceIndex[period];
         const cell = timeSlice.cells[cellId];
 
+        // If the cell doesn't exist in this period, return empty data
         if (!cell) {
             return jsonResponse({
                 cellId,
@@ -258,117 +260,88 @@ getCellFeatures: ApiHandler = async (req) => {
 
         let features: GeoFeatures[] = [];
         let totalPages = 0;
+        let totalFeatures = 0;
 
-        // If content classes are specified, fetch features by content class and tags
-        if (contentClasses.length > 0) {
-            // If we're only querying one content class with no tags, use pagination
-            if (contentClasses.length === 1 && tags.length === 0) {
-                const contentClass = contentClasses[0];
-                const pageKey = `page${page}`;
+        // If no specific content classes are requested, use all available content classes
+        const classesToFetch = contentClasses.length > 0 
+            ? contentClasses 
+            : Object.keys(cell.contentOffsets) as ContentClass[];
 
-                // Check if the requested page exists
-                if (!cell.pages[pageKey]) {
-                    return errorResponse("Page not found", 404);
+        // Case 1: Filter by content classes and tags
+        if (tags.length > 0) {
+            // For each requested content class and tag combination
+            for (const contentClass of classesToFetch) {
+                // Skip if this content class doesn't exist for this cell
+                if (!cell.contentOffsets[contentClass] || 
+                    cell.contentOffsets[contentClass].length === 0) {
+                    continue;
                 }
 
-                const pageLocation = cell.pages[pageKey][contentClass];
-                
-                if (pageLocation && pageLocation.length > 0) {
-                    const contentFeaturesBytes = new Uint8Array(
-                        this.binaryBuffer!,
-                        this.dataStartOffset + pageLocation.offset,
-                        pageLocation.length
-                    );
-                    features = decode(contentFeaturesBytes) as GeoFeatures[];
-                }
+                // Get features for each requested tag
+                for (const tag of tags) {
+                    // Skip if this content class doesn't have this tag
+                    if (!cell.contentTagOffsets[contentClass]?.[tag] || 
+                        cell.contentTagOffsets[contentClass][tag].length === 0) {
+                        continue;
+                    }
 
-                // Calculate total pages based on available pages for this content class
-                totalPages = Object.keys(cell.pages).length;
-            }
-            // If we're only querying one content class with one tag, still use direct assignment
-            else if (contentClasses.length === 1 && tags.length === 1) {
-                const contentClass = contentClasses[0];
-                const tag = tags[0];
-                if (cell.contentTagOffsets[contentClass]?.[tag] && 
-                    cell.contentTagOffsets[contentClass][tag].length > 0) {
+                    // Fetch the tag features
                     const tagOffset = cell.contentTagOffsets[contentClass][tag];
                     const taggedFeaturesBytes = new Uint8Array(
                         this.binaryBuffer!,
                         this.dataStartOffset + tagOffset.offset,
                         tagOffset.length
                     );
-                    features = decode(taggedFeaturesBytes) as GeoFeatures[];
+
+                    const taggedFeatures = decode(taggedFeaturesBytes) as GeoFeatures[];
+                    features.push(...taggedFeatures);
+                    totalFeatures += taggedFeatures.length;
                 }
-                totalPages = 1; // No pagination for tag queries
             }
-            // For multiple content classes or tags, we need to accumulate features
-            else {
-                for (const contentClass of contentClasses) {
-                    if (!cell.contentOffsets[contentClass] || cell.contentOffsets[contentClass].length === 0) {
+            
+            // Tag filtering doesn't support pagination
+            totalPages = 1;
+        }
+        // Case 2: Use paginated display with just content classes
+        else {
+            const pageKey = `page${page}`;
+            
+            // Check if the requested page exists
+            if (!Object.keys(cell.pages).includes(pageKey) && page > 1) {
+                return errorResponse(`Page ${page} not found for cell ${cellId}`, 404);
+            }
+
+            // Get total pages
+            totalPages = Object.keys(cell.pages).length;
+
+            // Fetch requested content classes from the current page
+            if (cell.pages[pageKey]) {
+                for (const contentClass of classesToFetch) {
+                    // Skip if this content class doesn't exist in this page
+                    if (!cell.pages[pageKey][contentClass] || 
+                        cell.pages[pageKey][contentClass].length === 0) {
                         continue;
                     }
 
-                    if (tags.length > 0) {
-                        for (const tag of tags) {
-                            if (cell.contentTagOffsets[contentClass]?.[tag]) {
-                                const tagOffset = cell.contentTagOffsets[contentClass][tag];
+                    const contentOffset = cell.pages[pageKey][contentClass];
+                    const contentFeaturesBytes = new Uint8Array(
+                        this.binaryBuffer!,
+                        this.dataStartOffset + contentOffset.offset,
+                        contentOffset.length
+                    );
 
-                                if (tagOffset.length > 0) {
-                                    const taggedFeaturesBytes = new Uint8Array(
-                                        this.binaryBuffer!,
-                                        this.dataStartOffset + tagOffset.offset,
-                                        tagOffset.length
-                                    );
-
-                                    const taggedFeatures = decode(taggedFeaturesBytes) as GeoFeatures[];
-                                    features.push(...taggedFeatures);
-                                }
-                            }
-                        }
-                    } else {
-                        const contentOffset = cell.contentOffsets[contentClass];
-
-                        if (contentOffset.length > 0) {
-                            const contentFeaturesBytes = new Uint8Array(
-                                this.binaryBuffer!,
-                                this.dataStartOffset + contentOffset.offset,
-                                contentOffset.length
-                            );
-
-                            const contentFeatures = decode(contentFeaturesBytes) as GeoFeatures[];
-                            features.push(...contentFeatures);
-                        }
-                    }
-                }
-                totalPages = 1; // No pagination for multiple filters
-            }
-        } else {
-            // No content classes specified, use pagination
-            const pageKey = `page${page}`;
-
-            // Check if the requested page exists
-            if (page > 1 && !cell.pages[pageKey]) {
-                return errorResponse("Page not found", 404);
-            }
-
-            const pageLocation = cell.pages[pageKey];
-            if (pageLocation) {
-                for (const contentClass of Object.keys(pageLocation) as ContentClass[]) {
-                    const contentOffset = pageLocation[contentClass];
-
-                    if (contentOffset.length > 0) {
-                        const contentFeaturesBytes = new Uint8Array(
-                            this.binaryBuffer!,
-                            this.dataStartOffset + contentOffset.offset,
-                            contentOffset.length
-                        );
-
-                        const contentFeatures = decode(contentFeaturesBytes) as GeoFeatures[];
-                        features.push(...contentFeatures);
-                    }
+                    const contentFeatures = decode(contentFeaturesBytes) as GeoFeatures[];
+                    features.push(...contentFeatures);
+                    totalFeatures += contentFeatures.length;
                 }
             }
-            totalPages = Object.keys(cell.pages).length;
+
+            // Calculate total features across all content classes
+            for (const contentClass of classesToFetch) {
+                if (cell.contentOffsets[contentClass]) {
+                    totalFeatures += cell.contentOffsets[contentClass].length > 0 ? 1 : 0;
+                }
+            }
         }
 
         // Remove duplicates if needed
@@ -380,12 +353,15 @@ getCellFeatures: ApiHandler = async (req) => {
             features: uniqueFeatures,
             featureCount: uniqueFeatures.length,
             currentPage: page,
-            totalPages
+            totalPages,
+            totalFeatures,
+            contentClasses: classesToFetch,
+            tags: tags
         } as CellFeaturesResponse);
 
     } catch (error) {
         console.error("Error serving cell data:", error);
-        return errorResponse("Internal server error", 500);
+        return errorResponse(`Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}`, 500);
     }
 }
     

@@ -51,17 +51,20 @@ export interface HeatmapBlueprint {
 }
 
 export interface Heatmap {
-    densityArray: Float32Array;
-    countArray: Uint32Array;
+    densityArray: number[] | Float32Array;
+    countArray: number[] | Uint32Array;
 }
 
 export interface HeatmapStack {
     contentClasses: {
-        [K in ContentClass]: {
+    [K in ContentClass]: {
             base: Heatmap;
-            tags: {
-                [tagName: string]: Heatmap;
-            };
+            tags: Heatmap;
+           // ai? : {
+           //     environment?: Heatmap;
+           //     tags?: Heatmap;
+           //     attributes?: Heatmap;
+           // }            
         }
     };
 }
