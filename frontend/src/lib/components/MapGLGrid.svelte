@@ -2,11 +2,7 @@
 	import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
 	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
 	import maplibre, { type Map } from 'maplibre-gl';
-	import type {
-		Heatmap,
-		HeatmapCell,
-		GridDimensions
-	} from '@atm/shared-types';
+	import type { Heatmap, HeatmapCell, GridDimensions } from '@atm/shared-types';
 	import debounce from 'lodash.debounce';
 	import { mergeCss } from '$utils/utils';
 	import 'maplibre-gl/dist/maplibre-gl.css';
@@ -37,10 +33,10 @@
 	let activeCellIds = new Set<string>();
 
 	const cellIdMap = new Map<number, string>();
-	heatmapBlueprint.forEach(cell => {
-			const index = cell.row * dimensions.colsAmount + cell.col;
-			cellIdMap.set(index, cell.cellId);
-			});
+	heatmapBlueprint.forEach((cell) => {
+		const index = cell.row * dimensions.colsAmount + cell.col;
+		cellIdMap.set(index, cell.cellId);
+	});
 
 	const dispatch = createEventDispatcher<{
 		cellClick: {
@@ -79,52 +75,46 @@
 		};
 	}
 
-	const updateFeatureStates = debounce(
-		(map: Map, heatmapData: Heatmap) => {
+	const updateFeatureStates = debounce((map: Map, heatmapData: Heatmap) => {
+		const { densityArray, countArray } = heatmapData;
 
-			const { densityArray, countArray } = heatmapData;
+		const newActiveCellIds = new Set<string>();
 
-			const newActiveCellIds = new Set<string>();
-				
-			// Only iterate through values that exist in the array
-			for (let i = 0; i < countArray.length; i++) {
-				const count = countArray[i];
-				if (count > 0) {
-
-					const cellId = cellIdMap.get(i);
-					if (cellId) {
-
-						// Set the feature state for cells with values
-						map.setFeatureState(
-							{ source: 'grid', id: cellId },
-							{
-								value: densityArray[i] || 0,
-								count
-							}
-						);
-						newActiveCellIds.add(cellId);
-					}
-				}
-			}
-			
-			// Clear cells inactive cells 
-			activeCellIds.forEach(cellId => {
-				if (!newActiveCellIds.has(cellId)) {
+		// Only iterate through values that exist in the array
+		for (let i = 0; i < countArray.length; i++) {
+			const count = countArray[i];
+			if (count > 0) {
+				const cellId = cellIdMap.get(i);
+				if (cellId) {
+					// Set the feature state for cells with values
 					map.setFeatureState(
 						{ source: 'grid', id: cellId },
 						{
-							value: 0,
-							count: 0
+							value: densityArray[i] || 0,
+							count
 						}
 					);
+					newActiveCellIds.add(cellId);
 				}
-			});
-			
-			// Update the tracking set
-			activeCellIds = newActiveCellIds;
-		},
-		16
-	);
+			}
+		}
+
+		// Clear cells inactive cells
+		activeCellIds.forEach((cellId) => {
+			if (!newActiveCellIds.has(cellId)) {
+				map.setFeatureState(
+					{ source: 'grid', id: cellId },
+					{
+						value: 0,
+						count: 0
+					}
+				);
+			}
+		});
+
+		// Update the tracking set
+		activeCellIds = newActiveCellIds;
+	}, 16);
 
 	function updateSelectedCell(cellId: string | null) {
 		if (!isMapLoaded || !map) return;
@@ -239,10 +229,39 @@
 
 					// Only dispatch if the cell has a value
 					if (featureState.count > 0) {
-						dispatch('cellClick', {
-							id: feature.properties.id,
-							//period
-						});
+						// If clicking on the already selected cell, deselect it
+						if (selectedCellId === feature.properties.id) {
+							// Update local selection state
+							selectedCellId = null;
+
+							// Update visual state
+							map.setFeatureState(
+								{ source: 'grid', id: feature.properties.id },
+								{ selected: false }
+							);
+
+							// Inform parent component
+							dispatch('cellClick', { id: null });
+						} else {
+							// Clear previous selection if any
+							if (selectedCellId) {
+								map.setFeatureState({ source: 'grid', id: selectedCellId }, { selected: false });
+							}
+
+							// Update local selection state
+							selectedCellId = feature.properties.id;
+
+							// Update visual state
+							map.setFeatureState(
+								{ source: 'grid', id: feature.properties.id },
+								{ selected: true }
+							);
+
+							// Inform parent component
+							dispatch('cellClick', {
+								id: feature.properties.id
+							});
+						}
 					}
 				}
 			});
@@ -250,7 +269,7 @@
 			isMapLoaded = true;
 		});
 	});
-	
+
 	onDestroy(() => {
 		if (map) {
 			map.off('mousemove', 'heatmap-squares');

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { createSlider, melt } from '@melt-ui/svelte';
-	import {formatDate} from '$utils/utils';
+	import { formatDate } from '$utils/utils';
 
 	// expects periods in the format of "startYear_endYear" eg: ["1500_1700", 1700_1900"]
 	export let timePeriods: string[] = [];
-	export let value : string | undefined = undefined;
+	export let value: string | undefined = undefined;
 	const displayPeriods = createDisplayPeriods(timePeriods);
 
 	const {
@@ -17,11 +17,10 @@
 		max: displayPeriods.length - 1
 	});
 
-
 	$: value = timePeriods[$sliderValue[0]];
-//	$: if (value !== $sliderValue) {
-//		sliderValue.set(value);
-//	}
+	//	$: if (value !== $sliderValue) {
+	//		sliderValue.set(value);
+	//	}
 
 	function createDisplayPeriods(periods: string[]): string[] {
 		if (!periods.length) return [];

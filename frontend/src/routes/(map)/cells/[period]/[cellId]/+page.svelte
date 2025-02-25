@@ -17,15 +17,24 @@
 	$: baseUrl =
 		import.meta.env.MODE === 'production' ? PUBLIC_SERVER_DEV_URL : PUBLIC_SERVER_PROD_URL;
 
+	// WIP: number of features per pages(25) shouldn't be hardcoded)
 	$: totalFeatureCount = 25 * data.cellFeatures.totalPages;
 
 	async function loadMore() {
 		if (loading || !hasMorePages) return;
 		loading = true;
-
 		try {
-			const url = `${baseUrl}/grid/cell/${data.cellFeatures.cellId}?period=${data.cellFeatures.period}&page=${currentPage + 1}`;
-			const response = await fetchApi<CellFeaturesResponse>(url);
+			// Get the current URL parameters
+			const url = new URL(window.location.href);
+			const contentClasses = url.searchParams.get('contentClasses') || '';
+			const tags = url.searchParams.get('tags') || '';
+
+			// Build API URL with parameters
+			let apiUrl = `${baseUrl}/grid/cell/${data.cellFeatures.cellId}?period=${data.cellFeatures.period}&page=${currentPage + 1}`;
+			if (contentClasses) apiUrl += `&contentClasses=${contentClasses}`;
+			if (tags) apiUrl += `&tags=${tags}`;
+
+			const response = await fetchApi<CellFeaturesResponse>(apiUrl);
 			allFeatures = allFeatures.concat(response.features);
 			currentPage = response.currentPage;
 			hasMorePages = currentPage < response.totalPages;
@@ -73,6 +82,8 @@
 				/ ~{totalFeatureCount}
 			{/if}
 		</div>
+
+		<!--
 		<FeatureCloud features={allFeatures} />
 		{#if hasMorePages}
 			<button
@@ -83,5 +94,6 @@
 				{loading ? 'Loading...' : 'Load More'}
 			</button>
 		{/if}
+		-->
 	{/if}
 {/if}

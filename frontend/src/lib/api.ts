@@ -46,3 +46,41 @@ export async function postApi<T>(endpoint: string, data?: any, options?: Request
 		throw new Error(`API Error: ${errorMessage}`);
 	}
 }
+
+// $api.ts
+import type { HeatmapsResponse, ContentClass } from '@atm/shared-types';
+import { PUBLIC_SERVER_DEV_URL, PUBLIC_SERVER_PROD_URL } from '$env/static/public';
+
+// New fetchHeatmaps function that uses your existing fetchApi
+export async function fetchHeatmaps(
+	selectedClasses: Set<ContentClass> | ContentClass[],
+	selectedTags: Set<string> | string[],
+	fetchFn: FetchFunction = fetch
+): Promise<HeatmapsResponse> {
+	const baseUrl =
+		import.meta.env.MODE === 'production' ? PUBLIC_SERVER_PROD_URL : PUBLIC_SERVER_DEV_URL;
+
+	// Convert collections to arrays if needed
+	const classesArray = Array.isArray(selectedClasses)
+		? selectedClasses
+		: Array.from(selectedClasses);
+
+	const tagsArray = Array.isArray(selectedTags) ? selectedTags : Array.from(selectedTags);
+
+	// Build the URL with parameters
+	const classesParam = classesArray.join(',');
+	const tagsParam = tagsArray.join(',');
+
+	let heatmapsUrl = `${baseUrl}/grid/heatmaps`;
+
+	// Add query parameters only if they're not empty
+	const params = [];
+	if (classesParam) params.push(`contentClasses=${classesParam}`);
+	if (tagsParam) params.push(`tags=${tagsParam}`);
+	if (params.length > 0) {
+		heatmapsUrl += `?${params.join('&')}`;
+	}
+
+	// Use your existing fetchApi function
+	return fetchApi<HeatmapsResponse>(heatmapsUrl, fetchFn);
+}
