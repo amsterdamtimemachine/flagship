@@ -255,18 +255,26 @@ export async function processFeatures(
             const sliceEnd = new Date(endYear, 0);
 
             if (doesFeatureFitTimeSlice(feature, sliceStart, sliceEnd)) {
-               if (!slice.cells[cellId]) {
-                  slice.cells[cellId] = {
-                     count: 0,
-                     contentIndex: Object.fromEntries(
-                        contentClasses.map(cls => [
-                           cls, 
-                           { features: [], count: 0 }
-                        ])
-                     ) as ContentFeatures,
-                     pages: {}
-                  };
-               }
+                if (!slice.cells[cellId]) {
+                    slice.cells[cellId] = {
+                        count: 0,
+                        // Add content-class specific counters
+                        contentClassCounts: Object.fromEntries(
+                            contentClasses.map(cls => [cls, 0])
+                        ) as Record<ContentClass, number>,
+                        contentIndex: Object.fromEntries(
+                            contentClasses.map(cls => [
+                                cls, 
+                                { features: [], count: 0 }
+                            ])
+                        ) as ContentFeatures,
+                        pages: {},
+                        // Add content-class specific pages
+                        contentPages: Object.fromEntries(
+                            contentClasses.map(cls => [cls, {}])
+                        ) as Record<ContentClass, Record<string, ContentClassPage>>
+                    };
+                }
 
                 const cell = slice.cells[cellId];
                 
@@ -275,17 +283,32 @@ export async function processFeatures(
                 (cell.contentIndex[contentClass].features as GeoFeatures[]).push(feature);
                 cell.contentIndex[contentClass].count++;
                 
-                // Add to pagination
-                const pageNum = Math.floor(cell.count / options.pageSize) + 1;
-                const pageKey = `page${pageNum}`;
+                // Increment content-class specific counter
+                cell.contentClassCounts[contentClass]++;
+                
+                // Keep original combined pagination
+                const overallPageNum = Math.floor(cell.count / options.pageSize) + 1;
+                const overallPageKey = `page${overallPageNum}`;
 
-                if (!cell.pages[pageKey]) {
-                   cell.pages[pageKey] = Object.fromEntries(
-                      contentClasses.map(cls => [cls, []])
-                   ) as ContentClassPage;
+                if (!cell.pages[overallPageKey]) {
+                    cell.pages[overallPageKey] = Object.fromEntries(
+                        contentClasses.map(cls => [cls, []])
+                    ) as ContentClassPage;
                 }
                 
-               (cell.pages[pageKey][contentClass] as GeoFeatures[]).push(feature);
+                (cell.pages[overallPageKey][contentClass] as GeoFeatures[]).push(feature);
+                
+                // Add content-class specific pagination
+                const classPageNum = Math.floor((cell.contentClassCounts[contentClass] - 1) / options.pageSize) + 1;
+                const classPageKey = `page${classPageNum}`;
+                
+                if (!cell.contentPages[contentClass][classPageKey]) {
+                    cell.contentPages[contentClass][classPageKey] = [] as GeoFeatures[];
+                }
+                
+                (cell.contentPages[contentClass][classPageKey] as GeoFeatures[]).push(feature);
+                
+                // Increment overall counter
                 cell.count++;
             }
         }
@@ -381,8 +404,6 @@ export async function processFeatures(
                     }
                 }
 
-
-
                 // Store tag heatmap
                 heatmaps[period].contentClasses[contentClass].tags[tagName] = {
                     countArray: tagCountArray,
@@ -447,6 +468,11 @@ export async function saveFeaturesToBinary(
                     length: number;
                 }
             }>;
+            // Add structure for content-class specific pages
+            contentPages: Record<ContentClass, Record<string, {
+                offset: number;
+                length: number;
+            }>>;
         }> = {};
 
         for (const [cellId, cell] of Object.entries(slice.cells)) {
@@ -506,6 +532,7 @@ export async function saveFeaturesToBinary(
                 }
             }
 
+            // Process original combined pagination
             const pageOffsets = Object.entries(cell.pages).reduce((acc, [pageNum, page]) => {
                 const pageContentOffsets = Object.entries(page).reduce((innerAcc, [className, features]) => {
                     const contentClass = className as ContentClass;
@@ -533,10 +560,43 @@ export async function saveFeaturesToBinary(
                 };
             }, {});
 
+            // Process content-class specific pagination
+            const contentPagesOffsets: Record<ContentClass, Record<string, {
+                offset: number;
+                length: number;
+            }>> = {};
+            
+            // Initialize contentPagesOffsets structure
+            Object.keys(cell.contentPages || {}).forEach(className => {
+                const contentClass = className as ContentClass;
+                contentPagesOffsets[contentClass] = {};
+            });
+            
+            // Calculate offsets for content-class specific pages
+            if (cell.contentPages) {
+                for (const [className, pages] of Object.entries(cell.contentPages)) {
+                    const contentClass = className as ContentClass;
+                    
+                    for (const [pageNum, features] of Object.entries(pages)) {
+                        if (Array.isArray(features) && features.length > 0) {
+                            const encoded = encode(features);
+                            const offset = currentOffset;
+                            const length = encoded.byteLength;
+                            currentOffset += length;
+                            
+                            contentPagesOffsets[contentClass][pageNum] = { offset, length };
+                        } else {
+                            contentPagesOffsets[contentClass][pageNum] = { offset: 0, length: 0 };
+                        }
+                    }
+                }
+            }
+
             cellIndices[cellId] = {
                 contentOffsets,
                 contentTagOffsets,
-                pages: pageOffsets
+                pages: pageOffsets,
+                contentPages: contentPagesOffsets
             };
         }
 
@@ -608,11 +668,22 @@ export async function saveFeaturesToBinary(
                 }
             }
 
-            // Write paged features
+            // Write original paged features
             for (const [_, page] of Object.entries(cell.pages)) {
                 for (const [className, features] of Object.entries(page)) {
                     if (features.length > 0) {
                         writer.write(encode(features));
+                    }
+                }
+            }
+            
+            // Write content-class specific paged features
+            if (cell.contentPages) {
+                for (const [className, pages] of Object.entries(cell.contentPages)) {
+                    for (const [_, features] of Object.entries(pages)) {
+                        if (Array.isArray(features) && features.length > 0) {
+                            writer.write(encode(features));
+                        }
                     }
                 }
             }
