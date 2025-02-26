@@ -121,6 +121,7 @@
 
 		// Clear previous highlight
 		if (selectedCellId) {
+			console.log("unselecting!");
 			map.setFeatureState({ source: 'grid', id: selectedCellId }, { selected: false });
 		}
 

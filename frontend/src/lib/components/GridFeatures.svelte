@@ -12,20 +12,17 @@
 
 </script>
 
-<div class="idea-board-container"> 
-  <Masonry options={{ 
-    itemSelector: '.masonry-item',
-    columnWidth: 250,
-    gutter: 20
-  }}>
+<div class="w-100"> 
+<Masonry 
+  gridGap={'10px'} 
+  colWidth={'150px'}
+>
 {#each features as feature, index (index)}
-    <div class="item item-{index}">
         {#if feature.content_class === 'Event'}
             <BlockEvent feature={feature} />
         {:else if feature.content_class === 'Image'}
             <BlockImage feature={feature} />
         {/if}
-    </div>
 {/each}
   </Masonry>
 </div>

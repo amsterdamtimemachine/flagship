@@ -93,6 +93,15 @@ export interface TimeSliceIndex {
                         length: number;
                     }
                 }
+            };
+            // Add this to support content-class specific pagination
+            contentPages: {
+                [T in ContentClass]: {
+                    [pageNum: string]: {
+                        offset: number;
+                        length: number;
+                    }
+                }
             }
         }
     }
@@ -102,15 +111,24 @@ export interface TimeSlice {
     cells: {
         [cellId: string]: {
             count: number;
-            contentIndex: ContentFeatures; // WIP: this field shouldn't be contentIndex but contentFeatures
+            // Add content-specific counts
+            contentClassCounts: {
+                [T in ContentClass]: number;
+            };
+            contentIndex: ContentFeatures;
+            // Change here: structure now reflects content-class separation
+            contentPages: {
+                [T in ContentClass]: {
+                    [pageNum: string]: ContentClassPage;
+                }
+            };
+            // Keep the original pages structure for backward compatibility if needed
             pages: {
                 [pageNum: string]: ContentClassPage;
             }
         }
     }
-}
-
-export interface BinaryMetadata {
+}export interface BinaryMetadata {
     dimensions: GridDimensions;
     timeRange: {
         start: string;

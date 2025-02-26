@@ -108,7 +108,6 @@
 			// Fetch cell data directly
 			const cellFeatures = await fetchApi<CellFeaturesResponse>(apiUrl);
 
-			console.log("features from click");
 			console.log(cellFeatures);
 
 			// Navigate with both URL parameters and state
@@ -119,6 +118,79 @@
 			console.error('Error fetching cell data:', error);
 		}
 	}
+
+
+
+// Track previous selections to detect changes
+let previousSelectedClasses = new Set(selectedClasses);
+let previousSelectedTags = new Set(selectedTags);
+
+// Update the cell when content classes or tags change
+$: {
+	if (browser && $page.state.selectedCell && 
+		(hasSelectionChanged(selectedClasses, previousSelectedClasses) || 
+		 hasSelectionChanged(selectedTags, previousSelectedTags))) {
+		
+		// Get the currently selected cell ID and period
+		const cellId = $page.state.selectedCell.cellFeatures.cellId;
+		const period = currentPeriod;
+
+		// Build new cell route with the current period
+		let cellRoute = `/cells/${period}/${cellId}`;
+
+		// Add query parameters
+		const params = new URLSearchParams();
+
+		if (selectedClasses.size > 0) {
+			params.set('contentClasses', Array.from(selectedClasses).join(','));
+		}
+
+		if (selectedTags.size > 0) {
+			params.set('tags', Array.from(selectedTags).join(','));
+		}
+
+		// Add search params if we have any
+		const queryString = params.toString();
+		if (queryString) {
+			cellRoute += `?${queryString}`;
+		}
+
+		// Build API URL
+		const baseUrl =
+			import.meta.env.MODE === 'production' ? PUBLIC_SERVER_PROD_URL : PUBLIC_SERVER_DEV_URL;
+
+		let apiUrl = `${baseUrl}/grid/cell/${cellId}?period=${period}&page=1`;
+		if (params.has('contentClasses')) apiUrl += `&contentClasses=${params.get('contentClasses')}`;
+		if (params.has('tags')) apiUrl += `&tags=${params.get('tags')}`;
+
+		// Fetch and update
+		fetchApi<CellFeaturesResponse>(apiUrl)
+			.then((cellFeatures) => {
+				// Update the route and state
+				pushState(cellRoute, {
+					selectedCell: { cellFeatures }
+				});
+			})
+			.catch((error) => {
+				console.error('Error updating cell for new content classes:', error);
+			});
+	}
+
+	// Update previous selections
+	previousSelectedClasses = new Set(selectedClasses);
+	previousSelectedTags = new Set(selectedTags);
+}
+
+// Helper function to compare sets
+function hasSelectionChanged(current: Set<any>, previous: Set<any>): boolean {
+	if (current.size !== previous.size) return true;
+	
+	for (const item of current) {
+		if (!previous.has(item)) return true;
+	}
+	
+	return false;
+}
 
 	onMount(() => {
 		// Get parameters from URL if present
@@ -224,7 +296,6 @@
 
 <div class="relative flex flex-col w-screen h-screen">
 	<ToggleGroupSelector
-		class="z-50 absolute top-[100px]"
 		defaultContentClass={PUBLIC_DEFAULT_CONTENT_CLASS}
 		bind:selected={selectedClasses}
 		bind:selectedTags

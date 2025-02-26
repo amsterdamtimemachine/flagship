@@ -302,50 +302,153 @@ getCellFeatures: ApiHandler = async (req) => {
             // Tag filtering doesn't support pagination
             totalPages = 1;
         }
-        // Case 2: Use paginated display with just content classes
-        else {
+        // Case 2: Single content class - use content-class specific pagination
+        else if (contentClasses.length === 1) {
+            const contentClass = contentClasses[0];
             const pageKey = `page${page}`;
             
-            // Check if the requested page exists
-            if (!Object.keys(cell.pages).includes(pageKey) && page > 1) {
-                return errorResponse(`Page ${page} not found for cell ${cellId}`, 404);
-            }
-
-            // Get total pages
-            totalPages = Object.keys(cell.pages).length;
-
-
-            console.log(cell.pages);
-
-            // Fetch requested content classes from the current page
-            if (cell.pages[pageKey]) {
-                for (const contentClass of classesToFetch) {
-                    // Skip if this content class doesn't exist in this page
-                    if (!cell.pages[pageKey][contentClass] || 
-                        cell.pages[pageKey][contentClass].length === 0) {
-                        continue;
-                    }
-
-                    const contentOffset = cell.pages[pageKey][contentClass];
+            // Check if content-class specific pagination exists and has this page
+            if (cell.contentPages && 
+                cell.contentPages[contentClass] && 
+                Object.keys(cell.contentPages[contentClass]).includes(pageKey)) {
+                
+                // Get total pages for this content class
+                totalPages = Object.keys(cell.contentPages[contentClass]).length;
+                
+                // Fetch the content-class specific page
+                const contentOffset = cell.contentPages[contentClass][pageKey];
+                
+                if (contentOffset && contentOffset.length > 0) {
                     const contentFeaturesBytes = new Uint8Array(
                         this.binaryBuffer!,
                         this.dataStartOffset + contentOffset.offset,
                         contentOffset.length
                     );
-
+                    
                     const contentFeatures = decode(contentFeaturesBytes) as GeoFeatures[];
                     features.push(...contentFeatures);
                     totalFeatures += contentFeatures.length;
                 }
-            }
-
-            // Calculate total features across all content classes
-            for (const contentClass of classesToFetch) {
-                if (cell.contentOffsets[contentClass]) {
-                    totalFeatures += cell.contentOffsets[contentClass].length > 0 ? 1 : 0;
+            } 
+            // Fallback to original pagination if content-class pagination not available
+            else if (cell.pages && Object.keys(cell.pages).includes(pageKey)) {
+                // Check if the requested page exists
+                if (!cell.pages[pageKey][contentClass] || 
+                    cell.pages[pageKey][contentClass].length === 0) {
+                    
+                    // If no content for this class on this page, return empty
+                    return jsonResponse({
+                        cellId,
+                        period,
+                        features: [],
+                        featureCount: 0,
+                        currentPage: page,
+                        totalPages: Object.keys(cell.pages).length,
+                        contentClasses: classesToFetch,
+                        tags: tags
+                    } as CellFeaturesResponse);
                 }
+                
+                // Get total pages from combined pagination
+                totalPages = Object.keys(cell.pages).length;
+                
+                // Fetch content from original pagination
+                const contentOffset = cell.pages[pageKey][contentClass];
+                const contentFeaturesBytes = new Uint8Array(
+                    this.binaryBuffer!,
+                    this.dataStartOffset + contentOffset.offset,
+                    contentOffset.length
+                );
+                
+                const contentFeatures = decode(contentFeaturesBytes) as GeoFeatures[];
+                features.push(...contentFeatures);
+                totalFeatures += contentFeatures.length;
+            }
+            else {
+                return errorResponse(`Page ${page} not found for content class ${contentClass} in cell ${cellId}`, 404);
+            }
+            
+            // Calculate total features for this content class
+            if (cell.contentOffsets[contentClass]) {
+                totalFeatures = cell.contentOffsets[contentClass].length > 0 ? 1 : 0;
             }
         }
+        // Case 3: Use original combined pagination for multiple content classes
+// Case 3: Use original combined pagination for multiple content classes
+// Case 3: Use original combined pagination for multiple content classes
+// Case 3: Use original combined pagination for multiple content classes
+else {
+    const pageKey = `page${page}`;
+    
+    // Check if the requested page exists in standard pagination
+    if (!Object.keys(cell.pages).includes(pageKey) && page > 1) {
+        return errorResponse(`Page ${page} not found for cell ${cellId}`, 404);
+    }
+
+    // Get total pages
+    totalPages = Object.keys(cell.pages).length;
+
+    // First, collect features by content class
+    const featuresByClass: Record<string, GeoFeatures[]> = {};
+    
+    // For each content class, try to get data from its content-specific pagination first
+    for (const contentClass of classesToFetch) {
+        // Try to get data from content-specific pagination (always use page 1 for each class)
+        if (cell.contentPages && 
+            cell.contentPages[contentClass] && 
+            cell.contentPages[contentClass]["page1"] && 
+            cell.contentPages[contentClass]["page1"].length > 0) {
+            
+            const contentOffset = cell.contentPages[contentClass]["page1"];
+            const contentFeaturesBytes = new Uint8Array(
+                this.binaryBuffer!,
+                this.dataStartOffset + contentOffset.offset,
+                contentOffset.length
+            );
+            
+            const contentFeatures = decode(contentFeaturesBytes) as GeoFeatures[];
+            featuresByClass[contentClass] = contentFeatures;
+        }
+        // Fallback to original pagination if needed
+        else if (cell.pages[pageKey] && 
+                 cell.pages[pageKey][contentClass] && 
+                 cell.pages[pageKey][contentClass].length > 0) {
+            
+            const contentOffset = cell.pages[pageKey][contentClass];
+            const contentFeaturesBytes = new Uint8Array(
+                this.binaryBuffer!,
+                this.dataStartOffset + contentOffset.offset,
+                contentOffset.length
+            );
+            
+            const contentFeatures = decode(contentFeaturesBytes) as GeoFeatures[];
+            featuresByClass[contentClass] = contentFeatures;
+        }
+        else {
+            featuresByClass[contentClass] = [];
+        }
+    }
+    
+    // Now interleave/shuffle the features
+    const allClasses = Object.keys(featuresByClass);
+    const maxLength = Math.max(...allClasses.map(cls => featuresByClass[cls].length || 0), 0);
+    
+    // Take one from each class in turn until we've used them all
+    for (let i = 0; i < maxLength; i++) {
+        // Shuffle the order of classes for each round
+        const shuffledClasses = [...allClasses].sort(() => Math.random() - 0.5);
+        
+        for (const cls of shuffledClasses) {
+            if (featuresByClass[cls] && i < featuresByClass[cls].length) {
+                features.push(featuresByClass[cls][i]);
+            }
+        }
+    }
+
+    // Update total features and pages accordingly
+    totalFeatures = features.length;
+    if (totalPages === 0) totalPages = 1;
+}
 
         // Remove duplicates if needed
         const uniqueFeatures = this.removeDuplicateFeatures(features);
