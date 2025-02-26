@@ -314,6 +314,9 @@ getCellFeatures: ApiHandler = async (req) => {
             // Get total pages
             totalPages = Object.keys(cell.pages).length;
 
+
+            console.log(cell.pages);
+
             // Fetch requested content classes from the current page
             if (cell.pages[pageKey]) {
                 for (const contentClass of classesToFetch) {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { pushState } from '$app/navigation';
-	import FeatureCloud from '$components/FeatureCloud.svelte';
+	import GridFeatures from '$components/GridFeatures.svelte';
 	import type { CellFeaturesResponse } from '@atm/shared-types';
 	import type { PageData } from './$types';
 	import { fetchApi } from '$api';
@@ -83,8 +83,9 @@
 			{/if}
 		</div>
 
+		<GridFeatures features={allFeatures} />
+
 		<!--
-		<FeatureCloud features={allFeatures} />
 		{#if hasMorePages}
 			<button
 				on:click={loadMore}

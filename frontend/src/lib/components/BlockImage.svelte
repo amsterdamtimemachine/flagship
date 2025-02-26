@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { GeoFeature } from '@atm/shared-types';
-	export let feature: GeoFeature;
+	export let feature: GeoFeature<'Image'>;
 </script>
 
 <div class="h-full flex flex-col">

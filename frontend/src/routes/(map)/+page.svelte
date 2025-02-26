@@ -37,7 +37,6 @@
 
 		try {
 			const response = await fetchHeatmaps(selectedClasses, selectedTags);
-			console.log(response);
 
 			data.heatmaps = response;
 		} catch (error) {
@@ -56,23 +55,23 @@
 		}
 	}
 
-	async function updateCellDataForPeriod(index: number) {
-		if (!$page.state.selectedCell) return;
-		loadingNewPeriod = true;
-		try {
-			const currentPeriodValue = timePeriods[index];
-			const cellId = $page.state.selectedCell.cellFeatures.cellId;
-			const cellRoute = `/cells/${currentPeriodValue}/${cellId}`;
-			const result = await preloadData(cellRoute);
-			if (result.type === 'loaded' && result.status === 200) {
-				pushState(cellRoute, {
-					selectedCell: result.data
-				});
-			}
-		} finally {
-			loadingNewPeriod = false;
-		}
-	}
+//	async function updateCellDataForPeriod(index: number) {
+//		if (!$page.state.selectedCell) return;
+//		loadingNewPeriod = true;
+//		try {
+//			const currentPeriodValue = timePeriods[index];
+//			const cellId = $page.state.selectedCell.cellFeatures.cellId;
+//			const cellRoute = `/cells/${currentPeriodValue}/${cellId}`;
+//			const result = await preloadData(cellRoute);
+//			if (result.type === 'loaded' && result.status === 200) {
+//				pushState(cellRoute, {
+//					selectedCell: result.data
+//				});
+//			}
+//		} finally {
+//			loadingNewPeriod = false;
+//		}
+//	}
 
 	async function handleCellClick(event: CustomEvent) {
 		const { id } = event.detail;
@@ -85,30 +84,19 @@
 			return;
 		}
 
-		// Get the current period
 		const period = currentPeriod;
-
-		// Build base route
 		let cellRoute = `/cells/${period}/${id}`;
-
-		// Add query parameters to the URL for deep linking
 		const params = new URLSearchParams();
-
 		if (selectedClasses.size > 0) {
 			params.set('contentClasses', Array.from(selectedClasses).join(','));
 		}
-
 		if (selectedTags.size > 0) {
 			params.set('tags', Array.from(selectedTags).join(','));
 		}
-
-		// Add search params if we have any
 		const queryString = params.toString();
 		if (queryString) {
 			cellRoute += `?${queryString}`;
 		}
-
-		// Build API URL for direct fetching
 		const baseUrl =
 			import.meta.env.MODE === 'production' ? PUBLIC_SERVER_PROD_URL : PUBLIC_SERVER_DEV_URL;
 
@@ -120,6 +108,9 @@
 			// Fetch cell data directly
 			const cellFeatures = await fetchApi<CellFeaturesResponse>(apiUrl);
 
+			console.log("features from click");
+			console.log(cellFeatures);
+
 			// Navigate with both URL parameters and state
 			pushState(cellRoute, {
 				selectedCell: { cellFeatures }
@@ -128,6 +119,7 @@
 			console.error('Error fetching cell data:', error);
 		}
 	}
+
 	onMount(() => {
 		// Get parameters from URL if present
 		const contentClassesParam = $page.url.searchParams.get('contentClasses');
