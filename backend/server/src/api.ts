@@ -203,7 +203,7 @@ getHeatmaps: ApiHandler = async (req) => {
                 }
 
                 if (heatmapsToMerge.length > 0) {
-                    periodHeatmaps[period] = this.mergeHeatmaps(heatmapsToMerge);
+                    periodHeatmaps[period] = this.mergeHeatmapsAND(heatmapsToMerge);
                 }
             }
         }
@@ -471,58 +471,58 @@ else {
     }
 }
     
-    private combineHeatmaps(
-        period: string,
-        contentClasses: ContentClass[],
-        tags: string[]
-    ): Heatmap {
-        if (!this.metadata) {
-            throw new Error("Metadata not initialized");
-        }
+   // private combineHeatmaps(
+   //     period: string,
+   //     contentClasses: ContentClass[],
+   //     tags: string[]
+   // ): Heatmap {
+   //     if (!this.metadata) {
+   //         throw new Error("Metadata not initialized");
+   //     }
 
-        const periodHeatmap = this.metadata.heatmaps[period];
-        if (!periodHeatmap) {
-            // Return empty heatmap for non-existent period
-            return this.createEmptyHeatmap();
-        }
+   //     const periodHeatmap = this.metadata.heatmaps[period];
+   //     if (!periodHeatmap) {
+   //         // Return empty heatmap for non-existent period
+   //         return this.createEmptyHeatmap();
+   //     }
 
-        // If no content classes specified, return empty heatmap
-        if (contentClasses.length === 0) {
-            return this.createEmptyHeatmap();
-        }
+   //     // If no content classes specified, return empty heatmap
+   //     if (contentClasses.length === 0) {
+   //         return this.createEmptyHeatmap();
+   //     }
 
-        // Get all relevant heatmaps (filter out invalid content classes)
-        const heatmapsToMerge: Heatmap[] = [];
+   //     // Get all relevant heatmaps (filter out invalid content classes)
+   //     const heatmapsToMerge: Heatmap[] = [];
 
-        for (const contentClass of contentClasses) {
-            // Skip invalid content classes instead of throwing an error
-            if (!periodHeatmap.contentClasses[contentClass]) {
-                console.warn(`Content class "${contentClass}" not found in period ${period}`);
-                continue;
-            }
+   //     for (const contentClass of contentClasses) {
+   //         // Skip invalid content classes instead of throwing an error
+   //         if (!periodHeatmap.contentClasses[contentClass]) {
+   //             console.warn(`Content class "${contentClass}" not found in period ${period}`);
+   //             continue;
+   //         }
 
-            if (tags.length === 0) {
-                // If no tags, use base heatmap for this content class
-                heatmapsToMerge.push(periodHeatmap.contentClasses[contentClass].base);
-            } else {
-                // If tags specified, use tag heatmaps (only those that exist)
-                for (const tag of tags) {
-                    if (periodHeatmap.contentClasses[contentClass].tags[tag]) {
-                        heatmapsToMerge.push(periodHeatmap.contentClasses[contentClass].tags[tag]);
-                    }
-                }
-            }
-        }
+   //         if (tags.length === 0) {
+   //             // If no tags, use base heatmap for this content class
+   //             heatmapsToMerge.push(periodHeatmap.contentClasses[contentClass].base);
+   //         } else {
+   //             // If tags specified, use tag heatmaps (only those that exist)
+   //             for (const tag of tags) {
+   //                 if (periodHeatmap.contentClasses[contentClass].tags[tag]) {
+   //                     heatmapsToMerge.push(periodHeatmap.contentClasses[contentClass].tags[tag]);
+   //                 }
+   //             }
+   //         }
+   //     }
 
-        // If no heatmaps to merge, return empty heatmap
-        if (heatmapsToMerge.length === 0) {
-            return this.createEmptyHeatmap();
-        }
+   //     // If no heatmaps to merge, return empty heatmap
+   //     if (heatmapsToMerge.length === 0) {
+   //         return this.createEmptyHeatmap();
+   //     }
 
-        // Merge heatmaps
-        return this.mergeHeatmaps(heatmapsToMerge);
-    }    
-    private mergeHeatmaps(heatmaps: Heatmap[]): Heatmap {
+   //     // Merge heatmaps
+   //     return this.mergeHeatmapsAND(heatmapsToMerge);
+   // }    
+    private mergeHeatmapsOR(heatmaps: Heatmap[]): Heatmap {
         if (heatmaps.length === 0) {
             return this.createEmptyHeatmap();
         }
@@ -534,7 +534,7 @@ else {
         const firstHeatmap = heatmaps[0];
         const length = firstHeatmap.countArray.length;
         
-        const resultCount = new Float32Array(length);
+        const resultCount = new Uint32Array(length);
         
         // Sum count arrays
         for (const heatmap of heatmaps) {
@@ -544,7 +544,10 @@ else {
         }
         
         // Calculate density using log normalization
-        const maxCount = Math.max(...resultCount);
+        const maxCount = resultCount.reduce((max, current) => {
+            return current > max ? current : max;
+        }, resultCount[0] || 0);
+
         const resultDensity = new Float32Array(length);
         
         if (maxCount > 0) {
@@ -560,6 +563,62 @@ else {
             densityArray: resultDensity
         };
     }
+
+private mergeHeatmapsAND(heatmaps: Heatmap[]): Heatmap {
+    if (heatmaps.length === 0) {
+        return this.createEmptyHeatmap();
+    }
+    
+    if (heatmaps.length === 1) {
+        return heatmaps[0];
+    }
+    
+    const firstHeatmap = heatmaps[0];
+    const length = firstHeatmap.countArray.length;
+    
+    const resultCount = new Uint32Array(length);
+    
+    // First determine which cells have data in ALL heatmaps (AND operation)
+    for (let i = 0; i < length; i++) {
+        let hasDataInAll = true;
+        let minValue = Infinity;
+        
+        // Check if all heatmaps have data in this cell
+        for (const heatmap of heatmaps) {
+            if (heatmap.countArray[i] <= 0) {
+                hasDataInAll = false;
+                break;
+            }
+            
+            // Keep track of the minimum value for each cell
+            if (heatmap.countArray[i] < minValue) {
+                minValue = heatmap.countArray[i];
+            }
+        }
+        
+        // Only cells with data in ALL heatmaps get a value
+        resultCount[i] = hasDataInAll ? minValue : 0;
+    }
+    
+    // Calculate density using log normalization
+    const maxCount = resultCount.reduce((max, current) => {
+        return current > max ? current : max;
+    }, resultCount[0] || 0);
+    const resultDensity = new Float32Array(length);
+    
+    if (maxCount > 0) {
+        const maxTransformed = Math.log(maxCount + 1);
+        for (let i = 0; i < length; i++) {
+            resultDensity[i] = resultCount[i] > 0 ? 
+                Math.log(resultCount[i] + 1) / maxTransformed : 0;
+        }
+    }
+    
+    return {
+        countArray: resultCount,
+        densityArray: resultDensity
+    };
+}
     
     private createEmptyHeatmap(): Heatmap {
         // Create empty heatmap with size based on blueprint
@@ -568,7 +627,7 @@ else {
         const length = rows * cols;
         
         return {
-            countArray: new Float32Array(length),
+            countArray: new Uint32Array(length),
             densityArray: new Float32Array(length)
         };
     }

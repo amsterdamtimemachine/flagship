@@ -152,7 +152,7 @@
 				[east, north]
 			],
 			center: [4.895645, 52.372219], // amsterdam center
-			minZoom: 12,
+			minZoom: 10,
 			maxZoom: 14,
 			zoom: 13,
 			dragRotate: false,

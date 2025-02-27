@@ -353,7 +353,10 @@ export async function processFeatures(
                 }
             }
 
-            const maxBaseCount = Math.max(...baseCountArray);
+            const maxBaseCount = baseCountArray.reduce((max, current) => {
+                return current > max ? current : max;
+            }, baseCountArray[0] || 0);
+
             const baseDensityArray : number [] = new Array(totalCells).fill(0); //new Float32Array(totalCells);
             
             if (maxBaseCount > 0) {
@@ -393,7 +396,9 @@ export async function processFeatures(
                 }
                 
                 // Calculate tag density array
-                const maxTagCount = Math.max(...tagCountArray);
+                const maxTagCount = tagCountArray.reduce((max, current) => {
+                    return current > max ? current : max;
+                }, tagCountArray[0] || 0);
                 const tagDensityArray : number[] = new Array(totalCells).fill(0) //new Float32Array(totalCells);
                 
                 if (maxTagCount > 0) {
