@@ -1,6 +1,6 @@
 node_modules
-experiments
 backend/preprocessor/temp/
+aux/cell_map/output/*
 
 # Assets
 data/*
@@ -12,6 +12,9 @@ public/*
 .yalc/*
 .yalc/
 .yalc
+.geojson
+.mbt
+.pbf
 
 # Output
 .output
