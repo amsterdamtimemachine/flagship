@@ -6,6 +6,7 @@
   "scripts": {
     "start": "bun run src/server.ts",
     "dev": "bun --watch src/server.ts",
+    "build": "tsc --noEmit",
     "test": "bun test src/test/server.test.ts",
     "test:watch": "bun test --watch src/test/server.test.ts",
     "test:debug": "bun test --inspect src/test/server.test.ts"
@@ -14,10 +15,10 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@msgpack/msgpack": "^3.0.0-beta2"
+    "@msgpack/msgpack": "^3.0.0-beta2",
+    "@atm/shared-types": "*"
   },
   "devDependencies": {
-    "@atm/shared-types": "file:.yalc/@atm/shared-types",
     "@types/bun": "^1.1.14",
     "typescript": "^5.6.3"
   }

@@ -1,10 +1,17 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { createSlider, melt } from '@melt-ui/svelte';
 	import { formatDate } from '$utils/utils';
 
-	// expects periods in the format of "startYear_endYear" eg: ["1500_1700", 1700_1900"]
-	export let timePeriods: string[] = [];
-	export let value: string | undefined = undefined;
+	
+	interface Props {
+		// expects periods in the format of "startYear_endYear" eg: ["1500_1700", 1700_1900"]
+		timePeriods?: string[];
+		value?: string | undefined;
+	}
+
+	let { timePeriods = [], value = $bindable() }: Props = $props();
 	const displayPeriods = createDisplayPeriods(timePeriods);
 
 	const {
@@ -17,7 +24,9 @@
 		max: displayPeriods.length - 1
 	});
 
-	$: value = timePeriods[$sliderValue[0]];
+	run(() => {
+		value = timePeriods[$sliderValue[0]];
+	});
 	//	$: if (value !== $sliderValue) {
 	//		sliderValue.set(value);
 	//	}
@@ -42,7 +51,7 @@
 {#if displayPeriods.length > 0}
 	<div class="w-full px-4 py-1 border-t border-solid border-gray-300">
 		<span {...$root} use:melt={$root} class="relative flex w-full h-12 items-center">
-			<span class="h-2 w-full bg-gray-200" />
+			<span class="h-2 w-full bg-gray-200"></span>
 			{#each $ticks as tick, i}
 				<span
 					{...tick}
@@ -66,7 +75,7 @@
 				{...$thumbs[0]}
 				use:melt={$thumbs[0]}
 				class="absolute w-5 h-5 bg-white border-2 border-blue-500 rounded-full cursor-pointer shadow-lg focus:ring-2 focus:ring-blue-500/40"
-			/>
+			></span>
 		</span>
 	</div>
 {/if}

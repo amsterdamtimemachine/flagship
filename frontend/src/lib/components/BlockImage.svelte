@@ -1,6 +1,10 @@
 <script lang="ts">
 	import type { GeoFeature } from '@atm/shared-types';
-	export let feature: GeoFeature<'Image'>;
+	type Props = {
+		feature: GeoFeature<'Image'>;
+	}
+
+	let { feature }: Props = $props();
 </script>
 
 <div class="w-full h-full flex flex-col">

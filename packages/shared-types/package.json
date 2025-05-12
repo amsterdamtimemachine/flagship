@@ -1,15 +1,13 @@
 {
   "name": "@atm/shared-types",
-  "version": "1.0.0",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "version": "0.1.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc -w",
-    "dev-w-yalc": "tsc-watch --onSuccess 'npx yalc push --publish'"
+    "build": "tsc --emitDeclarationOnly --outDir dist",
+    "dev": "tsc --emitDeclarationOnly --outDir dist --watch"
   },
   "devDependencies": {
-    "tsc-watch": "^6.2.1",
     "typescript": "^5.0.0"
   }
 }

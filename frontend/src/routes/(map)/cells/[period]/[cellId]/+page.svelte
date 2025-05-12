@@ -7,20 +7,24 @@
 	import { formatDate } from '$utils/utils';
 	import { PUBLIC_SERVER_DEV_URL, PUBLIC_SERVER_PROD_URL } from '$env/static/public';
 	
-	export let data: PageData;
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 	
 	// Make these reactive to data changes
-	$: currentPage = data.cellFeatures.currentPage;
-	$: hasMorePages = currentPage < data.cellFeatures.totalPages;
-	$: allFeatures = data.cellFeatures.features;
+	let currentPage = $derived(data.cellFeatures.currentPage);
+	let hasMorePages = $derived(currentPage < data.cellFeatures.totalPages);
+	let allFeatures = $derived(data.cellFeatures.features);
 	
-	$: baseUrl =
-		import.meta.env.MODE === 'production' ? PUBLIC_SERVER_DEV_URL : PUBLIC_SERVER_PROD_URL;
+	let baseUrl =
+		$derived(import.meta.env.MODE === 'production' ? PUBLIC_SERVER_DEV_URL : PUBLIC_SERVER_PROD_URL);
 	
 	// WIP: number of features per pages(25) shouldn't be hardcoded)
-	$: totalFeatureCount = 25 * data.cellFeatures.totalPages;
+	let totalFeatureCount = $derived(25 * data.cellFeatures.totalPages);
 	
-	let loading = false;
+	let loading = $state(false);
 
 	async function loadMore() {
 		if (loading || !hasMorePages) return;
@@ -68,7 +72,7 @@
 			</h2>
 		</div>
 		<button
-			on:click={closeModal}
+			onclick={closeModal}
 			class="px-2 py-1 text-sm text-black border border-solid border-black"
 		>
 			close
@@ -87,7 +91,7 @@
 		<GridFeatures features={allFeatures} />
 		{#if hasMorePages}
 			<button
-				on:click={loadMore}
+				onclick={loadMore}
 				disabled={loading}
 				class="px-2 py-1 text-sm text-black border border-solid border-black"
 			>

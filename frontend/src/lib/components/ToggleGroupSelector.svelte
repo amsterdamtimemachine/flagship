@@ -1,13 +1,24 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { createToggleGroup, melt } from '@melt-ui/svelte';
 	import { mergeCss } from '$utils/utils';
 	import type { BinaryMetadata, ContentClass } from '@atm/shared-types';
 
-	export let featuresStatistics: BinaryMetadata['featuresStatistics'];
-	export let selected: Set<ContentClass> = new Set();
-	export let selectedTags: Set<string> = new Set();
-	let styles: string | undefined = undefined;
-	export { styles as class };
+	interface Props {
+		featuresStatistics: BinaryMetadata['featuresStatistics'];
+		selected?: Set<ContentClass>;
+		selectedTags?: Set<string>;
+		class?: string | undefined;
+	}
+
+	let {
+		featuresStatistics,
+		selected = $bindable(new Set()),
+		selectedTags = $bindable(new Set()),
+		class: styles = undefined
+	}: Props = $props();
+	
 
 	const {
 		elements: { root: classRoot, item: classItem },
@@ -24,24 +35,10 @@
 		type: 'multiple'
 	});
 
-	$: contentClasses = Object.entries(featuresStatistics.contentClasses)
-		.filter(([_, stats]) => stats.total > 0)
-		.map(([className]) => className);
 
-	$: selected = new Set($classValue);
-	$: selectedTags = new Set($tagValue);
 
-	$: selectedClasses = [...selected];
-	$: intersectionTags = findIntersectionTags(selectedClasses, featuresStatistics).slice(0, 10);
 
-	// Reset tag selection when class selection changes
-	$: if (selectedClasses.length > 0) {
-		tagValue.set([]);
-	}
 
-	$: if (selected !== new Set($classValue)) {
-		classValue.set([...selected]);
-	}
 
 	/**
 	 * Gets all tags for a single content class
@@ -97,6 +94,28 @@
 			.map(([tag, count]) => ({ tag, count }))
 			.sort((a, b) => b.count - a.count);
 	}
+	let contentClasses = $derived(Object.entries(featuresStatistics.contentClasses)
+		.filter(([_, stats]) => stats.total > 0)
+		.map(([className]) => className));
+	run(() => {
+		selected = new Set($classValue);
+	});
+	run(() => {
+		selectedTags = new Set($tagValue);
+	});
+	let selectedClasses = $derived([...selected]);
+	let intersectionTags = $derived(findIntersectionTags(selectedClasses, featuresStatistics).slice(0, 10));
+	// Reset tag selection when class selection changes
+	run(() => {
+		if (selectedClasses.length > 0) {
+			tagValue.set([]);
+		}
+	});
+	run(() => {
+		if (selected !== new Set($classValue)) {
+			classValue.set([...selected]);
+		}
+	});
 </script>
 
 <div class="z-10 top-[20px] left-[20px] absolute flex flex-col space-y-4">

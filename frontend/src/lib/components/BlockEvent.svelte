@@ -2,10 +2,14 @@
 	import type { GeoFeature } from '@atm/shared-types';
 	import { pickAndConvertObjectToArray, prettifyKey } from '$utils/utils';
 
-	export let feature: GeoFeature<'Image'>;
+	interface Props {
+		feature: GeoFeature<'Image'>;
+	}
+
+	let { feature }: Props = $props();
 	
 	// WIP: currently there's only cinema screening data in th Event dataset so we'll make EventBlock less generic than it's supposed to be 
-	$: items = pickAndConvertObjectToArray(feature?.properties, ['title', 'city_name', 'street_name','info', 'venue_type']);	
+	let items = $derived(pickAndConvertObjectToArray(feature?.properties, ['title', 'city_name', 'street_name','info', 'venue_type']));	
 </script>
 
 {#if items}

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
 	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
 	import maplibre, { type Map } from 'maplibre-gl';
@@ -10,25 +12,36 @@
 	// WIP: this should be env import
 	const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
 
-	export let heatmap: Heatmap;
-	//export let period: string;
-	export let heatmapBlueprint: HeatmapCell[];
-	export let dimensions: GridDimensions;
-	export let className: string | undefined = undefined;
-	export let selectedCellId: string | null = null;
+	
+	interface Props {
+		heatmap: Heatmap;
+		//export let period: string;
+		heatmapBlueprint: HeatmapCell[];
+		dimensions: GridDimensions;
+		className?: string | undefined;
+		selectedCellId?: string | null;
+	}
 
-	let showModal = false;
-	let modalData = {
+	let {
+		heatmap,
+		heatmapBlueprint,
+		dimensions,
+		className = undefined,
+		selectedCellId = $bindable(null)
+	}: Props = $props();
+
+	let showModal = $state(false);
+	let modalData = $state({
 		id: '',
 		coordinates: [] as number[][],
 		position: { x: 0, y: 0 },
 		value: undefined as number | undefined,
 		count: undefined as number | undefined
-	};
+	});
 
-	let map: Map | undefined;
-	let mapContainer: HTMLElement;
-	let isMapLoaded = false;
+	let map: Map | undefined = $state();
+	let mapContainer: HTMLElement = $state();
+	let isMapLoaded = $state(false);
 	// Track which cells currently have values to optimize updates
 	let activeCellIds = new Set<string>();
 
@@ -132,12 +145,16 @@
 	}
 
 	// Update feature states when heatmap changes
-	$: if (isMapLoaded && map && heatmap) {
-		updateFeatureStates(map, heatmap);
-	}
+	run(() => {
+		if (isMapLoaded && map && heatmap) {
+			updateFeatureStates(map, heatmap);
+		}
+	});
 
 	// Reactive statement calls the function
-	$: updateSelectedCell(selectedCellId);
+	run(() => {
+		updateSelectedCell(selectedCellId);
+	});
 
 	onMount(() => {
 		if (!mapContainer) return;
@@ -284,7 +301,7 @@
 </script>
 
 <div class={mergeCss('h-full w-full', className)}>
-	<div bind:this={mapContainer} class="h-full w-full" />
+	<div bind:this={mapContainer} class="h-full w-full"></div>
 
 	{#if showModal}
 		<div

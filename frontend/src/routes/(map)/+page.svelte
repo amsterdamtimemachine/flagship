@@ -1,5 +1,8 @@
 <!-- (map)/+page.svelte -->
 <script lang="ts">
+
+	import type { ContentClass, Heatmap } from '@atm/shared-types';
+	import { run } from 'svelte/legacy';
 	import { onMount } from 'svelte';
 	import { preloadData, pushState } from '$app/navigation';
 	import { browser } from '$app/environment';
@@ -15,20 +18,13 @@
 	import ToggleGroupSelector from '$components/ToggleGroupSelector.svelte';
 	import MapGLGrid from '$components/MapGLGrid.svelte';
 	import HeatmapSlider from '$components/HeatmapSlider.svelte';
-	import type { ContentClass, Heatmap } from '@atm/shared-types';
 
-	export let data;
+	let { data = $bindable() } = $props();
 
-	$: dimensions = data?.metadata?.dimensions;
-	$: heatmaps = data?.heatmaps?.heatmaps as Record<string, Heatmap>;
-	$: heatmapBlueprint = data?.metadata?.heatmapBlueprint?.cells;
-	$: featuresStatistics = data?.metadata?.featuresStatistics;
-	$: timePeriods = data?.metadata?.timePeriods;
-	let currentPeriod = undefined;
-
-	let selectedClasses = new Set<ContentClass>([PUBLIC_DEFAULT_CONTENT_CLASS]);
-	let selectedTags = new Set<string>();
-	let isLoading = false;
+	let currentPeriod = $state(undefined);
+	let selectedClasses = $state(new Set<ContentClass>([PUBLIC_DEFAULT_CONTENT_CLASS]));
+	let selectedTags = $state(new Set<string>());
+	let isLoading = $state(false);
 	let loadingNewPeriod = false;
 
 	// Function that uses the modular fetchHeatmaps
@@ -45,33 +41,6 @@
 			isLoading = false;
 		}
 	}
-
-	// Watch for changes in selections and fetch new data
-	$: {
-		// This reactive statement will re-run whenever selectedClasses or selectedTags changes
-		if (selectedClasses.size > 0) {
-			console.log('Selection changed, fetching new heatmaps...');
-			updateHeatmaps();
-		}
-	}
-
-//	async function updateCellDataForPeriod(index: number) {
-//		if (!$page.state.selectedCell) return;
-//		loadingNewPeriod = true;
-//		try {
-//			const currentPeriodValue = timePeriods[index];
-//			const cellId = $page.state.selectedCell.cellFeatures.cellId;
-//			const cellRoute = `/cells/${currentPeriodValue}/${cellId}`;
-//			const result = await preloadData(cellRoute);
-//			if (result.type === 'loaded' && result.status === 200) {
-//				pushState(cellRoute, {
-//					selectedCell: result.data
-//				});
-//			}
-//		} finally {
-//			loadingNewPeriod = false;
-//		}
-//	}
 
 	async function handleCellClick(event: CustomEvent) {
 		const { id } = event.detail;
@@ -122,11 +91,61 @@
 
 
 // Track previous selections to detect changes
-let previousSelectedClasses = new Set(selectedClasses);
-let previousSelectedTags = new Set(selectedTags);
+let previousSelectedClasses = $state(new Set(selectedClasses));
+let previousSelectedTags = $state(new Set(selectedTags));
 
+
+// Helper function to compare sets
+function hasSelectionChanged(current: Set<any>, previous: Set<any>): boolean {
+	if (current.size !== previous.size) return true;
+	
+	for (const item of current) {
+		if (!previous.has(item)) return true;
+	}
+	
+	return false;
+}
+
+	onMount(() => {
+		// Get parameters from URL if present
+		const contentClassesParam = $page.url.searchParams.get('contentClasses');
+		const tagsParam = $page.url.searchParams.get('tags');
+
+		// Initialize selected classes from URL or default
+		if (contentClassesParam) {
+			selectedClasses = new Set(contentClassesParam.split(',') as ContentClass[]);
+		} else if (PUBLIC_DEFAULT_CONTENT_CLASS) {
+			selectedClasses = new Set([PUBLIC_DEFAULT_CONTENT_CLASS]);
+		}
+
+		// Initialize selected tags from URL
+		if (tagsParam) {
+			selectedTags = new Set(tagsParam.split(','));
+		}
+
+		// Update heatmap with initial selections
+		updateHeatmaps();
+	});
+
+	// Track the previous period to detect changes
+	let previousPeriod = $state(currentPeriod);
+
+
+	let dimensions = $derived(data?.metadata?.dimensions);
+	let heatmaps = $derived(data?.heatmaps?.heatmaps as Record<string, Heatmap>);
+	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
+	let featuresStatistics = $derived(data?.metadata?.featuresStatistics);
+	let timePeriods = $derived(data?.metadata?.timePeriods);
+	// Watch for changes in selections and fetch new data
+	run(() => {
+		// This reactive statement will re-run whenever selectedClasses or selectedTags changes
+		if (selectedClasses.size > 0) {
+			console.log('Selection changed, fetching new heatmaps...');
+			updateHeatmaps();
+		}
+	});
 // Update the cell when content classes or tags change
-$: {
+run(() => {
 	if (browser && $page.state.selectedCell && 
 		(hasSelectionChanged(selectedClasses, previousSelectedClasses) || 
 		 hasSelectionChanged(selectedTags, previousSelectedTags))) {
@@ -179,45 +198,9 @@ $: {
 	// Update previous selections
 	previousSelectedClasses = new Set(selectedClasses);
 	previousSelectedTags = new Set(selectedTags);
-}
-
-// Helper function to compare sets
-function hasSelectionChanged(current: Set<any>, previous: Set<any>): boolean {
-	if (current.size !== previous.size) return true;
-	
-	for (const item of current) {
-		if (!previous.has(item)) return true;
-	}
-	
-	return false;
-}
-
-	onMount(() => {
-		// Get parameters from URL if present
-		const contentClassesParam = $page.url.searchParams.get('contentClasses');
-		const tagsParam = $page.url.searchParams.get('tags');
-
-		// Initialize selected classes from URL or default
-		if (contentClassesParam) {
-			selectedClasses = new Set(contentClassesParam.split(',') as ContentClass[]);
-		} else if (PUBLIC_DEFAULT_CONTENT_CLASS) {
-			selectedClasses = new Set([PUBLIC_DEFAULT_CONTENT_CLASS]);
-		}
-
-		// Initialize selected tags from URL
-		if (tagsParam) {
-			selectedTags = new Set(tagsParam.split(','));
-		}
-
-		// Update heatmap with initial selections
-		updateHeatmaps();
-	});
-
-	// Track the previous period to detect changes
-	let previousPeriod = currentPeriod;
-
+});
 	// Update the cell when currentPeriod changes
-	$: {
+	run(() => {
 		if (browser && currentPeriod && currentPeriod !== previousPeriod && $page.state.selectedCell) {
 			// Get the currently selected cell ID
 			const cellId = $page.state.selectedCell.cellFeatures.cellId;
@@ -265,10 +248,9 @@ function hasSelectionChanged(current: Set<any>, previous: Set<any>): boolean {
 
 		// Update previous period
 		previousPeriod = currentPeriod;
-	}
-
+	});
 	// When selections change, update the URL
-	$: {
+	run(() => {
 		if (browser && (selectedClasses.size > 0 || selectedTags.size > 0)) {
 			const url = new URL(window.location.href);
 
@@ -291,7 +273,7 @@ function hasSelectionChanged(current: Set<any>, previous: Set<any>): boolean {
 			// Update heatmaps
 			updateHeatmaps();
 		}
-	}
+	});
 </script>
 
 <div class="relative flex flex-col w-screen h-screen">

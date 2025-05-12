@@ -1,9 +1,13 @@
 <script lang="ts">
   import type { GeoFeatures } from '@atm/shared-types';
-  export let features: GeoFeatures[];
   import Masonry from 'svelte-masonry';
   import BlockImage from '$components/BlockImage.svelte';
   import BlockEvent from '$components/BlockEvent.svelte';
+  type Props = {
+    features: GeoFeatures[];
+  }
+
+  let { features }: Props = $props();
   
 
  // function getFeatureId(feature: GeoFeatures) {
