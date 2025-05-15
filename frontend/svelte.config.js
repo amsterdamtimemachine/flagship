@@ -21,6 +21,7 @@ const config = {
 		alias: {
 			$routes: 'src/routes',
 			$components: 'src/lib/components',
+			$controllers: 'src/lib/controllers',
 			$types: 'src/lib/types.ts',
 			$api: 'src/lib/api.ts',
 			$utils: 'src/lib/utils/',

@@ -161,74 +161,74 @@ export function createMapController(initialData: any) {
   // Handle cell selection
   async function selectCell(cellId: string | null): Promise<void> {
     // If cellId is null, clear the selection
-    if (cellId === null || !currentPeriod) {
-      pushState('/', {
-        selectedCell: undefined
-      });
-      return;
-    }
-    
-    const cellRoute = buildCellRoute(cellId, currentPeriod);
-    const apiUrl = buildCellApiUrl(cellId, currentPeriod);
-    
-    try {
-      // Fetch cell data
-      const cellFeatures = await fetchApi<CellFeaturesResponse>(apiUrl);
-      
-      // Navigate with both URL parameters and state
-      pushState(cellRoute, {
-        selectedCell: { cellFeatures }
-      });
-    } catch (error) {
-      console.error('Error fetching cell data:', error);
-    }
+   // if (cellId === null || !currentPeriod) {
+   //   pushState('/', {
+   //     selectedCell: undefined
+   //   });
+   //   return;
+   // }
+   // 
+   // const cellRoute = buildCellRoute(cellId, currentPeriod);
+   // const apiUrl = buildCellApiUrl(cellId, currentPeriod);
+   // 
+   // try {
+   //   // Fetch cell data
+   //   const cellFeatures = await fetchApi<CellFeaturesResponse>(apiUrl);
+   //   
+   //   // Navigate with both URL parameters and state
+   //   pushState(cellRoute, {
+   //     selectedCell: { cellFeatures }
+   //   });
+   // } catch (error) {
+   //   console.error('Error fetching cell data:', error);
+   // }
   }
   
   // Update URL from current selections
   function updateUrlFromSelections(): void {
-    if (!browser) return;
-    
-    const url = new URL(window.location.href);
-    
-    // Update URL parameters without triggering navigation
-    if (selectedClasses.size > 0) {
-      url.searchParams.set('contentClasses', Array.from(selectedClasses).join(','));
-    } else {
-      url.searchParams.delete('contentClasses');
-    }
-    
-    if (selectedTags.size > 0) {
-      url.searchParams.set('tags', Array.from(selectedTags).join(','));
-    } else {
-      url.searchParams.delete('tags');
-    }
-    
-    // Update browser history without full page reload
-    history.replaceState({}, '', url.toString());
+   // if (!browser) return;
+   // 
+   // const url = new URL(window.location.href);
+   // 
+   // // Update URL parameters without triggering navigation
+   // if (selectedClasses.size > 0) {
+   //   url.searchParams.set('contentClasses', Array.from(selectedClasses).join(','));
+   // } else {
+   //   url.searchParams.delete('contentClasses');
+   // }
+   // 
+   // if (selectedTags.size > 0) {
+   //   url.searchParams.set('tags', Array.from(selectedTags).join(','));
+   // } else {
+   //   url.searchParams.delete('tags');
+   // }
+   // 
+   // // Update browser history without full page reload
+   // history.replaceState({}, '', url.toString());
   }
   
   // Update selected cell with new filters
   async function updateCellWithFilters(): Promise<void> {
-    if (!browser || !page.state.selectedCell) return;
-    
-    // Get the currently selected cell ID and period
-    const cellId = page.state.selectedCell.cellFeatures.cellId;
-    if (!cellId || !currentPeriod) return;
-    
-    const cellRoute = buildCellRoute(cellId, currentPeriod);
-    const apiUrl = buildCellApiUrl(cellId, currentPeriod);
-    
-    try {
-      // Fetch updated cell data
-      const cellFeatures = await fetchApi<CellFeaturesResponse>(apiUrl);
-      
-      // Update the route and state
-      pushState(cellRoute, {
-        selectedCell: { cellFeatures }
-      });
-    } catch (error) {
-      console.error('Error updating cell for new content classes:', error);
-    }
+   // if (!browser || !page.state.selectedCell) return;
+   // 
+   // // Get the currently selected cell ID and period
+   // const cellId = page.state.selectedCell.cellFeatures.cellId;
+   // if (!cellId || !currentPeriod) return;
+   // 
+   // const cellRoute = buildCellRoute(cellId, currentPeriod);
+   // const apiUrl = buildCellApiUrl(cellId, currentPeriod);
+   // 
+   // try {
+   //   // Fetch updated cell data
+   //   const cellFeatures = await fetchApi<CellFeaturesResponse>(apiUrl);
+   //   
+   //   // Update the route and state
+   //   pushState(cellRoute, {
+   //     selectedCell: { cellFeatures }
+   //   });
+   // } catch (error) {
+   //   console.error('Error updating cell for new content classes:', error);
+   // }
   }
   
   // Update selected cell with new period
