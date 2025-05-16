@@ -18,16 +18,34 @@ export function createMapController(initialData: any) {
   let isLoading = $state(false);
   let isLoadingNewPeriod = $state(false);
   let data = $state(initialData);
-  
-  // Previous state tracking for detecting changes
+
+ // const previousSelectedClasses = $derived(selectedClasses);
+ // const previousSelectedTags = $derived(selectedTags);
+
   let previousSelectedClasses = $state(new Set<ContentClass>());
   let previousSelectedTags = $state(new Set<string>());
+  
+ // const hasClassesChanged = $derived(
+ //   selectedClasses.size !== previousSelectedClasses.size || 
+ //   [...selectedClasses].some(cls => !previousSelectedClasses.has(cls))
+ // );
+
+ // const hasTagsChanged = $derived(
+ //   selectedTags.size !== previousSelectedTags.size || 
+ //   [...selectedTags].some(tag => !previousSelectedTags.has(tag))
+ // );
+
+
   let previousPeriod = $state<string | undefined>(undefined);
   
   // Derived values
   let dimensions = $derived(data?.metadata?.dimensions);
   let heatmaps = $derived(data?.heatmaps?.heatmaps as Record<string, Heatmap>);
-  let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
+  let heatmapBlueprint = $derived(
+    data?.metadata?.heatmapBlueprint?.cells ? 
+    $state.snapshot(data?.metadata?.heatmapBlueprint?.cells) : 
+    null
+  );
   let featuresStatistics = $derived(data?.metadata?.featuresStatistics);
   let timePeriods = $derived(data?.metadata?.timePeriods);
   
@@ -108,6 +126,8 @@ export function createMapController(initialData: any) {
       if (timePeriods && timePeriods.length > 0) {
         currentPeriod = timePeriods[0];
       }
+
+      console.log("initialised!");
       
       // Initial data fetch
       await updateHeatmaps();
@@ -128,6 +148,7 @@ export function createMapController(initialData: any) {
   function getCurrentHeatmap(): Heatmap | null {
     return currentPeriod && heatmaps ? heatmaps[currentPeriod] : null;
   }
+
   
   // Get the currently selected cell ID
   function getSelectedCellId(): string | undefined {
@@ -160,28 +181,28 @@ export function createMapController(initialData: any) {
   
   // Handle cell selection
   async function selectCell(cellId: string | null): Promise<void> {
-    // If cellId is null, clear the selection
-   // if (cellId === null || !currentPeriod) {
-   //   pushState('/', {
-   //     selectedCell: undefined
-   //   });
-   //   return;
-   // }
-   // 
-   // const cellRoute = buildCellRoute(cellId, currentPeriod);
-   // const apiUrl = buildCellApiUrl(cellId, currentPeriod);
-   // 
-   // try {
-   //   // Fetch cell data
-   //   const cellFeatures = await fetchApi<CellFeaturesResponse>(apiUrl);
-   //   
-   //   // Navigate with both URL parameters and state
-   //   pushState(cellRoute, {
-   //     selectedCell: { cellFeatures }
-   //   });
-   // } catch (error) {
-   //   console.error('Error fetching cell data:', error);
-   // }
+  // If cellId is null, clear the selection
+  // if (cellId === null || !currentPeriod) {
+  //   pushState('/', {
+  //     selectedCell: undefined
+  //   });
+  //   return;
+  // }
+  // 
+  // const cellRoute = buildCellRoute(cellId, currentPeriod);
+  // const apiUrl = buildCellApiUrl(cellId, currentPeriod);
+  // 
+  // try {
+  //   // Fetch cell data
+  //   const cellFeatures = await fetchApi<CellFeaturesResponse>(apiUrl);
+  //   
+  //   // Navigate with both URL parameters and state
+  //   pushState(cellRoute, {
+  //     selectedCell: { cellFeatures }
+  //   });
+  // } catch (error) {
+  //   console.error('Error fetching cell data:', error);
+  // }
   }
   
   // Update URL from current selections
@@ -262,42 +283,45 @@ export function createMapController(initialData: any) {
   // ------ Effects ------
   
   // Effect to watch for changes in selections and fetch new data
-  $effect(() => {
-    if (selectedClasses.size > 0 && browser) {
-      console.log('Selection changed, fetching new heatmaps...');
-      updateHeatmaps();
-    }
-    
-    previousSelectedClasses = new Set(selectedClasses);
-    previousSelectedTags = new Set(selectedTags);
-  });
+ // $effect(() => {
+ //   if (selectedClasses.size > 0 && browser) {
+ //     console.log('Selection changed, fetching new heatmaps...');
+ //     updateHeatmaps();
+ //   }
+ //  // previousSelectedClasses = new Set(selectedClasses);
+ //  // previousSelectedTags = new Set(selectedTags)
+
+ //   console.log("EFFECT!");
+
+ // });
+
   
   // Effect to update URL when selections change
-  $effect(() => {
-    if (browser && (selectedClasses.size > 0 || selectedTags.size > 0)) {
-      updateUrlFromSelections();
-    }
-  });
+ // $effect(() => {
+ //   if (browser && (selectedClasses.size > 0 || selectedTags.size > 0)) {
+ //     updateUrlFromSelections();
+ //   }
+ // });
   
   // Effect to update the cell when content classes or tags change
-  $effect(() => {
-    if (browser && page.state.selectedCell && 
-      (hasSelectionChanged(selectedClasses, previousSelectedClasses) || 
-      hasSelectionChanged(selectedTags, previousSelectedTags))) {
-      
-      updateCellWithFilters();
-    }
-  });
+ // $effect(() => {
+ //   if (browser && page.state.selectedCell && 
+ //     (hasSelectionChanged(selectedClasses, previousSelectedClasses) || 
+ //     hasSelectionChanged(selectedTags, previousSelectedTags))) {
+ //     
+ //     updateCellWithFilters();
+ //   }
+ // });
   
   // Effect to update the cell when currentPeriod changes
-  $effect(() => {
-    if (browser && currentPeriod && currentPeriod !== previousPeriod && page.state.selectedCell) {
-      updateCellWithPeriod();
-    }
-    
-    // Update previous period
-    previousPeriod = currentPeriod;
-  });
+ // $effect(() => {
+ //   if (browser && currentPeriod && currentPeriod !== previousPeriod && page.state.selectedCell) {
+ //     updateCellWithPeriod();
+ //   }
+ //   
+ //   // Update previous period
+ //   previousPeriod = currentPeriod;
+ // });
   
   // Return public interface
   return {

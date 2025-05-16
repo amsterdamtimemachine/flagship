@@ -8,13 +8,10 @@
   import HeatmapSlider from '$components/HeatmapSlider.svelte';
   //import CellPage from '$routes/(map)/cells/[period]/[cellId]/+page.svelte';
   
-	import type { PageProps } from './$types';
-  let { data } : PageProps = $props();
+      import type { PageProps } from './$types';
+    let { data } : PageProps = $props();
 
-	let mapController = $derived.by(() => {
-			if (!data) return null;
-			return createMapController(data);
-	});
+      let mapController = $derived(createMapController(data));
 
   onMount(() => {
     mapController.initialize();

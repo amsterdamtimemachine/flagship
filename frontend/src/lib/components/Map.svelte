@@ -14,26 +14,28 @@
 		heatmap: Heatmap;
 		heatmapBlueprint: HeatmapCell[];
 		dimensions: GridDimensions;
-		className?: string | undefined;
+		className?: string;
 		selectedCellId?: string | null;
+		handleCellClick?: () => void; 
 	}
 
 	let {
 		heatmap,
 		heatmapBlueprint,
 		dimensions,
-		className = undefined,
-		selectedCellId = $bindable(null)
+		class: className = undefined,
+		selectedCellId = null,
+		handleCellclick = undefined,
 	}: Props = $props();
 
-	let showModal = $state(false);
-	let modalData = $state({
-		id: '',
-		coordinates: [] as number[][],
-		position: { x: 0, y: 0 },
-		value: undefined as number | undefined,
-		count: undefined as number | undefined
-	});
+//	let showModal = $state(false);
+//	let modalData = $state({
+//		id: '',
+//		coordinates: [] as number[][],
+//		position: { x: 0, y: 0 },
+//		value: undefined as number | undefined,
+//		count: undefined as number | undefined
+//	});
 
 	let map: Map | undefined = $state();
 	let mapContainer: HTMLElement = $state();
@@ -50,11 +52,14 @@
 		return idMap;
 	});
 
-	const dispatch = createEventDispatcher<{
-		cellClick: {
-			id: string;
-		};
-	}>();
+	console.log(cellIdMap);
+
+
+//	const dispatch = createEventDispatcher<{
+//		cellClick: {
+//			id: string;
+//		};
+//	}>();
 
 	// Generate initial features from blueprint
 	function generateInitialFeatures(blueprint: HeatmapCell[]) {
@@ -144,16 +149,16 @@
 	}
 
 	// Effect to update feature states when heatmap changes
-	$effect(() => {
-		if (isMapLoaded && map && heatmap) {
-			updateFeatureStates(map, heatmap);
-		}
-	});
-
-	// Effect to update the selected cell
-	$effect(() => {
-		updateSelectedCell(selectedCellId);
-	});
+//	$effect(() => {
+//		if (isMapLoaded && map && heatmap) {
+//			updateFeatureStates(map, heatmap);
+//		}
+//	});
+//
+//	// Effect to update the selected cell
+//	$effect(() => {
+//		updateSelectedCell(selectedCellId);
+//	});
 
 	onMount(() => {
 		if (!mapContainer) return;
@@ -208,7 +213,7 @@
 				}
 			});
 
-			// Initial feature state setup
+		//	// Initial feature state setup
 			updateFeatureStates(map, heatmap);
 
 			// Event handlers
@@ -218,24 +223,23 @@
 					const featureState = map.getFeatureState({ source: 'grid', id: feature.properties.id });
 
 					if (featureState.count > 0) {
-						showModal = true;
-						modalData = {
-							id: feature.properties.id,
-							coordinates: feature.geometry.coordinates,
-							position: { x: e.point.x, y: e.point.y },
-							value: featureState.value || 0,
-							count: featureState.count || 0
-						};
+					//	modalData = {
+					//		id: feature.properties.id,
+					//		coordinates: feature.geometry.coordinates,
+					//		position: { x: e.point.x, y: e.point.y },
+					//		value: featureState.value || 0,
+					//		count: featureState.count || 0
+					//	};
 						map.getCanvas().style.cursor = 'pointer';
 					} else {
-						showModal = false;
+					//	showModal = false;
 						map.getCanvas().style.cursor = '';
 					}
 				}
 			});
 
 			map.on('mouseleave', 'heatmap-squares', () => {
-				showModal = false;
+			//	showModal = false;
 				map.getCanvas().style.cursor = '';
 			});
 
@@ -258,7 +262,7 @@
 							);
 
 							// Inform parent component
-							dispatch('cellClick', { id: null });
+						//	dispatch('cellClick', { id: null });
 						} else {
 							// Clear previous selection if any
 							if (selectedCellId) {
@@ -275,9 +279,9 @@
 							);
 
 							// Inform parent component
-							dispatch('cellClick', {
-								id: feature.properties.id
-							});
+						//	dispatch('cellClick', {
+						//		id: feature.properties.id
+						//	});
 						}
 					}
 				}
@@ -302,6 +306,9 @@
 <div class={mergeCss('h-full w-full', className)}>
 	<div bind:this={mapContainer} class="h-full w-full"></div>
 
+
+	<!--
+
 	{#if showModal}
 		<div
 			class="absolute pointer-events-none bg-white shadow-lg p-1 z-50 transition-opacity duration-150"
@@ -321,4 +328,5 @@
 			</p>
 		</div>
 	{/if}
+	-->
 </div>
