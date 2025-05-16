@@ -17,8 +17,8 @@
     !!controller.heatmaps[controller.currentPeriod]
   );
 
-  function handleCellClick(event: CustomEvent<{id: string | null}>) {
-    controller.selectCell(event.detail.id);
+  function handleCellClick(cellId: string | null) {
+    controller.selectCell(cellId);
   }
 
 </script>
@@ -26,7 +26,7 @@
 {#if isVisible}
   <Map
     heatmap={currentHeatmap}
-    heatmapBlueprint={controller.heatmapBlueprint}
+    heatmapBlueprint={$state.snapshot(controller.heatmapBlueprint)}
     dimensions={controller.dimensions}
     selectedCellId={selectedCellId}
     class={className}
