@@ -2,10 +2,11 @@
 	import type { Snippet } from 'svelte';
 	import '../app.pcss';
 
-	let { children }: {
+	let {
+		children
+	}: {
 		children?: Snippet;
 	} = $props();
-
 </script>
 
 <main class="relative">

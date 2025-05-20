@@ -4,10 +4,10 @@
 	const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
-	import maplibre, { 
-		type Map, 
-		type FeatureCollection, 
-		type Feature, 
+	import maplibre, {
+		type Map,
+		type FeatureCollection,
+		type Feature,
 		type Polygon,
 		type GeoJSONProperties
 	} from 'maplibre-gl';
@@ -22,14 +22,13 @@
 		count: number;
 	}
 
-//	let modalData = $state({
-//		id: '',
-//		coordinates: [] as number[][],
-//		position: { x: 0, y: 0 },
-//		value: undefined as number | undefined,
-//		count: undefined as number | undefined
-//	});
-
+	//	let modalData = $state({
+	//		id: '',
+	//		coordinates: [] as number[][],
+	//		position: { x: 0, y: 0 },
+	//		value: undefined as number | undefined,
+	//		count: undefined as number | undefined
+	//	});
 
 	interface Props {
 		heatmap: Heatmap;
@@ -37,7 +36,7 @@
 		dimensions: GridDimensions;
 		selectedCellId: string | null;
 		className?: string;
-		handleCellClick?: (cellId: string | null) => void; 
+		handleCellClick?: (cellId: string | null) => void;
 	}
 
 	let {
@@ -46,7 +45,7 @@
 		dimensions,
 		selectedCellId = null,
 		class: className,
-		handleCellClick,
+		handleCellClick
 	}: Props = $props();
 
 	let map: Map | undefined = $state();
@@ -65,12 +64,12 @@
 
 	let activeCells = $derived.by(() => {
 		if (!isMapLoaded || !map || !heatmap) {
-			return new Map<string, { value: number, count: number }>();
+			return new Map<string, { value: number; count: number }>();
 		}
-		
+
 		const { densityArray, countArray } = heatmap;
-		const result = new Map<string, { value: number, count: number }>();
-		
+		const result = new Map<string, { value: number; count: number }>();
+
 		// Calculate active cells and their values
 		for (let i = 0; i < countArray.length; i++) {
 			const count = countArray[i];
@@ -84,32 +83,15 @@
 				}
 			}
 		}
-		
+
 		return result;
 	});
-	
+
 	// update heatmap cells when active cells change
 	$effect(() => {
 		if (!isMapLoaded || !map || !heatmapBlueprint) return;
-			
-		// Clear ALL cells to default state first
-		heatmapBlueprint.forEach(cell => {
-			map.setFeatureState(
-				{ source: 'grid', id: cell.cellId },
-				{
-					value: 0,
-					count: 0
-				}
-			);
-		});
-		
-		// Then set feature states only for active cells
-		activeCells.forEach((stateValues, cellId) => {
-			map.setFeatureState(
-				{ source: 'grid', id: cellId },
-				stateValues
-			);
-		});
+		resetAllCells();
+		setActiveCells();
 	});
 
 	onMount(() => {
@@ -126,71 +108,58 @@
 		}
 	});
 
-	function generateHeatmapFeatures(blueprint: HeatmapCell[]): FeatureCollection<Polygon, CellProperties> {
-		const features = blueprint.map((cell): Feature<Polygon, CellProperties> => ({
-			type: 'Feature',
-			id: cell.cellId,
-			properties: {
+	function resetAllCells(): void {
+		if (!map) return;
+		cellIdMap.forEach((cellId, _) => {
+			map.setFeatureState(
+				{ source: 'heatmap', id: cellId },
+				{
+					value: 0,
+					count: 0
+				}
+			);
+		});
+	}
+
+	function setActiveCells(): void {
+		if (!map) return;
+		activeCells.forEach((stateValues, cellId) => {
+			map.setFeatureState({ source: 'heatmap', id: cellId }, stateValues);
+		});
+	}
+
+	function generateHeatmapCells(
+		blueprint: HeatmapCell[]
+	): FeatureCollection<Polygon, CellProperties> {
+		const features = blueprint.map(
+			(cell): Feature<Polygon, CellProperties> => ({
+				type: 'Feature',
 				id: cell.cellId,
-				row: cell.row,
-				col: cell.col,
-				count: 0
-			},
-			geometry: {
-				type: 'Polygon',
-				coordinates: [
-					[
-						[cell.bounds.minLon, cell.bounds.minLat],
-						[cell.bounds.maxLon, cell.bounds.minLat],
-						[cell.bounds.maxLon, cell.bounds.maxLat],
-						[cell.bounds.minLon, cell.bounds.maxLat],
-						[cell.bounds.minLon, cell.bounds.minLat]
+				properties: {
+					id: cell.cellId,
+					row: cell.row,
+					col: cell.col,
+					count: 0
+				},
+				geometry: {
+					type: 'Polygon',
+					coordinates: [
+						[
+							[cell.bounds.minLon, cell.bounds.minLat],
+							[cell.bounds.maxLon, cell.bounds.minLat],
+							[cell.bounds.maxLon, cell.bounds.maxLat],
+							[cell.bounds.minLon, cell.bounds.maxLat],
+							[cell.bounds.minLon, cell.bounds.minLat]
+						]
 					]
-				]
-			}
-		}));
-		
+				}
+			})
+		);
+
 		return {
 			type: 'FeatureCollection',
 			features
 		};
-	}
-
-	function updateFeatureStates(map, heatmapData): void {
-		const { densityArray, countArray } = heatmapData;
-		const newActiveCellIds = new Set();
-		// Only iterate through values that exist in the array
-		for (let i = 0; i < countArray.length; i++) {
-			const count = countArray[i];
-			if (count > 0) {
-				const cellId = cellIdMap.get(i);
-				if (cellId) {
-					// Set the feature state for cells with values
-					map.setFeatureState(
-						{ source: 'grid', id: cellId },
-						{
-							value: densityArray[i] || 0,
-							count
-						}
-					);
-					newActiveCellIds.add(cellId);
-				}
-			}
-		}
-		// Clear cells inactive cells
-		activeCellIds.forEach((cellId) => {
-			if (!newActiveCellIds.has(cellId)) {
-				map.setFeatureState(
-					{ source: 'grid', id: cellId },
-					{
-						value: 0,
-						count: 0
-					}
-				);
-			}
-		});
-		// Update the tracking set
-		activeCellIds = newActiveCellIds;
 	}
 
 	function updateSelectedCell(cellId: string | null): void {
@@ -198,14 +167,14 @@
 
 		// Clear previous highlight
 		if (selectedCellId) {
-			map.setFeatureState({ source: 'grid', id: selectedCellId }, { selected: false });
+			map.setFeatureState({ source: 'heatmap', id: selectedCellId }, { selected: false });
 		}
 
 		selectedCellId = cellId;
 
 		// Set new highlight
 		if (cellId) {
-			map.setFeatureState({ source: 'grid', id: cellId }, { selected: true });
+			map.setFeatureState({ source: 'heatmap', id: cellId }, { selected: true });
 		}
 	}
 
@@ -233,28 +202,29 @@
 		});
 
 		map.on('load', () => {
-			// Add source with blueprint features
-			map.addSource('grid', {
+			// Heatmap geometry
+			map.addSource('heatmap', {
 				type: 'geojson',
-				data: generateHeatmapFeatures(heatmapBlueprint),
+				data: generateHeatmapCells(heatmapBlueprint),
 				promoteId: 'id'
 			});
 
-			// Add layer using feature state for opacity with transition
+			// Color and opacity of the heatmaps cells
 			map.addLayer({
 				id: 'heatmap-squares',
 				type: 'fill',
-				source: 'grid',
+				source: 'heatmap',
 				paint: {
 					'fill-color': '#0000ff',
 					'fill-opacity': ['coalesce', ['feature-state', 'value'], 0]
 				}
 			});
 
+			// Active cell
 			map.addLayer({
 				id: 'selected-cell',
 				type: 'line',
-				source: 'grid',
+				source: 'heatmap',
 				paint: {
 					'line-color': '#ff0000',
 					'line-width': 2,
@@ -266,7 +236,10 @@
 			map.on('mousemove', 'heatmap-squares', (e) => {
 				if (e.features?.[0]) {
 					const feature = e.features[0];
-					const featureState = map.getFeatureState({ source: 'grid', id: feature.properties.id });
+					const featureState = map.getFeatureState({
+						source: 'heatmap',
+						id: feature.properties.id
+					});
 					if (featureState.count > 0) {
 						map.getCanvas().style.cursor = 'pointer';
 					} else {
@@ -283,33 +256,26 @@
 				if (e.features?.[0]) {
 					const feature = e.features[0];
 					const featureId = feature.properties.id;
-					const featureState = map.getFeatureState({ source: 'grid', id: featureId });
+					const featureState = map.getFeatureState({ source: 'heatmap', id: featureId });
 
 					// select only cells with values
 					if (featureState.count > 0) {
-						// deselect the currently selected cell if its clicked 
+						// deselect the currently selected cell if its clicked
 						if (featureId === selectedCellId) {
-							// Update local selection state
 							selectedCellId = null;
-
-							// Update visual state
-							map.setFeatureState(
-								{ source: 'grid', id: featureId },
-								{ selected: false }
-							);
+							map.setFeatureState({ source: 'heatmap', id: featureId }, { selected: false });
 
 							// update parent
-							if(handleCellClick) {
+							if (handleCellClick) {
 								handleCellClick(null);
 							}
 						} else {
 							updateSelectedCell(featureId);
 
-							// update parent
-							if(handleCellClick) {
+							// parent callback
+							if (handleCellClick) {
 								handleCellClick(feature.properties.id);
 							}
-
 						}
 					}
 				}
@@ -317,8 +283,6 @@
 			isMapLoaded = true;
 		});
 	}
-
-
 </script>
 
 <div class={mergeCss('h-full w-full', className)}>

@@ -1,17 +1,17 @@
 <script>
- // import MapHeader from '$components/MapHeader.svelte';
-  import MapVisualization from '$components/MapVisualization.svelte';
- // import TimelineControls from '$components/TimelineControls.svelte';
- // import CellDetailPanel from '$components/CellDetailPanel.svelte';
- // import LoadingOverlay from '$components/LoadingOverlay.svelte';
-  
-  let { mapController } = $props();
-  
-  // Derive these from the controller
-  let isLoading = $derived(mapController.isLoading);
-  let isLoadingNewPeriod = $derived(mapController.isLoadingNewPeriod);
-  let selectedCell = $derived(mapController.selectedCell);
-  let currentPeriod = $derived(mapController.currentPeriod);
+	// import MapHeader from '$components/MapHeader.svelte';
+	import MapVisualization from '$components/MapVisualization.svelte';
+	// import TimelineControls from '$components/TimelineControls.svelte';
+	// import CellDetailPanel from '$components/CellDetailPanel.svelte';
+	// import LoadingOverlay from '$components/LoadingOverlay.svelte';
+
+	let { mapController } = $props();
+
+	// Derive these from the controller
+	let isLoading = $derived(mapController.isLoading);
+	let isLoadingNewPeriod = $derived(mapController.isLoadingNewPeriod);
+	let selectedCell = $derived(mapController.selectedCell);
+	let currentPeriod = $derived(mapController.currentPeriod);
 </script>
 
 <div class="relative flex flex-col w-screen h-screen">
@@ -25,12 +25,12 @@
     <LoadingOverlay />
   {/if}
 	-->
-  
-  <div class="relative flex-1">
-    <MapVisualization 
-      controller={mapController}
-      isVisible={!!currentPeriod && !!mapController.heatmaps[currentPeriod]}
-    />
+
+	<div class="relative flex-1">
+		<MapVisualization
+			controller={mapController}
+			isVisible={!!currentPeriod && !!mapController.heatmaps[currentPeriod]}
+		/>
 
 		<!--
     
@@ -43,7 +43,7 @@
     {/if}
 
 		-->
-  </div>
+	</div>
 
 	<!--
   

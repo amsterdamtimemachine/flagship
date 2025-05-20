@@ -4,7 +4,6 @@
 	import { createSlider, melt } from '@melt-ui/svelte';
 	import { formatDate } from '$utils/utils';
 
-	
 	interface Props {
 		// expects periods in the format of "startYear_endYear" eg: ["1500_1700", 1700_1900"]
 		timePeriods?: string[];

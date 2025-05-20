@@ -1,32 +1,27 @@
 <script lang="ts">
-  import type { GeoFeatures } from '@atm/shared-types';
-  import Masonry from 'svelte-masonry';
-  import BlockImage from '$components/BlockImage.svelte';
-  import BlockEvent from '$components/BlockEvent.svelte';
-  type Props = {
-    features: GeoFeatures[];
-  }
+	import type { GeoFeatures } from '@atm/shared-types';
+	import Masonry from 'svelte-masonry';
+	import BlockImage from '$components/BlockImage.svelte';
+	import BlockEvent from '$components/BlockEvent.svelte';
+	type Props = {
+		features: GeoFeatures[];
+	};
 
-  let { features }: Props = $props();
-  
+	let { features }: Props = $props();
 
- // function getFeatureId(feature: GeoFeatures) {
- //   return `${feature.content_class}-${feature.properties.title}`; 
- // }
-
+	// function getFeatureId(feature: GeoFeatures) {
+	//   return `${feature.content_class}-${feature.properties.title}`;
+	// }
 </script>
 
-<div class="w-100"> 
-<Masonry 
-  gridGap={'10px'} 
-  colWidth={'150px'}
->
-{#each features as feature, index (index)}
-        {#if feature.content_class === 'Event'}
-            <BlockEvent feature={feature} />
-        {:else if feature.content_class === 'Image'}
-            <BlockImage feature={feature} />
-        {/if}
-{/each}
-  </Masonry>
+<div class="w-100">
+	<Masonry gridGap={'10px'} colWidth={'150px'}>
+		{#each features as feature, index (index)}
+			{#if feature.content_class === 'Event'}
+				<BlockEvent {feature} />
+			{:else if feature.content_class === 'Image'}
+				<BlockImage {feature} />
+			{/if}
+		{/each}
+	</Masonry>
 </div>

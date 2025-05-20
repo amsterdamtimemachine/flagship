@@ -1,25 +1,25 @@
 <!-- src/routes/(map)/+page.svelte -->
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { page } from '$app/state';
-  import { createMapController } from '$lib/controllers/MapController.svelte';
-  import MapVisualization from '$components/MapVisualisation.svelte';
-  import ToggleGroupSelector from '$components/ToggleGroupSelector.svelte';
-  import HeatmapSlider from '$components/HeatmapSlider.svelte';
-  //import CellPage from '$routes/(map)/cells/[period]/[cellId]/+page.svelte';
-  
-      import type { PageProps } from './$types';
-    let { data } : PageProps = $props();
+	import { onMount } from 'svelte';
+	import { page } from '$app/state';
+	import { createMapController } from '$lib/controllers/MapController.svelte';
+	import MapVisualization from '$components/MapVisualisation.svelte';
+	import ToggleGroupSelector from '$components/ToggleGroupSelector.svelte';
+	import HeatmapSlider from '$components/HeatmapSlider.svelte';
+	//import CellPage from '$routes/(map)/cells/[period]/[cellId]/+page.svelte';
 
-      let mapController = $derived(createMapController(data));
+	import type { PageProps } from './$types';
+	let { data }: PageProps = $props();
 
-  onMount(() => {
-    mapController.initialize();
-  });
+	let mapController = $derived(createMapController(data));
+
+	onMount(() => {
+		mapController.initialize();
+	});
 </script>
 
 <div class="relative flex flex-col w-screen h-screen">
-  <!-- For now, keep the ToggleGroupSelector as is -->
+	<!-- For now, keep the ToggleGroupSelector as is -->
 	<!--
   <ToggleGroupSelector
     featuresStatistics={mapController.featuresStatistics}
@@ -30,17 +30,14 @@
   />
 	-->
 
-  {#if mapController.isLoading}
-    <div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-50 z-50">
-      <div class="loader"></div>
-    </div>
-  {/if}
+	{#if mapController.isLoading}
+		<div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-50 z-50">
+			<div class="loader"></div>
+		</div>
+	{/if}
 
-  <div class="relative flex-1">
-    <MapVisualization 
-      controller={mapController}
-      class="w-full h-full z-10"
-    />
+	<div class="relative flex-1">
+		<MapVisualization controller={mapController} class="w-full h-full z-10" />
 
 		<!---
 
@@ -58,7 +55,7 @@
       </div>
     {/if}
 		-->
-  </div>
+	</div>
 
 	<!--
   {#if mapController.timePeriods}
@@ -71,21 +68,21 @@
 </div>
 
 <style>
-  .loader {
-    border: 5px solid #f3f3f3;
-    border-radius: 50%;
-    border-top: 5px solid #3498db;
-    width: 50px;
-    height: 50px;
-    animation: spin 2s linear infinite;
-  }
+	.loader {
+		border: 5px solid #f3f3f3;
+		border-radius: 50%;
+		border-top: 5px solid #3498db;
+		width: 50px;
+		height: 50px;
+		animation: spin 2s linear infinite;
+	}
 
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
+	@keyframes spin {
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
+	}
 </style>

@@ -2,7 +2,7 @@
 	import type { GeoFeature } from '@atm/shared-types';
 	type Props = {
 		feature: GeoFeature<'Image'>;
-	}
+	};
 
 	let { feature }: Props = $props();
 </script>
