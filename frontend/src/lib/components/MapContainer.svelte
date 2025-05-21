@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import Map, { type MapProps } from '$components/Map.svelte';
+  import Map, { type Props as MapProps } from '$components/Map.svelte';
   import type { Heatmap, HeatmapCell, GridDimensions } from '@atm/shared-types';
   //import type { MapController } from '$controllers/types';
   

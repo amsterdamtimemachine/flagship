@@ -30,7 +30,7 @@
 	//		count: undefined as number | undefined
 	//	});
 
-	export interface MapProps {
+	export interface Props {
 		heatmap: Heatmap;
 		heatmapBlueprint: HeatmapCell[];
 		dimensions: GridDimensions;
@@ -64,7 +64,6 @@
 	});
 
 	let activeCells = $derived.by(() => {
-		console.log("HEATMAP", heatmapBlueprint);
 		if (!isMapLoaded || !map || !heatmap) {
 			return new Map<string, { value: number; count: number }>();
 		}
