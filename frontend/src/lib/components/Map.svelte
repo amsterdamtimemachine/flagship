@@ -25,18 +25,19 @@
 	//	let modalData = $state({
 	//		id: '',
 	//		coordinates: [] as number[][],
-	//		position: { x: 0, y: 0 },
+	//		position: { x: 0, y: 0 },http://localhost:5175/
 	//		value: undefined as number | undefined,
 	//		count: undefined as number | undefined
 	//	});
 
-	interface Props {
+	export interface MapProps {
 		heatmap: Heatmap;
 		heatmapBlueprint: HeatmapCell[];
 		dimensions: GridDimensions;
 		selectedCellId: string | null;
 		className?: string;
 		handleCellClick?: (cellId: string | null) => void;
+		handleMapLoaded?: () => void;
 	}
 
 	let {
@@ -46,7 +47,7 @@
 		selectedCellId = null,
 		class: className,
 		handleCellClick
-	}: Props = $props();
+	}: MapProps = $props();
 
 	let map: Map | undefined = $state();
 	let mapContainer: HTMLElement = $state();
@@ -63,6 +64,7 @@
 	});
 
 	let activeCells = $derived.by(() => {
+		console.log("HEATMAP", heatmapBlueprint);
 		if (!isMapLoaded || !map || !heatmap) {
 			return new Map<string, { value: number; count: number }>();
 		}
@@ -190,7 +192,7 @@
 				[west, south],
 				[east, north]
 			],
-			center: [4.895645, 52.372219], // amsterdam center
+			center: [4.895645, 52.372219], 
 			minZoom: 10,
 			maxZoom: 14,
 			zoom: 13,
@@ -271,7 +273,6 @@
 							}
 						} else {
 							updateSelectedCell(featureId);
-
 							// parent callback
 							if (handleCellClick) {
 								handleCellClick(feature.properties.id);
@@ -281,6 +282,9 @@
 				}
 			});
 			isMapLoaded = true;
+			if(handleMapLoaded) {
+				handleMapLoaded();
+			}
 		});
 	}
 </script>
