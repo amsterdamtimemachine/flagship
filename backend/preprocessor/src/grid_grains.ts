@@ -441,6 +441,99 @@ export async function processFeatures(
         cells: blueprintCells
     };
 
+    console.log("Generating histogram...");
+
+    const histogramBins: HistogramBin[] = [];
+    let maxCount = 0;
+    const contentMaxCounts: Record<ContentClass, number> = Object.fromEntries(
+        contentClasses.map(cls => [cls, 0])
+    ) as Record<ContentClass, number>;
+
+    // Process each time period to create histogram bins
+    for (const period of timePeriods) {
+        const timeSlice = timeSlices[period];
+        
+        // Initialize bin with zeros
+        const bin: HistogramBin = {
+            period,
+            count: 0,
+            contentCounts: Object.fromEntries(
+                contentClasses.map(cls => [cls, 0])
+            ) as Record<ContentClass, number>,
+            tagCounts: Object.fromEntries(
+                contentClasses.map(cls => [cls, {}])
+            ) as Record<ContentClass, Record<string, number>>
+        };
+        
+        // Collect all tags for this period across all cells and content classes
+        const periodTags = new Map<ContentClass, Set<string>>();
+        contentClasses.forEach(cls => periodTags.set(cls, new Set()));
+        
+        // First pass: collect all unique tags for this period
+        for (const cellData of Object.values(timeSlice.cells)) {
+            for (const contentClass of contentClasses) {
+                if (cellData.contentIndex[contentClass].count > 0) {
+                    for (const feature of cellData.contentIndex[contentClass].features) {
+                        if (feature.properties.ai?.tags) {
+                            for (const tag of feature.properties.ai.tags) {
+                                periodTags.get(contentClass)!.add(tag);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Initialize tag counts for all tags found in this period
+        for (const [contentClass, tags] of periodTags.entries()) {
+            for (const tag of tags) {
+                bin.tagCounts[contentClass][tag] = 0;
+            }
+        }
+        
+        // Second pass: count features by content class and tags
+        for (const cellData of Object.values(timeSlice.cells)) {
+            bin.count += cellData.count;
+            
+            // Count by content class
+            for (const contentClass of contentClasses) {
+                bin.contentCounts[contentClass] += cellData.contentClassCounts[contentClass];
+                
+                // Count by tags within each content class
+                if (cellData.contentIndex[contentClass].count > 0) {
+                    for (const feature of cellData.contentIndex[contentClass].features) {
+                        if (feature.properties.ai?.tags) {
+                            for (const tag of feature.properties.ai.tags) {
+                                bin.tagCounts[contentClass][tag]++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Update max counts
+        maxCount = Math.max(maxCount, bin.count);
+        for (const contentClass of contentClasses) {
+            contentMaxCounts[contentClass] = Math.max(
+                contentMaxCounts[contentClass],
+                bin.contentCounts[contentClass]
+            );
+        }
+        
+        histogramBins.push(bin);
+    }
+
+    const histogram: HistogramStack = {
+        bins: histogramBins,
+        maxCount,
+        contentMaxCounts
+    };
+
+    console.log(`Generated histogram with ${histogramBins.length} bins`);
+    console.log(`Max count: ${maxCount}`);
+    console.log(`Content max counts:`, contentMaxCounts);
+
     return {
         timeSlices,
         gridDimensions,
@@ -448,7 +541,8 @@ export async function processFeatures(
         timePeriods,
         featuresStatistics,
         heatmaps,
-        heatmapBlueprint
+        heatmapBlueprint,
+        histogram,
     };
 }
 
@@ -625,7 +719,8 @@ export async function saveFeaturesToBinary(
         timePeriods: processingResult.timePeriods,
         timeSliceIndex,
         heatmaps: processingResult.heatmaps,
-        heatmapBlueprint: processingResult.heatmapBlueprint
+        heatmapBlueprint: processingResult.heatmapBlueprint,
+        histogram: processingResult.histogram, 
     };
 
     const metadataBytes = encode(metadata);

@@ -128,7 +128,9 @@ export interface TimeSlice {
             }
         }
     }
-}export interface BinaryMetadata {
+}
+
+export interface BinaryMetadata {
     dimensions: GridDimensions;
     timeRange: {
         start: string;
@@ -140,6 +142,7 @@ export interface TimeSlice {
     };
     heatmaps: Heatmaps;
     heatmapBlueprint: HeatmapBlueprint;
+    histogram: HistogramStack; // Add this back
     featuresStatistics: {
         contentClasses: {
             [K in ContentClass]: ContentClassStats;
