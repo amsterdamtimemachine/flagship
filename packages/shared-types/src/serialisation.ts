@@ -1,5 +1,5 @@
 import { GeoFeature, GeoFeatures, ContentClass } from "./geo";
-import type { GridDimensions, Heatmap, Heatmaps, HistogramStack, HeatmapBlueprint  } from "./visualisation";
+import type { GridDimensions, Heatmap, Heatmaps, Histogram, HeatmapBlueprint  } from "./visualisation";
 
 
 export type CellContentIndex = {
@@ -142,7 +142,7 @@ export interface BinaryMetadata {
     };
     heatmaps: Heatmaps;
     heatmapBlueprint: HeatmapBlueprint;
-    histogram: HistogramStack; // Add this back
+    histogram: Histogram;
     featuresStatistics: {
         contentClasses: {
             [K in ContentClass]: ContentClassStats;
@@ -206,7 +206,7 @@ export interface HeatmapsResponse {
 
 
 export interface HistogramResponse {
-    histogram: HistogramStack;
+    histogram: Histogram;
     timeRange: {
         start: string;
         end: string;

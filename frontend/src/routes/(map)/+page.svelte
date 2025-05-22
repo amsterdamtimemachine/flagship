@@ -21,7 +21,8 @@
   let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
   let timePeriods = $derived(data?.metadata?.timePeriods);
   let featuresStatistics = $derived(data?.metadata?.featuresStatistics);
-  
+  let histogram = $derived(data?.histogram?.histogram);
+	 
   // Create the controller at the route level
   const mapController = $state(createMapController());
   
@@ -123,7 +124,7 @@
 		
 	{#if timePeriods}
 		<TimePeriodSelector
-			timePeriods={timePeriods}
+			histogram={histogram}
 			value={currentPeriod}/>
 	{/if}
 	
