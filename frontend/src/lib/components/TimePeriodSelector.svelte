@@ -30,7 +30,8 @@
  const displayPeriods = $derived(createDisplayPeriods(timePeriods));
  const thumbScaleFactor = $derived((histogram.bins.length - 1) / histogram.bins.length);
  const thumbOffset = $derived((100 / histogram.bins.length - 1) / 2);
- 
+ const thumbWidth = $derived(100 / histogram.bins.length);
+
  // Find initial slider index based on provided value
  function getInitialIndex(): number {
    if (!value || !timePeriods.length) return 0;
@@ -121,8 +122,8 @@
      <!-- Draggable thumb using --percentage but positioned at bar centers -->
      <div
        {...slider.thumb}
-       class="absolute bg-white w-4 h-4  border-2 border-blue-500 shadow-md hover:shadow-lg cursor-pointer z-10"
-			 style="left: calc(var(--percentage) * {thumbScaleFactor} + {thumbOffset}%);"
+       class="absolute bg-white h-4 bg-red-500 shadow-md hover:shadow-lg cursor-pointer z-10"
+			 style="left: calc(var(--percentage) * {thumbScaleFactor}); width: {thumbWidth}%"
      ></div> 
    </div>
  </div>
