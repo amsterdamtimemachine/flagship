@@ -37,22 +37,26 @@
     }
     return null;
   });
-  
-  // Handle period change
- // function handlePeriodChange(period: string) {
- //   mapController.updatePeriod(period);
- //   
- //   // If there's a selected cell, update it with the new period
- //   if (selectedCellId) {
- //     mapController.updateCellWithPeriod();
- //   }
- // }
-  
-  onMount(() => {
+
+	onMount(() => {
     if (timePeriods) {
       mapController.initialize(timePeriods);
     }
   });
+
+
+  
+  // Handle period change
+  function handlePeriodChange(period: string) {
+		console.log(period);
+   // mapController.updatePeriod(period);
+   // 
+   // // If there's a selected cell, update it with the new period
+   // if (selectedCellId) {
+   //   mapController.updateCellWithPeriod();
+   // }
+  }
+  
   
   // Effect to watch for filter changes and update data
  // $effect(() => {
@@ -124,8 +128,10 @@
 		
 	{#if timePeriods}
 		<TimePeriodSelector
+			period={currentPeriod}
 			histogram={histogram}
-			value={currentPeriod}/>
+			onPeriodChange={handlePeriodChange}
+		/>
 	{/if}
 	
 

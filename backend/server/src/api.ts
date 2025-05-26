@@ -10,7 +10,7 @@ import type {
   ContentClass,
   Heatmap,
   HistogramBin,
-  HistogramStack,
+  Histogram,
   HistogramResponse,
 } from "@atm/shared-types";
 
@@ -290,10 +290,10 @@ async initialize() {
   };
 
   private filterHistogram(
-    originalHistogram: HistogramStack,
+    originalHistogram: Histogram,
     contentClasses: ContentClass[],
     tags: string[],
-  ): HistogramStack {
+  ): Histogram {
     const filteredBins: HistogramBin[] = [];
     let maxCount = 0;
     const contentMaxCounts: Record<ContentClass, number> = {};
