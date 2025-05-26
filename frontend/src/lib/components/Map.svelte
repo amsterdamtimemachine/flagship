@@ -30,7 +30,7 @@
 	//		count: undefined as number | undefined
 	//	});
 
-	export interface Props {
+	export interface MapProps {
 		heatmap: Heatmap;
 		heatmapBlueprint: HeatmapCell[];
 		dimensions: GridDimensions;

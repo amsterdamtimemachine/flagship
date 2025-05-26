@@ -1,150 +1,145 @@
 <script lang="ts">
-   import { type Histogram } from '@atm/shared-types';
-	 import { Slider } from "melt/builders";
- 
- interface Props {
-   histogram: Histogram;
-   period?: string;
-   onPeriodChange?: (newPeriod: string) => void;
- }
- 
- let { 
-   histogram, 
-   period = undefined,
-   onPeriodChange = undefined 
- }: Props = $props();
+	import { type Histogram } from '@atm/shared-types';
+	import { Slider } from 'melt/builders';
 
- 
- const timelineHeight = 26;
- const timePeriods = $derived(histogram?.bins?.map(bin => bin.period) || []); 
- const displayPeriods = $derived(createDisplayPeriods(timePeriods));
- const thumbScaleFactor = $derived((histogram.bins.length - 1) / histogram.bins.length);
- const thumbOffset = $derived((100 / histogram.bins.length - 1) / 2);
- const thumbWidth = $derived(100 / histogram.bins.length);
- 
-function createDisplayPeriods(periods: string[]): string[] {
-  if (!periods.length) return [];
-  const result = periods.map((period) => {
-    const [start] = period.split('_');
-    return start;
-  });
-  
-  // Add the end period of the last bin for the final tick
-  const lastPeriod = periods[periods.length - 1];
-  const [, end] = lastPeriod.split('_');
-  if (end) {
-    result.push(end);
-  }
-  
-  return result;
-}
+	interface Props {
+		histogram: Histogram;
+		period?: string;
+		onPeriodChange?: (newPeriod: string) => void;
+	}
+	let { histogram, period = undefined, onPeriodChange = undefined,  }: Props = $props();
 
- function getInitialIndex(): number {
-   if (!period || !timePeriods.length) return 0;
-   const index = timePeriods.indexOf(period);
-   return index >= 0 ? index : 0;
- }
- 
- // Make slider reactive to timePeriods changes
-	const slider = $derived(new Slider({
-		value: getInitialIndex(),
-		onValueChange: (newIndex) => {
-			if (onPeriodChange && timePeriods.length > 0 && newIndex >= 0 && newIndex < timePeriods.length) {
-				const periodValue = timePeriods[newIndex];
-				onPeriodChange(periodValue);
-			}
-		},
-		min: 0,
-		max: Math.max(0, histogram.bins.length-1), 
-		step: 1,
-		orientation: "horizontal"
-	}));
- 
- // Calculate histogram bar heights (normalized to max height)
+	const timePeriods = $derived(histogram?.bins?.map((bin) => bin.period) || []);
+	const displayPeriods = $derived(createDisplayPeriods(timePeriods));
+	const thumbScaleFactor = $derived((histogram.bins.length - 1) / histogram.bins.length);
+	const thumbOffset = $derived((100 / histogram.bins.length - 1) / 2);
+	const thumbWidth = $derived(100 / histogram.bins.length);
+	const timelineHeight = 26;
+
+	const slider = $derived(
+		new Slider({
+			value: getInitialIndex(),
+			onValueChange: (newIndex) => {
+				if (
+					onPeriodChange &&
+					timePeriods.length > 0 &&
+					newIndex >= 0 &&
+					newIndex < timePeriods.length
+				) {
+					const periodValue = timePeriods[newIndex];
+					onPeriodChange(periodValue);
+				}
+			},
+			min: 0,
+			max: Math.max(0, histogram.bins.length - 1),
+			step: 1,
+			orientation: 'horizontal'
+		})
+	);
+
+	function createDisplayPeriods(periods: string[]): string[] {
+		if (!periods.length) return [];
+		const result = periods.map((period) => {
+			const [start] = period.split('_');
+			return start;
+		});
+
+		// Add the end period of the last bin for the final tick
+		const lastPeriod = periods[periods.length - 1];
+		const [, end] = lastPeriod.split('_');
+		if (end) {
+			result.push(end);
+		}
+
+		return result;
+	}
+
+	function getInitialIndex(): number {
+		if (!period || !timePeriods.length) return 0;
+		const index = timePeriods.indexOf(period);
+		return index >= 0 ? index : 0;
+	}
+
+
+	// Calculate histogram bar heights (normalized to max height)
 	function getBarHeight(count: number, maxCount: number, minHeight: number = 2): number {
-	 if (count === 0 || maxCount === 0) return 0;
-	 const normalizedHeight = (count / maxCount) * 40;
-	 return Math.max(normalizedHeight, minHeight);
+		if (count === 0 || maxCount === 0) return 0;
+		const normalizedHeight = (count / maxCount) * 40;
+		return Math.max(normalizedHeight, minHeight);
 	}
 </script>
 
 {#if histogram?.bins?.length > 0}
- <div class="w-full px-4 pb-1 pt-4">
-   <!-- Root slider element with spread props -->
-   <div {...slider.root} class="w-full h-[60px] relative">
-     
-	<svg class="absolute inset-x-0 top-0 w-full h-full pointer-events-none"> 
-	 <!-- Histogram bars -->
-	 {#each histogram.bins as bin, i}
-		 {@const barWidth = 100 / histogram.bins.length}
-		 {@const barHeight = getBarHeight(bin.count, histogram.maxCount)}
-		 {@const x = i / histogram.bins.length * 100}
-		 <rect
-			 x="{x}%"
-			 y="{timelineHeight - barHeight}"
-			 width="{barWidth}%"
-			 height="{barHeight}"
-			 fill="#60a5fa"
-			 class="transition-colors duration-200"
-		 >
-			 <title>Period: {bin.period}, Count: {bin.count}</title>
-		 </rect>
-	 {/each}
+	<div class="w-full px-4 pb-1 pt-4">
+		<div {...slider.root} class="w-full relative h-[60px]">
+			<svg class="absolute inset-x-0 top-0 w-full h-full pointer-events-none">
+				<!-- Histogram bars -->
+				{#each histogram.bins as bin, i}
+					{@const barWidth = 100 / histogram.bins.length}
+					{@const barHeight = getBarHeight(bin.count, histogram.maxCount)}
+					{@const x = (i / histogram.bins.length) * 100}
+					<rect
+						x="{x}%"
+						y={timelineHeight - barHeight}
+						width="{barWidth}%"together
+						height={barHeight}
+						fill="#60a5fa"
+						class="transition-colors duration-200"
+					>
+						<title>Period: {bin.period}, Count: {bin.count}</title>
+					</rect>
+				{/each}
 
-	 <!-- Ticks at boundaries -->
-	 {#each Array(histogram.bins.length + 1) as _, i}
-		 {@const position = i / histogram.bins.length * 100}
-		 <line 
-			 x1="{position}%" 
-			 y1="0" 
-			 x2="{position}%" 
-			 y2="{timelineHeight}" 
-			 stroke="black" 
-			 stroke-width="1"
-			 transform="{i === 0 ? 'translate(0.5, 0)' : i === histogram.bins.length ? 'translate(-0.5, 0)' : ''}"
-		 />
+				<!-- Ticks at period boundaries -->
+				{#each Array(histogram.bins.length + 1) as _, i}
+					{@const position = (i / histogram.bins.length) * 100}
+					<line
+						x1="{position}%"
+						y1="0"
+						x2="{position}%"
+						y2={timelineHeight}
+						stroke="black"
+						stroke-width="1"
+						transform={i === 0
+							? 'translate(0.5, 0)'
+							: i === histogram.bins.length
+								? 'translate(-0.5, 0)'
+								: ''}
+					/>
 
-		{#if i < displayPeriods.length}
-		<text
-			x="{position}%"
-			y="{timelineHeight + 26}"
-			font-size="14"
-			fill="black"
-			text-anchor="{i === 0 ? 'start' : i === histogram.bins.length ? 'end' : 'middle'}"
-			class="pointer-events-auto font-sans"
-		>
-			{displayPeriods[i]}
-		</text>
-		{/if}
-	 {/each}
-	 
-	 <!-- Track line aligned to bottom of ticks -->
-	 <line 
-		 x1="0%" 
-		 y1="{timelineHeight}" 
-		 x2="100%" 
-		 y2="{timelineHeight}" 
-		 stroke="black" 
-		 stroke-width="1"
-	 />
-	</svg>
+					<!-- Tick year -->
+					{#if i < displayPeriods.length}
+						<text
+							x="{position}%"
+							y={timelineHeight + 24}
+							font-size="16"
+							fill="black"
+							text-anchor={i === 0 ? 'start' : i === histogram.bins.length ? 'end' : 'middle'}
+							class="pointer-events-auto font-sans"
+						>
+							{displayPeriods[i]}
+						</text>
+					{/if}
+				{/each}
 
-					<!--
+				<!-- Track -->
+				<line
+					x1="0%"
+					y1={timelineHeight}
+					x2="100%"
+					y2={timelineHeight}
+					stroke="black"
+					stroke-width="1"
+				/>
+			</svg>
 
-         {#if i < displayPeriods.length}
-           <span class="absolute text-xs text-black whitespace-nowrap">
-             {displayPeriods[i]}
-           </span>
-         {/if}
-				 -->
-     
-     <!-- Draggable thumb using --percentage but positioned at bar centers -->
-<div
-  {...slider.thumb}
-  class="absolute cursor-pointer z-10 outline outline-[6px] outline-red-500 rounded"
-  style="left: calc(var(--percentage) * {thumbScaleFactor} + 1px); width: calc({thumbWidth}% - 2px); height: {timelineHeight}px;"
->
-</div>
-   </div>
- </div>
+			<!-- Thumb-->
+			<span
+				{...slider.thumb}
+				class="absolute cursor-pointer z-10 outline outline-[6px] outline-red-500 rounded"
+				style="left: calc(var(--percentage) * {thumbScaleFactor} + 1px); width: calc({thumbWidth}% - 2px); height: {timelineHeight}px;"
+			>
+			</span>
+		</div>
+	</div>
 {/if}
