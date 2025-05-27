@@ -56,34 +56,41 @@ export function createMapController() {
 		return apiUrl;
 	}
 
-	async function initialize(timePeriods: string[] | undefined): Promise<void> {
-			if (browser) {
-					// Get parameters from URL if present
-					const contentClassesParam = page.url.searchParams.get('contentClasses');
-					const tagsParam = page.url.searchParams.get('tags');
-					const periodParam = page.url.searchParams.get('period'); // Add this line
+	async function initialize(timePeriods: string[] | undefined, initialPeriod?: string): Promise<void> {
+		if (browser) {
+			// Get parameters from URL if present
+			const contentClassesParam = page.url.searchParams.get('contentClasses');
+			const tagsParam = page.url.searchParams.get('tags');
+			const periodParam = page.url.searchParams.get('period');
 
-					// Initialize selected classes from URL or default
-					if (contentClassesParam) {
-							selectedClasses = new Set(contentClassesParam.split(',') as ContentClass[]);
-					} else if (PUBLIC_DEFAULT_CONTENT_CLASS) {
-							selectedClasses = new Set([PUBLIC_DEFAULT_CONTENT_CLASS]);
-					}
-
-					// Initialize selected tags from URL
-					if (tagsParam) {
-							selectedTags = new Set(tagsParam.split(','));
-					}
-
-					// Set initial period - prioritize URL parameter
-					if (periodParam && timePeriods && timePeriods.includes(periodParam)) {
-							currentPeriod = periodParam;
-					} else if (timePeriods && timePeriods.length > 0) {
-							currentPeriod = timePeriods[0];
-					}
-
-					console.log('initialized!');
+			// Initialize selected classes from URL or default
+			if (contentClassesParam) {
+				selectedClasses = new Set(contentClassesParam.split(',') as ContentClass[]);
+			} else if (PUBLIC_DEFAULT_CONTENT_CLASS) {
+				selectedClasses = new Set([PUBLIC_DEFAULT_CONTENT_CLASS]);
 			}
+
+			// Initialize selected tags from URL
+			if (tagsParam) {
+				selectedTags = new Set(tagsParam.split(','));
+			}
+
+			// Set initial period - priority: initialPeriod > URL param > first period
+			if (initialPeriod && timePeriods && timePeriods.includes(initialPeriod)) {
+				currentPeriod = initialPeriod;
+			} else if (periodParam && timePeriods && timePeriods.includes(periodParam)) {
+				currentPeriod = periodParam;
+			} else if (timePeriods && timePeriods.length > 0) {
+				currentPeriod = timePeriods[0];
+			}
+
+			console.log('MapController initialized with:', {
+				selectedClasses: Array.from(selectedClasses),
+				selectedTags: Array.from(selectedTags),
+				currentPeriod,
+				source: initialPeriod ? 'route-param' : periodParam ? 'url-param' : 'default'
+			});
+		}
 	}
 
 	// Get selected classes as array

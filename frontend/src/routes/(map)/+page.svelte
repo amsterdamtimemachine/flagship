@@ -33,7 +33,8 @@
 
 	onMount(() => {
 		if (timePeriods) {
-			mapController.initialize(timePeriods);
+			const initialPeriod = data.initialPeriod || undefined;
+			mapController.initialize(timePeriods, initialPeriod);
 		}
 	});
 

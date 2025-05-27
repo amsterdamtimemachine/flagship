@@ -22,7 +22,7 @@ const config = {
 			$routes: 'src/routes',
 			$components: 'src/lib/components',
 			$controllers: 'src/lib/controllers',
-			$types: 'src/lib/types.ts',
+			$types: 'src/lib/types',
 			$api: 'src/lib/api.ts',
 			$utils: 'src/lib/utils/',
 			$constants: 'src/lib/constants.ts',
