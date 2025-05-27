@@ -1,5 +1,7 @@
 <script lang="ts" module>
 	import { Toaster } from 'melt/builders';
+
+	// WIP: out:fade transition on toast doesn't work?
 	
 	type ToastData = {
 		title: string;

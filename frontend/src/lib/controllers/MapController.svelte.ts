@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import { page } from '$app/state';
-import { pushState } from '$app/navigation';
+import { goto, pushState, replaceState } from '$app/navigation';
 import { fetchHeatmaps, fetchApi } from '$api';
 import type { ContentClass, Heatmap, CellFeaturesResponse } from '@atm/shared-types';
 import {
@@ -93,6 +93,35 @@ export function createMapController() {
 		}
 	}
 
+	function syncUrlParams(): void {
+		if (!browser) return;
+
+		// Get parameters from current URL
+		const contentClassesParam = page.url.searchParams.get('contentClasses');
+		const tagsParam = page.url.searchParams.get('tags');
+
+		// Update selected classes from URL
+		if (contentClassesParam) {
+			selectedClasses = new Set(contentClassesParam.split(',') as ContentClass[]);
+		} else if (PUBLIC_DEFAULT_CONTENT_CLASS) {
+			selectedClasses = new Set([PUBLIC_DEFAULT_CONTENT_CLASS]);
+		} else {
+			selectedClasses = new Set();
+		}
+
+		// Update selected tags from URL
+		if (tagsParam) {
+			selectedTags = new Set(tagsParam.split(','));
+		} else {
+			selectedTags = new Set();
+		}
+
+		console.log('Synced URL params:', {
+			selectedClasses: Array.from(selectedClasses),
+			selectedTags: Array.from(selectedTags)
+		});
+	}
+
 	// Get selected classes as array
 	function getSelectedClassesArray(): ContentClass[] {
 		return Array.from(selectedClasses);
@@ -123,8 +152,19 @@ export function createMapController() {
 		selectedTags = new Set(tags);
 	}
 
-	// Update period selection
 	function updatePeriod(period: string | undefined): void {
+		currentPeriod = period;
+		
+		if (!browser) return;
+		
+		if (period) {
+			const url = new URL(window.location.href);
+			const newPath = `/${period}`;
+			goto(newPath + url.search, page.state);
+		}
+	}
+
+	function setPeriod(period: string | undefined): void {
 		currentPeriod = period;
 	}
 
@@ -153,23 +193,24 @@ export function createMapController() {
 		// }
 	}
 
-	// Update URL from current selections
-	function updateUrlFromSelections(): void {
-		// if (!browser) return;
-		// const url = new URL(window.location.href);
-		// // Update URL parameters without triggering navigation
-		// if (selectedClasses.size > 0) {
-		//   url.searchParams.set('contentClasses', Array.from(selectedClasses).join(','));
-		// } else {
-		//   url.searchParams.delete('contentClasses');
-		// }
-		// if (selectedTags.size > 0) {
-		//   url.searchParams.set('tags', Array.from(selectedTags).join(','));
-		// } else {
-		//   url.searchParams.delete('tags');
-		// }
-		// // Update browser history without full page reload
-		// history.replaceState({}, '', url.toString());
+	function updateUrlParams(): void {
+		if (!browser) return;
+
+		const url = new URL(window.location.href);
+		
+		if (selectedClasses.size > 0) {
+			url.searchParams.set('contentClasses', Array.from(selectedClasses).join(','));
+		} else {
+			url.searchParams.delete('contentClasses');
+		}
+
+		if (selectedTags.size > 0) {
+			url.searchParams.set('tags', Array.from(selectedTags).join(','));
+		} else {
+			url.searchParams.delete('tags');
+		}
+
+		replaceState(url.pathname + url.search, page.state);
 	}
 
 	// Update selected cell with new filters
@@ -233,14 +274,15 @@ export function createMapController() {
 		get isLoadingNewPeriod() {
 			return isLoadingNewPeriod;
 		},
-
 		// Control methods
 		initialize,
 		handleClassesChange,
 		handleTagsChange,
 		updatePeriod,
+		setPeriod,
 		selectCell,
-		updateUrlFromSelections,
+		updateUrlParams,
+		syncUrlParams,
 		updateCellWithFilters,
 		updateCellWithPeriod
 	};

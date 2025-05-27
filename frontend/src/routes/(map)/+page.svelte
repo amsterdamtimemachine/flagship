@@ -2,6 +2,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { afterNavigate } from '$app/navigation';
 	import { createMapController } from '$controllers/MapController.svelte';
 	//import type { MapController } from '$controllers/types';
 	import MapContainer from '$components/MapContainer.svelte';
@@ -38,15 +39,27 @@
 		}
 	});
 
+	afterNavigate(() => {
+   // Sync MapController state with URL after navigation (including back/forward)
+   // Since all period data is pre-loaded, we only need to update internal state
+   // to match the URL period, ensuring visualization displays correctly
+		const currentPath = page.url.pathname;
+		const pathParts = currentPath.split('/').filter(Boolean);
+		
+		if (pathParts.length === 1 && timePeriods) {
+			const urlPeriod = pathParts[0];
+			if (timePeriods.includes(urlPeriod) && urlPeriod !== mapController.getCurrentPeriod()) {
+				mapController.setPeriod(urlPeriod);
+			}
+		}	
+		mapController.syncUrlParams();
+	});
+
 	// Handle period change
 	function handlePeriodChange(period: string) {
 		mapController.updatePeriod(period);
-		//
-		// // If there's a selected cell, update it with the new period
-		// if (selectedCellId) {
-		//   mapController.updateCellWithPeriod();
-		// }
 	}
+
 
 	// Effect to watch for filter changes and update data
 	// $effect(() => {
