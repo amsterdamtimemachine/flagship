@@ -39,3 +39,6 @@ vite.config.ts.timestamp-*
 
 # Python
 env/
+
+# Turbo
+.turbo/cookies/*
