@@ -158,9 +158,9 @@ export function createMapController() {
 		if (!browser) return;
 		
 		if (period) {
-			const url = new URL(window.location.href);
+			//const url = new URL(window.location.href);
 			const newPath = `/${period}`;
-			goto(newPath + url.search, page.state);
+			replaceState(`${newPath}${window.location.search}`, page.state);
 		}
 	}
 

@@ -8,8 +8,7 @@
 	import MapContainer from '$components/MapContainer.svelte';
 	import Map from '$components/Map.svelte';
 	import ToggleGroupSelector from '$components/ToggleGroupSelector.svelte';
-	import HeatmapSlider from '$components/HeatmapSlider.svelte';
-	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
+	import SelectorTimePeriod from '$components/SelectorTimePeriod.svelte';
 	// import CellPage from '$routes/(map)/cells/[period]/[cellId]/+page.svelte';
 	import type { PageProps } from './$types';
 
@@ -129,7 +128,7 @@
 	</div>
 
 	{#if timePeriods}
-		<TimePeriodSelector period={currentPeriod} {histogram} onPeriodChange={handlePeriodChange} />
+		<SelectorTimePeriod period={currentPeriod} {histogram} onPeriodChange={handlePeriodChange} />
 	{/if}
 </div>
 
