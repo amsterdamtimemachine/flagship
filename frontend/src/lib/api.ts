@@ -80,6 +80,7 @@ export async function fetchHeatmaps(
 	if (params.length > 0) {
 		heatmapsUrl += `?${params.join('&')}`;
 	}
+	console.log(heatmapsUrl);
 
 	// Use your existing fetchApi function
 	return fetchApi<HeatmapsResponse>(heatmapsUrl, fetchFn);

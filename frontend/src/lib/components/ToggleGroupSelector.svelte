@@ -3,49 +3,79 @@
 	import { mergeCss } from '$utils/utils';
 	import type { BinaryMetadata, ContentClass } from '@atm/shared-types';
 
-	export let featuresStatistics: BinaryMetadata['featuresStatistics'];
-	export let selected: Set<ContentClass> = new Set();
-	export let selectedTags: Set<string> = new Set();
-	let styles: string | undefined = undefined;
-	export { styles as class };
+	interface Props {
+		featuresStatistics: BinaryMetadata['featuresStatistics'];
+		initialSelectedClasses?: ContentClass[];
+		initialSelectedTags?: string[];
+		class?: string | undefined;
+		onClassesChange?: (classes: ContentClass[]) => void;
+		onTagsChange?: (tags: string[]) => void;
+	}
 
+	let {
+		featuresStatistics,
+		initialSelectedClasses = ['Image'],
+		initialSelectedTags = [],
+		class: styles = undefined,
+		onClassesChange,
+		onTagsChange
+	} = $props();
+
+	// Content classes with items > 0
+	const contentClasses = $derived(
+		Object.entries(featuresStatistics.contentClasses)
+			.filter(([_, stats]) => stats.total > 0)
+			.map(([className]) => className)
+	);
+
+	// Create toggle groups with initial values
 	const {
 		elements: { root: classRoot, item: classItem },
 		states: { value: classValue }
 	} = createToggleGroup({
 		type: 'multiple',
-		defaultValue: ['Image']
+		defaultValue: initialSelectedClasses
 	});
 
 	const {
 		elements: { root: tagRoot, item: tagItem },
 		states: { value: tagValue }
 	} = createToggleGroup({
-		type: 'multiple'
+		type: 'multiple',
+		defaultValue: initialSelectedTags
 	});
 
-	$: contentClasses = Object.entries(featuresStatistics.contentClasses)
-		.filter(([_, stats]) => stats.total > 0)
-		.map(([className]) => className);
+	// Effect to notify parent when classes change
+	$effect(() => {
+		// Get the actual value from the store
+		const selectedClasses = classValue.get();
 
-	$: selected = new Set($classValue);
-	$: selectedTags = new Set($tagValue);
+		if (onClassesChange) {
+			onClassesChange(selectedClasses);
+		}
 
-	$: selectedClasses = [...selected];
-	$: intersectionTags = findIntersectionTags(selectedClasses, featuresStatistics).slice(0, 10);
+		// Reset tag selection when class selection changes
+		if (selectedClasses.length > 0) {
+			tagValue.set([]);
+		}
+	});
 
-	// Reset tag selection when class selection changes
-	$: if (selectedClasses.length > 0) {
-		tagValue.set([]);
-	}
+	// Effect to notify parent when tags change
+	$effect(() => {
+		// Get the actual value from the store
+		const selectedTags = tagValue.get();
 
-	$: if (selected !== new Set($classValue)) {
-		classValue.set([...selected]);
-	}
+		if (onTagsChange) {
+			onTagsChange(selectedTags);
+		}
+	});
 
-	/**
-	 * Gets all tags for a single content class
-	 */
+	// Compute intersection tags based on currently selected classes
+	const intersectionTags = $derived(
+		findIntersectionTags(classValue.get(), featuresStatistics).slice(0, 10)
+	);
+
+	// Tag utilities remain the same
 	function getTagsForClass(
 		contentClass: ContentClass,
 		statistics: BinaryMetadata['featuresStatistics']
@@ -56,16 +86,13 @@
 		return new Map(Object.entries(classStats.ai.tags.tags));
 	}
 
-	/**
-	 * Finds intersection of tags between multiple content classes
-	 */
 	function findIntersectionTags(
 		classes: ContentClass[],
 		statistics: BinaryMetadata['featuresStatistics']
 	) {
+		// Same implementation as before
 		if (classes.length === 0) return [];
 
-		// For a single class, return all its tags
 		if (classes.length === 1) {
 			const tagsMap = getTagsForClass(classes[0], statistics);
 			return Array.from(tagsMap.entries())
@@ -73,17 +100,13 @@
 				.sort((a, b) => b.count - a.count);
 		}
 
-		// For multiple classes, find tags common to all classes
 		const tagsFromClasses = classes.map((cls) => getTagsForClass(cls, statistics));
 		const firstTags = tagsFromClasses[0];
 		const intersectionMap = new Map<string, number>();
 
-		// Find tags that exist in all classes
 		for (const [tag, count] of firstTags.entries()) {
 			const isInAll = tagsFromClasses.every((classTags) => classTags.has(tag));
-
 			if (isInAll) {
-				// Sum the counts from all classes
 				const totalCount = tagsFromClasses.reduce(
 					(sum, classTags) => sum + (classTags.get(tag) || 0),
 					0
@@ -92,7 +115,6 @@
 			}
 		}
 
-		// Convert to array and sort by count
 		return Array.from(intersectionMap.entries())
 			.map(([tag, count]) => ({ tag, count }))
 			.sort((a, b) => b.count - a.count);
@@ -116,8 +138,12 @@
 		{/each}
 	</div>
 
-	{#if selectedClasses.length > 0 && intersectionTags.length > 0}
-		<div use:melt={$tagRoot} class="db flex items-center flex-wrap gap-2 mt-2" aria-label="Tag selection">
+	{#if classValue.get().length > 0 && intersectionTags.length > 0}
+		<div
+			use:melt={$tagRoot}
+			class="db flex items-center flex-wrap gap-2 mt-2"
+			aria-label="Tag selection"
+		>
 			{#each intersectionTags as { tag, count }}
 				<button
 					class="px-3 py-1 bg-white text-sm text-gray-600 border border-gray-200 rounded-full hover:bg-gray-100 data-[state='on']:bg-indigo-600 data-[state='on']:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"

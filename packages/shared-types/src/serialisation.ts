@@ -1,5 +1,5 @@
 import { GeoFeature, GeoFeatures, ContentClass } from "./geo";
-import type { GridDimensions, Heatmap, Heatmaps, HeatmapBlueprint  } from "./visualisation";
+import type { GridDimensions, Heatmap, Heatmaps, Histogram, HeatmapBlueprint  } from "./visualisation";
 
 
 export type CellContentIndex = {
@@ -128,7 +128,9 @@ export interface TimeSlice {
             }
         }
     }
-}export interface BinaryMetadata {
+}
+
+export interface BinaryMetadata {
     dimensions: GridDimensions;
     timeRange: {
         start: string;
@@ -140,6 +142,7 @@ export interface TimeSlice {
     };
     heatmaps: Heatmaps;
     heatmapBlueprint: HeatmapBlueprint;
+    histogram: Histogram;
     featuresStatistics: {
         contentClasses: {
             [K in ContentClass]: ContentClassStats;
@@ -194,6 +197,16 @@ export interface HeatmapResponse {
 
 export interface HeatmapsResponse {
     heatmaps: Record<string, Heatmap>;  // period -> heatmap
+    timeRange: {
+        start: string;
+        end: string;
+    };
+    availablePeriods: string[];
+}
+
+
+export interface HistogramResponse {
+    histogram: Histogram;
     timeRange: {
         start: string;
         end: string;

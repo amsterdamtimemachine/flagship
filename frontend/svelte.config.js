@@ -6,7 +6,12 @@ import { preprocessMeltUI, sequence } from '@melt-ui/pp';
 const config = {
 	// Consult https://kit.svelte.dev/docs/integrations#preprocessors
 	// for more information about preprocessors
-	preprocess: sequence([vitePreprocess(), preprocessMeltUI()]),
+	preprocess: sequence([
+		vitePreprocess({
+			script: true // Make sure this is enabled for TypeScript
+		}),
+		preprocessMeltUI()
+	]),
 
 	kit: {
 		// adapter-auto only supports some environments, see https://kit.svelte.dev/docs/adapter-auto for a list.
@@ -16,7 +21,8 @@ const config = {
 		alias: {
 			$routes: 'src/routes',
 			$components: 'src/lib/components',
-			$types: 'src/lib/types.ts',
+			$state: 'src/lib/state',
+			$types: 'src/lib/types',
 			$api: 'src/lib/api.ts',
 			$utils: 'src/lib/utils/',
 			$constants: 'src/lib/constants.ts',

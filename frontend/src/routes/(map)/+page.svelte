@@ -1,342 +1,110 @@
 <!-- (map)/+page.svelte -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { preloadData, pushState } from '$app/navigation';
-	import { browser } from '$app/environment';
-	import { page } from '$app/stores';
-	import {
-		PUBLIC_DEFAULT_CONTENT_CLASS,
-		PUBLIC_SERVER_PROD_URL,
-		PUBLIC_SERVER_DEV_URL
-	} from '$env/static/public';
-
-	import { fetchHeatmaps, fetchApi } from '$api';
-	import CellPage from '$routes/(map)/cells/[period]/[cellId]/+page.svelte';
-	import ToggleGroupSelector from '$components/ToggleGroupSelector.svelte';
-	import MapGLGrid from '$components/MapGLGrid.svelte';
-	import HeatmapSlider from '$components/HeatmapSlider.svelte';
-	import type { ContentClass, Heatmap } from '@atm/shared-types';
-
-	export let data;
-
-	$: dimensions = data?.metadata?.dimensions;
-	$: heatmaps = data?.heatmaps?.heatmaps as Record<string, Heatmap>;
-	$: heatmapBlueprint = data?.metadata?.heatmapBlueprint?.cells;
-	$: featuresStatistics = data?.metadata?.featuresStatistics;
-	$: timePeriods = data?.metadata?.timePeriods;
-	let currentPeriod = undefined;
-
-	let selectedClasses = new Set<ContentClass>([PUBLIC_DEFAULT_CONTENT_CLASS]);
-	let selectedTags = new Set<string>();
-	let isLoading = false;
-	let loadingNewPeriod = false;
-
-	// Function that uses the modular fetchHeatmaps
-	async function updateHeatmaps() {
-		isLoading = true;
-
-		try {
-			const response = await fetchHeatmaps(selectedClasses, selectedTags);
-
-			data.heatmaps = response;
-		} catch (error) {
-			console.error('Error fetching heatmaps:', error);
-		} finally {
-			isLoading = false;
-		}
-	}
-
-	// Watch for changes in selections and fetch new data
-	$: {
-		// This reactive statement will re-run whenever selectedClasses or selectedTags changes
-		if (selectedClasses.size > 0) {
-			console.log('Selection changed, fetching new heatmaps...');
-			updateHeatmaps();
-		}
-	}
-
-//	async function updateCellDataForPeriod(index: number) {
-//		if (!$page.state.selectedCell) return;
-//		loadingNewPeriod = true;
-//		try {
-//			const currentPeriodValue = timePeriods[index];
-//			const cellId = $page.state.selectedCell.cellFeatures.cellId;
-//			const cellRoute = `/cells/${currentPeriodValue}/${cellId}`;
-//			const result = await preloadData(cellRoute);
-//			if (result.type === 'loaded' && result.status === 200) {
-//				pushState(cellRoute, {
-//					selectedCell: result.data
-//				});
-//			}
-//		} finally {
-//			loadingNewPeriod = false;
-//		}
-//	}
-
-	async function handleCellClick(event: CustomEvent) {
-		const { id } = event.detail;
-
-		// If id is null, clear the selection
-		if (id === null) {
-			pushState('/', {
-				selectedCell: undefined
-			});
-			return;
-		}
-
-		const period = currentPeriod;
-		let cellRoute = `/cells/${period}/${id}`;
-		const params = new URLSearchParams();
-		if (selectedClasses.size > 0) {
-			params.set('contentClasses', Array.from(selectedClasses).join(','));
-		}
-		if (selectedTags.size > 0) {
-			params.set('tags', Array.from(selectedTags).join(','));
-		}
-		const queryString = params.toString();
-		if (queryString) {
-			cellRoute += `?${queryString}`;
-		}
-		const baseUrl =
-			import.meta.env.MODE === 'production' ? PUBLIC_SERVER_PROD_URL : PUBLIC_SERVER_DEV_URL;
-
-		let apiUrl = `${baseUrl}/grid/cell/${id}?period=${period}&page=1`;
-		if (params.has('contentClasses')) apiUrl += `&contentClasses=${params.get('contentClasses')}`;
-		if (params.has('tags')) apiUrl += `&tags=${params.get('tags')}`;
-
-		try {
-			// Fetch cell data directly
-			const cellFeatures = await fetchApi<CellFeaturesResponse>(apiUrl);
-
-			console.log(cellFeatures);
-
-			// Navigate with both URL parameters and state
-			pushState(cellRoute, {
-				selectedCell: { cellFeatures }
-			});
-		} catch (error) {
-			console.error('Error fetching cell data:', error);
-		}
-	}
-
-
-
-// Track previous selections to detect changes
-let previousSelectedClasses = new Set(selectedClasses);
-let previousSelectedTags = new Set(selectedTags);
-
-// Update the cell when content classes or tags change
-$: {
-	if (browser && $page.state.selectedCell && 
-		(hasSelectionChanged(selectedClasses, previousSelectedClasses) || 
-		 hasSelectionChanged(selectedTags, previousSelectedTags))) {
-		
-		// Get the currently selected cell ID and period
-		const cellId = $page.state.selectedCell.cellFeatures.cellId;
-		const period = currentPeriod;
-
-		// Build new cell route with the current period
-		let cellRoute = `/cells/${period}/${cellId}`;
-
-		// Add query parameters
-		const params = new URLSearchParams();
-
-		if (selectedClasses.size > 0) {
-			params.set('contentClasses', Array.from(selectedClasses).join(','));
-		}
-
-		if (selectedTags.size > 0) {
-			params.set('tags', Array.from(selectedTags).join(','));
-		}
-
-		// Add search params if we have any
-		const queryString = params.toString();
-		if (queryString) {
-			cellRoute += `?${queryString}`;
-		}
-
-		// Build API URL
-		const baseUrl =
-			import.meta.env.MODE === 'production' ? PUBLIC_SERVER_PROD_URL : PUBLIC_SERVER_DEV_URL;
-
-		let apiUrl = `${baseUrl}/grid/cell/${cellId}?period=${period}&page=1`;
-		if (params.has('contentClasses')) apiUrl += `&contentClasses=${params.get('contentClasses')}`;
-		if (params.has('tags')) apiUrl += `&tags=${params.get('tags')}`;
-
-		// Fetch and update
-		fetchApi<CellFeaturesResponse>(apiUrl)
-			.then((cellFeatures) => {
-				// Update the route and state
-				pushState(cellRoute, {
-					selectedCell: { cellFeatures }
-				});
-			})
-			.catch((error) => {
-				console.error('Error updating cell for new content classes:', error);
-			});
-	}
-
-	// Update previous selections
-	previousSelectedClasses = new Set(selectedClasses);
-	previousSelectedTags = new Set(selectedTags);
-}
-
-// Helper function to compare sets
-function hasSelectionChanged(current: Set<any>, previous: Set<any>): boolean {
-	if (current.size !== previous.size) return true;
+	import debounce from 'lodash.debounce';
 	
-	for (const item of current) {
-		if (!previous.has(item)) return true;
-	}
+	import { createMapController } from '$state/MapController.svelte';
+	import { createPageErrorData } from '$utils/error';
+	import Map from '$components/Map.svelte';
+	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
+	import CellView from '$components/CellView.svelte';
+	import ErrorHandler from '$lib/components/ErrorHandler.svelte';
 	
-	return false;
-}
+	import type { PageData } from './$types';
 
-	onMount(() => {
-		// Get parameters from URL if present
-		const contentClassesParam = $page.url.searchParams.get('contentClasses');
-		const tagsParam = $page.url.searchParams.get('tags');
+	let { data }: { data: PageData } = $props();
 
-		// Initialize selected classes from URL or default
-		if (contentClassesParam) {
-			selectedClasses = new Set(contentClassesParam.split(',') as ContentClass[]);
-		} else if (PUBLIC_DEFAULT_CONTENT_CLASS) {
-			selectedClasses = new Set([PUBLIC_DEFAULT_CONTENT_CLASS]);
+	// Derived data from server
+	let dimensions = $derived(data?.metadata?.dimensions);
+	let heatmaps = $derived(data?.heatmaps?.heatmaps);
+	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
+	let timePeriods = $derived(data?.metadata?.timePeriods);
+	let histogram = $derived(data?.histogram?.histogram);
+
+	// Centralized state management
+	const controller = createMapController();
+	
+	// Derived state from controller
+	let currentPeriod = $derived(controller.currentPeriod);
+	let selectedCellId = $derived(controller.selectedCellId);
+	let cellData = $derived(controller.cellData);
+	let cellLoading = $derived(controller.isLoadingCell);
+	let showCellModal = $derived(controller.showCellModal);
+	
+	// Combine server errors with controller errors for ErrorHandler
+	let allErrors = $derived.by(() => {
+		const serverErrors = data.errorData?.errors || [];
+		const controllerErrors = controller.errors || [];
+		return createPageErrorData([...serverErrors, ...controllerErrors]);
+	});
+	
+	let currentHeatmap = $derived.by(() => {
+		if (heatmaps && currentPeriod) {
+			return heatmaps[currentPeriod];
 		}
-
-		// Initialize selected tags from URL
-		if (tagsParam) {
-			selectedTags = new Set(tagsParam.split(','));
-		}
-
-		// Update heatmap with initial selections
-		updateHeatmaps();
+		return null;
 	});
 
-	// Track the previous period to detect changes
-	let previousPeriod = currentPeriod;
+	// Debounced period changes to avoid too many API calls
+	const debouncedPeriodChange = debounce((period: string) => {
+		controller.setPeriod(period);
+	}, 300);
 
-	// Update the cell when currentPeriod changes
-	$: {
-		if (browser && currentPeriod && currentPeriod !== previousPeriod && $page.state.selectedCell) {
-			// Get the currently selected cell ID
-			const cellId = $page.state.selectedCell.cellFeatures.cellId;
+	onMount(() => {
+		// Initialize controller with server data
+		controller.initialize(data.currentPeriod);
+	});
 
-			// Build new cell route with the new period
-			let cellRoute = `/cells/${currentPeriod}/${cellId}`;
-
-			// Add query parameters
-			const params = new URLSearchParams();
-
-			if (selectedClasses.size > 0) {
-				params.set('contentClasses', Array.from(selectedClasses).join(','));
-			}
-
-			if (selectedTags.size > 0) {
-				params.set('tags', Array.from(selectedTags).join(','));
-			}
-
-			// Add search params if we have any
-			const queryString = params.toString();
-			if (queryString) {
-				cellRoute += `?${queryString}`;
-			}
-
-			// Build API URL
-			const baseUrl =
-				import.meta.env.MODE === 'production' ? PUBLIC_SERVER_PROD_URL : PUBLIC_SERVER_DEV_URL;
-
-			let apiUrl = `${baseUrl}/grid/cell/${cellId}?period=${currentPeriod}&page=1`;
-			if (params.has('contentClasses')) apiUrl += `&contentClasses=${params.get('contentClasses')}`;
-			if (params.has('tags')) apiUrl += `&tags=${params.get('tags')}`;
-
-			// Fetch and update
-			fetchApi<CellFeaturesResponse>(apiUrl)
-				.then((cellFeatures) => {
-					// Update the route and state
-					pushState(cellRoute, {
-						selectedCell: { cellFeatures }
-					});
-				})
-				.catch((error) => {
-					console.error('Error updating cell for new period:', error);
-				});
-		}
-
-		// Update previous period
-		previousPeriod = currentPeriod;
+	// Handle period change from slider
+	function handlePeriodChange(period: string) {
+		debouncedPeriodChange(period);
 	}
 
-	// When selections change, update the URL
-	$: {
-		if (browser && (selectedClasses.size > 0 || selectedTags.size > 0)) {
-			const url = new URL(window.location.href);
+	// Handle cell selection from map
+	function handleCellClick(cellId: string | null) {
+		controller.selectCell(cellId);
+	}
 
-			// Update URL parameters without triggering navigation
-			if (selectedClasses.size > 0) {
-				url.searchParams.set('contentClasses', Array.from(selectedClasses).join(','));
-			} else {
-				url.searchParams.delete('contentClasses');
-			}
-
-			if (selectedTags.size > 0) {
-				url.searchParams.set('tags', Array.from(selectedTags).join(','));
-			} else {
-				url.searchParams.delete('tags');
-			}
-
-			// Update browser history without full page reload
-			history.replaceState({}, '', url.toString());
-
-			// Update heatmaps
-			updateHeatmaps();
-		}
+	// Handle cell modal close
+	function handleCellClose() {
+		// Clear any cell-related errors when closing
+		controller.clearErrors();
+		controller.selectCell(null);
 	}
 </script>
 
+<ErrorHandler errorData={allErrors} />
+
 <div class="relative flex flex-col w-screen h-screen">
-	<ToggleGroupSelector
-		defaultContentClass={PUBLIC_DEFAULT_CONTENT_CLASS}
-		bind:selected={selectedClasses}
-		bind:selectedTags
-		{featuresStatistics}
-	/>
+	<div class="relative flex-1">
+		<Map
+			heatmap={currentHeatmap}
+			{heatmapBlueprint}
+			{dimensions}
+			{selectedCellId}
+			handleCellClick={handleCellClick}
+		/>
 
-	{#if isLoading}
-		<div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-50 z-50">
-			<div class="loader"></div>
-		</div>
-	{/if}
+		<!-- Cell Modal -->
+		{#if showCellModal}
+			<div class="z-40 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
+				{#if cellLoading}
+					<div class="flex items-center justify-center h-20">
+						<div class="loader"></div>
+					</div>
+				{:else if cellData}
+					<CellView data={cellData} onClose={handleCellClose} />
+				{/if}
+			</div>
+		{/if}
+	</div>
 
-	{#if heatmaps && currentPeriod && heatmaps[currentPeriod]}
-		<div class="relative flex-1">
-			<MapGLGrid
-				class="w-full h-full z-10"
-				heatmap={heatmaps[currentPeriod]}
-				{heatmapBlueprint}
-				{dimensions}
-				selectedCellId={$page.state.selectedCell?.cellFeatures.cellId}
-				on:cellClick={handleCellClick}
-			/>
-
-			{#if $page.state.selectedCell}
-				<div
-					class="z-40 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300"
-				>
-					{#if loadingNewPeriod}
-						<div>Loading new period data...</div>
-					{:else}
-						{#key [$page.state.selectedCell.cellFeatures.cellId, currentPeriod]}
-							<CellPage data={$page.state.selectedCell} />
-						{/key}
-					{/if}
-				</div>
-			{/if}
-		</div>
-	{/if}
-
-	{#if timePeriods}
-		<HeatmapSlider {timePeriods} bind:value={currentPeriod} />
+	{#if timePeriods && histogram}
+		<TimePeriodSelector 
+			period={currentPeriod} 
+			{histogram} 
+			onPeriodChange={handlePeriodChange} 
+		/>
 	{/if}
 </div>
 
@@ -349,13 +117,8 @@ function hasSelectionChanged(current: Set<any>, previous: Set<any>): boolean {
 		height: 50px;
 		animation: spin 2s linear infinite;
 	}
-
 	@keyframes spin {
-		0% {
-			transform: rotate(0deg);
-		}
-		100% {
-			transform: rotate(360deg);
-		}
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
 	}
 </style>

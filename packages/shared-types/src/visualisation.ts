@@ -70,3 +70,24 @@ export interface HeatmapStack {
 }
 
 export type Heatmaps = Record<string, HeatmapStack>;
+
+export interface HistogramBin {
+    period: string;
+    count: number;
+    contentCounts: {
+        [K in ContentClass]: number;
+    };
+    tagCounts: {
+        [K in ContentClass]: {
+            [tagName: string]: number;
+        };
+    };
+}
+
+export interface Histogram {
+    bins: HistogramBin[];
+    maxCount: number;
+    contentMaxCounts: {
+        [K in ContentClass]: number;
+    };
+}

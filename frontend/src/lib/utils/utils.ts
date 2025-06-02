@@ -11,19 +11,17 @@ export function formatDate(date: string, separator: string = '-'): string {
 	return `${start}${separator}${end}`;
 }
 
-
 export function pickAndConvertObjectToArray<T extends Record<string, unknown>>(
-  obj: T, 
-  keys: (keyof T)[]
+	obj: T,
+	keys: (keyof T)[]
 ): [string, unknown][] {
-  return keys.map(key => [key.toString(), obj[key]]);
+	return keys.map((key) => [key.toString(), obj[key]]);
 }
 
+export function prettifyKey(key: string): string {
+	// Replace underscores with spaces
+	const withSpaces = key.replace(/_/g, ' ');
 
-export function prettifyKey(key: string): string{
-  // Replace underscores with spaces
-  const withSpaces = key.replace(/_/g, ' ');
-  
-  // Capitalize the first letter and convert rest to lowercase
-  return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1).toLowerCase();
+	// Capitalize the first letter and convert rest to lowercase
+	return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1).toLowerCase();
 }
