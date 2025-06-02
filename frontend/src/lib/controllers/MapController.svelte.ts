@@ -152,20 +152,43 @@ export function createMapController() {
 		selectedTags = new Set(tags);
 	}
 
+function setPeriod(period: string | undefined): void {
+		currentPeriod = period;
+	}
+
+	// Update the existing updatePeriod to work with query params
 	function updatePeriod(period: string | undefined): void {
 		currentPeriod = period;
 		
 		if (!browser) return;
 		
-		if (period) {
-			//const url = new URL(window.location.href);
-			const newPath = `/${period}`;
-			replaceState(`${newPath}${window.location.search}`, page.state);
-		}
+		const url = new URL(window.location.href);
+		url.searchParams.set('period', period || '');
+		
+		// Use replaceState for fast period changes
+		replaceState(url.pathname + url.search, page.state);
 	}
 
-	function setPeriod(period: string | undefined): void {
-		currentPeriod = period;
+	// Update URL from selections to work with query params
+	function updateUrl(): void {
+		if (!browser) return;
+
+		const url = new URL(window.location.href);
+		
+		if (selectedClasses.size > 0) {
+			url.searchParams.set('contentClasses', Array.from(selectedClasses).join(','));
+		} else {
+			url.searchParams.delete('contentClasses');
+		}
+
+		if (selectedTags.size > 0) {
+			url.searchParams.set('tags', Array.from(selectedTags).join(','));
+		} else {
+			url.searchParams.delete('tags');
+		}
+
+		// Use replaceState to update URL without navigation
+		replaceState(url.pathname + url.search, page.state);
 	}
 
 	// Handle cell selection

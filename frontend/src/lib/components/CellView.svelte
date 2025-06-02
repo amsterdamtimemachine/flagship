@@ -7,7 +7,7 @@
 	import { PUBLIC_SERVER_DEV_URL, PUBLIC_SERVER_PROD_URL } from '$env/static/public';
 	
 	interface Props {
-		data: { cellFeatures: CellFeaturesResponse }; // Adjusted type
+		data: { cellFeatures: CellFeaturesResponse };
 		onClose?: () => void; // Optional close handler
 	}
 	
