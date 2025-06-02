@@ -1,3 +1,4 @@
+<!-- Map Container -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Map, { type Props as MapProps } from '$components/Map.svelte';

@@ -1,44 +1,42 @@
 <!-- (map)/+page.svelte -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { replaceState } from '$app/navigation';
-	import { page } from '$app/state';
 	import debounce from 'lodash.debounce';
-	import { fetchApi } from '$api';
-	import { createMapController } from '$controllers/MapController.svelte';
-	import MapContainer from '$components/MapContainer.svelte';
+	
+	import { createMapController } from '$state/MapController.svelte';
+	import { createPageErrorData } from '$utils/error';
 	import Map from '$components/Map.svelte';
-	import ToggleGroupSelector from '$components/ToggleGroupSelector.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import CellView from '$components/CellView.svelte';
 	import ErrorHandler from '$lib/components/ErrorHandler.svelte';
+	
 	import type { PageData } from './$types';
-	import type { CellFeaturesResponse } from '@atm/shared-types';
-	import {
-		PUBLIC_SERVER_DEV_URL,
-		PUBLIC_SERVER_PROD_URL
-	} from '$env/static/public';
 
 	let { data }: { data: PageData } = $props();
 
+	// Derived data from server
 	let dimensions = $derived(data?.metadata?.dimensions);
 	let heatmaps = $derived(data?.heatmaps?.heatmaps);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
 	let timePeriods = $derived(data?.metadata?.timePeriods);
-	let featuresStatistics = $derived(data?.metadata?.featuresStatistics);
 	let histogram = $derived(data?.histogram?.histogram);
 
-	const mapController = $state(createMapController());
+	// Centralized state management
+	const controller = createMapController();
 	
-	// Client-side cell data management
-	let cellData = $state(null);
-	let cellLoading = $state(false);
-	let showCellModal = $derived(!!cellData);
+	// Derived state from controller
+	let currentPeriod = $derived(controller.currentPeriod);
+	let selectedCellId = $derived(controller.selectedCellId);
+	let cellData = $derived(controller.cellData);
+	let cellLoading = $derived(controller.isLoadingCell);
+	let showCellModal = $derived(controller.showCellModal);
 	
-	// Use MapController's period state for reactivity
-	let currentPeriod = $derived(mapController.getCurrentPeriod());
-	let selectedCellId = $derived(mapController.getSelectedCellId());
+	// Combine server errors with controller errors for ErrorHandler
+	let allErrors = $derived.by(() => {
+		const serverErrors = data.errorData?.errors || [];
+		const controllerErrors = controller.errors || [];
+		return createPageErrorData([...serverErrors, ...controllerErrors]);
+	});
 	
 	let currentHeatmap = $derived.by(() => {
 		if (heatmaps && currentPeriod) {
@@ -47,151 +45,47 @@
 		return null;
 	});
 
-	const baseUrl = import.meta.env.MODE === 'production' ? PUBLIC_SERVER_PROD_URL : PUBLIC_SERVER_DEV_URL;
-
-	// Debounced cell data refresh for period changes
-	const debouncedCellRefresh = debounce(async () => {
-		if (cellData && currentPeriod) {
-			await loadCellData(cellData.cellFeatures.cellId, currentPeriod);
-		}
+	// Debounced period changes to avoid too many API calls
+	const debouncedPeriodChange = debounce((period: string) => {
+		controller.setPeriod(period);
 	}, 300);
 
 	onMount(() => {
-		if (timePeriods) {
-			// Initialize with server data as starting point
-			mapController.initialize(timePeriods, data.currentPeriod);
-		}
-
-		// Check if cell should be opened from URL
-		const cellParam = page.url.searchParams.get('cell');
-		if (cellParam && data.currentPeriod) {
-			loadCellData(cellParam, data.currentPeriod);
-		}
+		// Initialize controller with server data
+		controller.initialize(data.currentPeriod);
 	});
 
-	async function loadCellData(cellId: string, period: string) {
-		cellLoading = true;
-		try {
-			const contentClasses = page.url.searchParams.get('contentClasses') || '';
-			const tags = page.url.searchParams.get('tags') || '';
-			
-			let cellApiUrl = `${baseUrl}/grid/cell/${cellId}?period=${period}&page=1`;
-			if (contentClasses) cellApiUrl += `&contentClasses=${contentClasses}`;
-			if (tags) cellApiUrl += `&tags=${tags}`;
-			
-			const cellFeatures = await fetchApi<CellFeaturesResponse>(cellApiUrl);
-			cellData = { cellFeatures };
-			
-			// Update URL to reflect cell selection
-			const url = new URL(window.location.href);
-			url.searchParams.set('cell', cellId);
-			replaceState(url.pathname + url.search, page.state);
-			
-		} catch (error) {
-			console.error('Error loading cell data:', error);
-			// Could show error toast here
-		} finally {
-			cellLoading = false;
-		}
-	}
-
-	// Handle period change via slider - fast, no server reload
+	// Handle period change from slider
 	function handlePeriodChange(period: string) {
-		const url = new URL(window.location.href);
-		url.searchParams.set('period', period);
-		
-		// Update URL without triggering load function
-		replaceState(url.pathname + url.search, page.state);
-		
-		// Update MapController internal state
-		mapController.setPeriod(period);
-		
-		// Debounced cell refresh if cell is open
-		debouncedCellRefresh();
+		debouncedPeriodChange(period);
 	}
 
-	// Handle filter changes - refetch static data
-	function handleFiltersChange(classes: string[], tags: string[]) {
-		const url = new URL(window.location.href);
-		
-		if (classes.length > 0) {
-			url.searchParams.set('contentClasses', classes.join(','));
-		} else {
-			url.searchParams.delete('contentClasses');
-		}
-		
-		if (tags.length > 0) {
-			url.searchParams.set('tags', tags.join(','));
-		} else {
-			url.searchParams.delete('tags');
-		}
-		
-		// This triggers load function rerun - will refetch static data with new filters
-		goto(url.pathname + url.search);
-		
-		// If cell is open, also refresh cell data with new filters
-		if (cellData) {
-			loadCellData(cellData.cellFeatures.cellId, currentPeriod);
-		}
+	// Handle cell selection from map
+	function handleCellClick(cellId: string | null) {
+		controller.selectCell(cellId);
 	}
 
-	// Handle cell selection
-	function handleCellClick(cellId: string) {
-		loadCellData(cellId, currentPeriod);
-	}
-
-	// Handle cell close
+	// Handle cell modal close
 	function handleCellClose() {
-		cellData = null;
-		
-		// Remove cell from URL
-		const url = new URL(window.location.href);
-		url.searchParams.delete('cell');
-		replaceState(url.pathname + url.search, page.state);
+		// Clear any cell-related errors when closing
+		controller.clearErrors();
+		controller.selectCell(null);
 	}
 </script>
 
-<ErrorHandler errorData={data.errorData} />
+<ErrorHandler errorData={allErrors} />
 
 <div class="relative flex flex-col w-screen h-screen">
-	<!-- Toggle selector for content classes and tags -->
-	<!--
-	<ToggleGroupSelector
-		featuresStatistics={featuresStatistics}
-		initialSelectedClasses={mapController.getSelectedClassesArray()}
-		initialSelectedTags={mapController.getSelectedTagsArray()}
-		onClassesChange={(classes) => {
-			mapController.handleClassesChange(classes);
-			handleFiltersChange(classes, mapController.getSelectedTagsArray());
-		}}
-		onTagsChange={(tags) => {
-			mapController.handleTagsChange(tags);
-			handleFiltersChange(mapController.getSelectedClassesArray(), tags);
-		}}
-	/>
-	-->
-
-	{#if mapController.isLoading}
-		<div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-50 z-50">
-			<div class="loader"></div>
-		</div>
-	{/if}
-
 	<div class="relative flex-1">
-		<MapContainer controller={mapController}>
-			{#snippet map(props)}
-				<Map
-					heatmap={currentHeatmap}
-					{heatmapBlueprint}
-					{dimensions}
-					selectedCellId={cellData?.cellFeatures?.cellId}
-					handleCellClick={handleCellClick}
-					handleMapLoaded={props.handleMapLoaded}
-				/>
-			{/snippet}
-		</MapContainer>
+		<Map
+			heatmap={currentHeatmap}
+			{heatmapBlueprint}
+			{dimensions}
+			{selectedCellId}
+			handleCellClick={handleCellClick}
+		/>
 
-		<!-- Cell Modal with Loading State -->
+		<!-- Cell Modal -->
 		{#if showCellModal}
 			<div class="z-40 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
 				{#if cellLoading}

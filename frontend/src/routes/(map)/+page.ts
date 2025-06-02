@@ -15,12 +15,10 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	const baseUrl = import.meta.env.MODE === 'production' ? PUBLIC_SERVER_DEV_URL : PUBLIC_SERVER_PROD_URL;
 	const errors: AppError[] = [];
 	
-	// Extract parameters from URL
 	const period = url.searchParams.get('period');
 	const contentClassesParam = url.searchParams.get('contentClasses') || PUBLIC_DEFAULT_CONTENT_CLASS;
 	const tagsParam = url.searchParams.get('tags') || '';
 	
-	// Static data only - metadata, heatmaps, histogram
 	let metadata, heatmaps, histogram;
 	
 	try {

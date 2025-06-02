@@ -1,9 +1,9 @@
+<!-- Map.svelte -->
 <script lang="ts">
 	import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
-	// WIP: this should be env import
 	const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import maplibre, {
 		type Map,
 		type FeatureCollection,
@@ -12,7 +12,6 @@
 		type GeoJSONProperties
 	} from 'maplibre-gl';
 	import type { Heatmap, HeatmapCell, GridDimensions } from '@atm/shared-types';
-	import debounce from 'lodash.debounce';
 	import { mergeCss } from '$utils/utils';
 
 	interface CellProperties extends GeoJSONProperties {
@@ -21,14 +20,6 @@
 		col: number;
 		count: number;
 	}
-
-	//	let modalData = $state({
-	//		id: '',
-	//		coordinates: [] as number[][],
-	//		position: { x: 0, y: 0 },http://localhost:5175/
-	//		value: undefined as number | undefined,
-	//		count: undefined as number | undefined
-	//	});
 
 	export interface MapProps {
 		heatmap: Heatmap;
@@ -46,13 +37,13 @@
 		dimensions,
 		selectedCellId = null,
 		class: className,
-		handleCellClick
+		handleCellClick,
+		handleMapLoaded
 	}: MapProps = $props();
 
 	let map: Map | undefined = $state();
 	let mapContainer: HTMLElement = $state();
 	let isMapLoaded = $state(false);
-	let activeCellIds = $state(new Set<string>());
 
 	const cellIdMap = $derived.by(() => {
 		const idMap = new Map<number, string>();
@@ -71,7 +62,6 @@
 		const { densityArray, countArray } = heatmap;
 		const result = new Map<string, { value: number; count: number }>();
 
-		// Calculate active cells and their values
 		for (let i = 0; i < countArray.length; i++) {
 			const count = countArray[i];
 			if (count > 0) {
@@ -88,11 +78,18 @@
 		return result;
 	});
 
-	// update heatmap cells when active cells change
+	// Update heatmap cells when active cells change
 	$effect(() => {
 		if (!isMapLoaded || !map || !heatmapBlueprint) return;
 		resetAllCells();
 		setActiveCells();
+	});
+
+	// Handle selected cell changes - THIS FIXES THE HIGHLIGHTING ISSUE
+	$effect(() => {
+		if (isMapLoaded && map) {
+			updateSelectedCell(selectedCellId);
+		}
 	});
 
 	onMount(() => {
@@ -166,12 +163,10 @@
 	function updateSelectedCell(cellId: string | null): void {
 		if (!isMapLoaded || !map) return;
 
-		// Clear previous highlight
-		if (selectedCellId) {
-			map.setFeatureState({ source: 'heatmap', id: selectedCellId }, { selected: false });
-		}
-
-		selectedCellId = cellId;
+		// Clear all previous highlights
+		cellIdMap.forEach((id) => {
+			map.setFeatureState({ source: 'heatmap', id }, { selected: false });
+		});
 
 		// Set new highlight
 		if (cellId) {
@@ -263,15 +258,10 @@
 					if (featureState.count > 0) {
 						// deselect the currently selected cell if its clicked
 						if (featureId === selectedCellId) {
-							selectedCellId = null;
-							map.setFeatureState({ source: 'heatmap', id: featureId }, { selected: false });
-
-							// update parent
 							if (handleCellClick) {
 								handleCellClick(null);
 							}
 						} else {
-							updateSelectedCell(featureId);
 							// parent callback
 							if (handleCellClick) {
 								handleCellClick(feature.properties.id);
@@ -280,8 +270,10 @@
 					}
 				}
 			});
+			
 			isMapLoaded = true;
-			if(handleMapLoaded) {
+			
+			if (handleMapLoaded) {
 				handleMapLoaded();
 			}
 		});

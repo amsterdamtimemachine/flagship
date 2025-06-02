@@ -30,7 +30,7 @@ export function createPeriodNotFoundError(requestedPeriod: string, availablePeri
 	return createError(
 		'warning',
 		'Period Not Found',
-		`Period "${requestedPeriod}" doesn't exist. Showing "${fallbackPeriod}" instead.`,
+		`Period "${requestedPeriod}" doesn't exist. Showing default instead.`,
 		{
 			requestedPeriod,
 			fallbackPeriod,
@@ -39,16 +39,34 @@ export function createPeriodNotFoundError(requestedPeriod: string, availablePeri
 	);
 }
 
-//export function createDataLoadError(dataType: string, fallbackUsed: boolean = false): AppError {
-//	return createError(
-//		'error',
-//		'Data Load Failed',
-//		fallbackUsed 
-//			? `Failed to load ${dataType}. Using cached data instead.`
-//			: `Failed to load ${dataType}. Please try again.`,
-//		{ dataType, fallbackUsed }
-//	);
-//}
+export function createCellNotFoundError(cellId: string, period: string): AppError {
+	return createError(
+		'warning',
+		'Cell Not Found',
+		`Cell "${cellId}" doesn't exist for period "${period}".`,
+		{ cellId, period }
+	);
+}
+
+export function createCellLoadError(cellId: string, period: string, reason?: string): AppError {
+	return createError(
+		'error',
+		'Failed to Load Cell Data',
+		reason 
+			? `Could not load data for cell "${cellId}": ${reason}`
+			: `Could not load data for cell "${cellId}". Please try again.`,
+		{ cellId, period, reason }
+	);
+}
+
+export function createEmptyCellError(cellId: string, period: string): AppError {
+	return createError(
+		'info',
+		'Empty Cell',
+		`Cell "${cellId}" has no content for period "${period}".`,
+		{ cellId, period }
+	);
+}
 
 export function createValidationError(field: string, value: any, reason: string): AppError {
 	return createError(
