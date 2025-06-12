@@ -21,8 +21,10 @@ export type PropertiesFor<R extends RecordType> =
     R extends 'image' ? ImageProperties :
     never;
 
+
 // Geometry types
-export type Coordinates = [number, number];
+export type Coordinates = {lon: number, lat: number};
+
 
 export interface PointGeometry {
     type: "Point";
@@ -85,7 +87,6 @@ export type TextFeature = ProcessedFeature<'text'>;
 export type AnyProcessedFeature = ProcessedFeature<RecordType>;
 
 
-// Grid cell types (unchanged)
 export interface GridCellBounds {
     minLon: number;
     maxLon: number;
