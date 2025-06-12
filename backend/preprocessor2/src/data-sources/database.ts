@@ -1,10 +1,4 @@
 // src/data-sources/database.ts - Updated for your API structure
-
-import type { 
-  ApiQueryParams, 
-  ApiResponse, 
-} from './types';
-
 import type { 
   RawFeature,
   ProcessedFeature, 
@@ -13,6 +7,36 @@ import type {
   RecordType,
   ImageFeature, EventFeature, TextFeature,
 } from '../types/geo';
+
+export interface GridConfig {
+  colsAmount: number;
+  rowsAmount: number;
+  padding: number; // e.g., 0.05 = 5% padding
+}
+
+export interface DatabaseConfig {
+  baseUrl: string;
+  defaultParams?: Partial<ApiQueryParams>;
+  batchSize?: number;
+  timeout?: number;
+}
+
+export interface ApiQueryParams {
+  min_lat: number;
+  min_lon: number;
+  max_lat: number;
+  max_lon: number;
+  start_year: string;
+  end_year: string;
+  recordtype?: RecordType;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ApiResponse {
+  data: RawFeature[];
+  total: number;
+}
 
 /**
  * Core function that makes HTTP calls to your Amsterdam API
@@ -125,7 +149,7 @@ function parseWKTPoint(wktGeom: string): Coordinates {
     throw new Error(`Invalid coordinates in WKT: ${wktGeom}`);
   }
   
-  return [lon, lat];
+  return {lon: lon, lat: lat};
 }
 
 /**

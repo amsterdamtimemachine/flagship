@@ -5,7 +5,7 @@ import {
   convertRawFeature
 } from '../data-sources';
 import { AMSTERDAM_DATABASE_CONFIG } from '../config/defaults';
-import type { ApiQueryParams } from '../data-sources/types';
+import type { ApiQueryParams } from '../data-sources';
 import type { RawFeature } from '../types/geo';
 
 describe("Amsterdam API Database Integration", () => {

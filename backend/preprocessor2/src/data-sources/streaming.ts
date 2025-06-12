@@ -2,9 +2,9 @@
 
 import type { 
   DatabaseConfig, 
-} from './types';
+} from './';
 import type { GridCellBounds, AnyProcessedFeature, RecordType } from '../types/geo';
-import { fetchBatch, convertRawFeature } from './database';
+import { fetchBatch, convertRawFeature } from './';
 
 export interface SpatialChunk {
   id: string;

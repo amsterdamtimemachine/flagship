@@ -1,7 +1,7 @@
 // src/config/defaults.ts - Simple, configurable defaults
 
-import type { DatabaseConfig, GridConfig } from './types';
-import type { ChunkingConfig } from '../data-sources/types';
+import type { DatabaseConfig, ChunkingConfig } from '../data-sources';
+import type { GridConfig } from '../processing';
 
 export const AMSTERDAM_DATABASE_CONFIG: DatabaseConfig = {
   baseUrl: 'https://atmbackend.create.humanities.uva.nl',
