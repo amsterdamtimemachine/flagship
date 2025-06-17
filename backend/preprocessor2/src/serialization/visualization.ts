@@ -61,6 +61,7 @@ export class VisualizationBinaryWriter {
   async writeHeatmaps(heatmapsData: HeatmapsData): Promise<void> {
     console.log(`🔥 Writing heatmaps data...`);
     
+    // Store the absolute offset (including reserved metadata space)
     const heatmapsStartOffset = this.currentOffset;
     
     // Encode heatmaps data
@@ -69,9 +70,9 @@ export class VisualizationBinaryWriter {
     // Write to file
     this.writer.write(encodedHeatmaps);
     
-    // Update offset tracking
+    // Store relative offset (from start of data sections, not including metadata)
     this.sections.heatmaps = {
-      offset: heatmapsStartOffset,
+      offset: 0, // First data section, so offset is 0 relative to data start
       length: encodedHeatmaps.byteLength
     };
     
@@ -86,7 +87,8 @@ export class VisualizationBinaryWriter {
   async writeHistograms(histogramsData: any): Promise<void> {
     console.log(`📊 Writing histograms data...`);
     
-    const histogramsStartOffset = this.currentOffset;
+    // Calculate relative offset from start of data sections
+    const currentDataOffset = this.currentOffset - 4; // Subtract metadata space reservation
     
     // Encode histograms data
     const encodedHistograms = encode(histogramsData);
@@ -94,15 +96,15 @@ export class VisualizationBinaryWriter {
     // Write to file
     this.writer.write(encodedHistograms);
     
-    // Update offset tracking
+    // Store relative offset (histograms come after heatmaps)
     this.sections.histograms = {
-      offset: histogramsStartOffset,
+      offset: this.sections.heatmaps.length, // Offset relative to data start
       length: encodedHistograms.byteLength
     };
     
     this.currentOffset += encodedHistograms.byteLength;
     
-    console.log(`✅ Histograms written: ${encodedHistograms.byteLength} bytes at offset ${histogramsStartOffset}`);
+    console.log(`✅ Histograms written: ${encodedHistograms.byteLength} bytes`);
   }
 
   /**
