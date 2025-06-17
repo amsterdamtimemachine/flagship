@@ -1,10 +1,5 @@
-export type {Heatmap, HeatmapStack, HeatmapBlueprint, CellCounts, HeatmapAccumulator, GridConfig} from './heatmaps'
+export type {Heatmap, HeatmapStack, HeatmapBlueprint, CellCounts, HeatmapAccumulator, GridConfig} from './heatmap'
 
-export {
-  generateHeatmapsForRecordtype,
-  generateHeatmapBlueprint,
-  getCellIdForCoordinates,
-  calculateCellBounds,
-  createHeatmapAccumulator,
-  processFeatureIntoCounts
-} from './heatmaps';
+export type {TimeSlice} from './types'
+
+

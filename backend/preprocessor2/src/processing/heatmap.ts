@@ -1,4 +1,4 @@
-// src/processing/heatmaps.ts - Pure functions for heatmap generation (UPDATED: Period-first structure)
+// src/processing/heatmap.ts - Pure functions for heatmap generation (UPDATED: TimeSlice integration)
 
 import type { 
   RecordType, 
@@ -8,6 +8,7 @@ import type {
   Coordinates 
 } from '../types/geo';
 import type { DatabaseConfig, ChunkingConfig } from '../data-sources';
+import type { TimeSlice } from './';
 import { streamFeaturesByChunks } from '../data-sources';
 
 export interface Heatmap {
@@ -15,9 +16,9 @@ export interface Heatmap {
   countArray: number[];
 }
 
-// ✅ UPDATED: Period-first hierarchical structure (Option 3)
+// ✅ UPDATED: Period-first hierarchical structure using TimeSlice keys
 export interface HeatmapStack {
-  [period: string]: {
+  [periodKey: string]: {
     [recordType in RecordType]: {
       base: Heatmap;
       tags: Record<string, Heatmap>;
@@ -170,7 +171,7 @@ export function processFeatureIntoCounts(
 }
 
 /**
- * Stream features for a specific recordtype and accumulate counts
+ * ✅ UPDATED: Stream features for a specific recordtype and TimeSlice
  */
 export async function accumulateCountsForRecordtype(
   config: DatabaseConfig,
@@ -178,18 +179,18 @@ export async function accumulateCountsForRecordtype(
   chunkConfig: ChunkingConfig,
   recordtype: RecordType,
   gridDimensions: GridDimensions,
-  timeRange?: { start: string; end: string }
+  timeSlice: TimeSlice
 ): Promise<HeatmapAccumulator> {
   
   const accumulator = createHeatmapAccumulator(gridDimensions);
   
-  console.log(`🔥 Accumulating counts for recordtype: ${recordtype}`);
+  console.log(`🔥 Accumulating counts for recordtype: ${recordtype} in period: ${timeSlice.label}`);
   
   for await (const result of streamFeaturesByChunks(config, bounds, chunkConfig, {
     recordtype,
-    timeRange
+    timeRange: timeSlice.timeRange
   })) {
-    console.log(`📊 Processing ${result.features.length} ${recordtype} features from chunk ${result.chunk.id}`);
+    console.log(`📊 Processing ${result.features.length} ${recordtype} features from chunk ${result.chunk.id} for period ${timeSlice.label}`);
     
     // Process each feature into counts
     for (const feature of result.features) {
@@ -197,7 +198,7 @@ export async function accumulateCountsForRecordtype(
     }
   }
   
-  console.log(`✅ Completed accumulation for ${recordtype}:`);
+  console.log(`✅ Completed accumulation for ${recordtype} in ${timeSlice.label}:`);
   console.log(`   - Cells with data: ${accumulator.cellCounts.base.get(recordtype)?.size || 0}`);
   console.log(`   - Unique tags found: ${accumulator.collectedTags.size}`);
   
@@ -242,35 +243,35 @@ export function generateHeatmap(
 }
 
 /**
- * ✅ UPDATED: Generate complete heatmap stack from accumulator (Period-first structure)
+ * ✅ UPDATED: Generate complete heatmap stack from accumulator using TimeSlice
  */
 export function generateHeatmapStack(
   accumulator: HeatmapAccumulator, 
-  period: string
+  timeSlice: TimeSlice
 ): HeatmapStack {
   const recordtypes: RecordType[] = ['image', 'text', 'event'];
   
-  // Initialize result structure with period-first hierarchy
+  // Initialize result structure with period-first hierarchy using TimeSlice key
   const result: HeatmapStack = {
-    [period]: {} as any
+    [timeSlice.key]: {} as any
   };
   
   // Generate heatmaps for each recordtype
   for (const recordtype of recordtypes) {
     // Initialize recordtype structure
-    result[period][recordtype] = {
+    result[timeSlice.key][recordtype] = {
       base: generateHeatmap(new Map(), accumulator.gridDimensions), // Default empty
       tags: {}
     };
     
     // Generate base heatmap for this recordtype
     const counts = accumulator.cellCounts.base.get(recordtype) || new Map();
-    result[period][recordtype].base = generateHeatmap(counts, accumulator.gridDimensions);
+    result[timeSlice.key][recordtype].base = generateHeatmap(counts, accumulator.gridDimensions);
     
     // Generate tag heatmaps for this recordtype
     for (const tag of Array.from(accumulator.collectedTags)) {
       const tagCounts = accumulator.cellCounts.tags.get(tag)?.get(recordtype) || new Map();
-      result[period][recordtype].tags[tag] = generateHeatmap(tagCounts, accumulator.gridDimensions);
+      result[timeSlice.key][recordtype].tags[tag] = generateHeatmap(tagCounts, accumulator.gridDimensions);
     }
   }
   
@@ -305,7 +306,7 @@ export function generateHeatmapBlueprint(gridDimensions: GridDimensions): Heatma
 }
 
 /**
- * ✅ UPDATED: Generate heatmaps for a specific recordtype (returns period-first structure)
+ * ✅ UPDATED: Generate heatmaps for a specific recordtype using TimeSlice
  */
 export async function generateHeatmapsForRecordtype(
   config: DatabaseConfig,
@@ -313,13 +314,10 @@ export async function generateHeatmapsForRecordtype(
   chunkConfig: ChunkingConfig,
   recordtype: RecordType,
   gridDimensions: GridDimensions,
-  timeRange?: { start: string; end: string }
+  timeSlice: TimeSlice
 ): Promise<HeatmapStack> {
   
-  // Create period key from time range
-  const periodKey = timeRange ? 
-    `${timeRange.start.split('-')[0]}_${timeRange.end.split('-')[0]}` : 
-    'default';
+  console.log(`📊 Generating heatmaps for recordtype: ${recordtype} in period: ${timeSlice.label}`);
   
   // Accumulate counts by streaming
   const accumulator = await accumulateCountsForRecordtype(
@@ -328,15 +326,212 @@ export async function generateHeatmapsForRecordtype(
     chunkConfig,
     recordtype,
     gridDimensions,
-    timeRange
+    timeSlice
   );
   
   // Generate heatmaps from accumulated counts
-  return generateHeatmapStack(accumulator, periodKey);
+  return generateHeatmapStack(accumulator, timeSlice);
 }
 
 /**
- * ✅ NEW: Generate heatmaps for multiple periods and recordtypes
+ * ✅ UPDATED: Generate heatmaps for multiple TimeSlices and recordtypes
+ */
+export async function generateHeatmapsForMultipleTimeSlices(
+  config: DatabaseConfig,
+  bounds: GridCellBounds,
+  chunkConfig: ChunkingConfig,
+  recordtypes: RecordType[],
+  gridDimensions: GridDimensions,
+  timeSlices: TimeSlice[]
+): Promise<HeatmapStack> {
+  
+  const result: HeatmapStack = {};
+  
+  console.log(`🔥 Generating heatmaps for ${timeSlices.length} time slices and ${recordtypes.length} recordtypes`);
+  
+  for (const timeSlice of timeSlices) {
+    console.log(`📅 Processing time slice: ${timeSlice.label} (${timeSlice.timeRange.start} to ${timeSlice.timeRange.end})`);
+    
+    // Initialize time slice structure
+    result[timeSlice.key] = {} as any;
+    
+    for (const recordtype of recordtypes) {
+      console.log(`📊 Processing recordtype: ${recordtype} for time slice ${timeSlice.label}`);
+      
+      // Accumulate counts for this recordtype and time slice
+      const accumulator = await accumulateCountsForRecordtype(
+        config,
+        bounds,
+        chunkConfig,
+        recordtype,
+        gridDimensions,
+        timeSlice
+      );
+      
+      // Initialize recordtype structure
+      result[timeSlice.key][recordtype] = {
+        base: generateHeatmap(new Map(), gridDimensions), // Default empty
+        tags: {}
+      };
+      
+      // Generate base heatmap
+      const counts = accumulator.cellCounts.base.get(recordtype) || new Map();
+      result[timeSlice.key][recordtype].base = generateHeatmap(counts, gridDimensions);
+      
+      // Generate tag heatmaps
+      for (const tag of Array.from(accumulator.collectedTags)) {
+        const tagCounts = accumulator.cellCounts.tags.get(tag)?.get(recordtype) || new Map();
+        result[timeSlice.key][recordtype].tags[tag] = generateHeatmap(tagCounts, gridDimensions);
+      }
+    }
+  }
+  
+  console.log(`✅ Completed heatmap generation for all time slices and recordtypes`);
+  return result;
+}
+
+/**
+ * ✅ NEW: Convenience function to create TimeSlice from simple time range
+ */
+export function createTimeSlice(
+  startYear: number,
+  endYear: number,
+  options?: {
+    keyFormat?: 'underscore' | 'hyphen';
+    labelFormat?: 'hyphen' | 'to';
+  }
+): TimeSlice {
+  const keyFormat = options?.keyFormat || 'underscore';
+  const labelFormat = options?.labelFormat || 'hyphen';
+  
+  const key = keyFormat === 'underscore' ? `${startYear}_${endYear}` : `${startYear}-${endYear}`;
+  const label = labelFormat === 'hyphen' ? `${startYear}-${endYear}` : `${startYear} to ${endYear}`;
+  
+  return {
+    key,
+    label,
+    timeRange: {
+      start: `${startYear}-01-01`,
+      end: `${endYear}-12-31`
+    },
+    startYear,
+    endYear,
+    durationYears: endYear - startYear
+  };
+}
+
+/**
+ * ✅ NEW: Create multiple TimeSlices for common periods
+ */
+export function createTimeSlices(periods: Array<{ start: number; end: number }>): TimeSlice[] {
+  return periods.map(period => createTimeSlice(period.start, period.end));
+}
+
+/**
+ * ✅ NEW: Analyze heatmap stack across time slices
+ */
+export function analyzeHeatmapStack(
+  heatmapStack: HeatmapStack,
+  timeSlices: TimeSlice[]
+): {
+  totalTimeSlices: number;
+  totalCells: number;
+  recordtypeStats: Record<RecordType, {
+    totalFeatures: number;
+    peakTimeSlice: { key: string; label: string; count: number };
+    averagePerTimeSlice: number;
+  }>;
+  overallStats: {
+    totalFeatures: number;
+    peakTimeSlice: { key: string; label: string; count: number };
+    mostActiveRecordtype: RecordType;
+  };
+} {
+  const recordtypeStats: Record<RecordType, any> = {
+    text: { totalFeatures: 0, peakTimeSlice: { key: '', label: '', count: 0 }, averagePerTimeSlice: 0 },
+    image: { totalFeatures: 0, peakTimeSlice: { key: '', label: '', count: 0 }, averagePerTimeSlice: 0 },
+    event: { totalFeatures: 0, peakTimeSlice: { key: '', label: '', count: 0 }, averagePerTimeSlice: 0 }
+  };
+  
+  let overallTotal = 0;
+  let overallPeak = { key: '', label: '', count: 0 };
+  let totalCells = 0;
+  
+  // Analyze each time slice
+  for (const timeSlice of timeSlices) {
+    const timeSliceData = heatmapStack[timeSlice.key];
+    if (!timeSliceData) continue;
+    
+    let timeSliceTotal = 0;
+    
+    // Analyze each recordtype
+    for (const recordtype of ['text', 'image', 'event'] as RecordType[]) {
+      const recordtypeData = timeSliceData[recordtype];
+      if (!recordtypeData) continue;
+      
+      const counts = Array.from(recordtypeData.base.countArray);
+      const recordtypeCount = counts.reduce((sum, count) => sum + count, 0);
+      
+      recordtypeStats[recordtype].totalFeatures += recordtypeCount;
+      timeSliceTotal += recordtypeCount;
+      
+      // Track peak time slice for this recordtype
+      if (recordtypeCount > recordtypeStats[recordtype].peakTimeSlice.count) {
+        recordtypeStats[recordtype].peakTimeSlice = {
+          key: timeSlice.key,
+          label: timeSlice.label,
+          count: recordtypeCount
+        };
+      }
+      
+      // Set total cells from first non-empty recordtype
+      if (totalCells === 0) {
+        totalCells = counts.length;
+      }
+    }
+    
+    overallTotal += timeSliceTotal;
+    
+    // Track overall peak time slice
+    if (timeSliceTotal > overallPeak.count) {
+      overallPeak = {
+        key: timeSlice.key,
+        label: timeSlice.label,
+        count: timeSliceTotal
+      };
+    }
+  }
+  
+  // Calculate averages and find most active recordtype
+  let mostActiveRecordtype: RecordType = 'text';
+  let mostActiveCount = 0;
+  
+  for (const recordtype of ['text', 'image', 'event'] as RecordType[]) {
+    recordtypeStats[recordtype].averagePerTimeSlice = Math.round(
+      recordtypeStats[recordtype].totalFeatures / timeSlices.length
+    );
+    
+    if (recordtypeStats[recordtype].totalFeatures > mostActiveCount) {
+      mostActiveCount = recordtypeStats[recordtype].totalFeatures;
+      mostActiveRecordtype = recordtype;
+    }
+  }
+  
+  return {
+    totalTimeSlices: timeSlices.length,
+    totalCells,
+    recordtypeStats,
+    overallStats: {
+      totalFeatures: overallTotal,
+      peakTimeSlice: overallPeak,
+      mostActiveRecordtype
+    }
+  };
+}
+
+// ✅ DEPRECATED: Keep for backward compatibility but mark as deprecated
+/**
+ * @deprecated Use generateHeatmapsForMultipleTimeSlices instead
  */
 export async function generateHeatmapsForMultiplePeriods(
   config: DatabaseConfig,
@@ -346,48 +541,29 @@ export async function generateHeatmapsForMultiplePeriods(
   gridDimensions: GridDimensions,
   periods: Array<{ key: string; timeRange: { start: string; end: string } }>
 ): Promise<HeatmapStack> {
+  console.warn('⚠️ generateHeatmapsForMultiplePeriods is deprecated. Use generateHeatmapsForMultipleTimeSlices instead.');
   
-  const result: HeatmapStack = {};
-  
-  console.log(`🔥 Generating heatmaps for ${periods.length} periods and ${recordtypes.length} recordtypes`);
-  
-  for (const period of periods) {
-    console.log(`📅 Processing period: ${period.key} (${period.timeRange.start} to ${period.timeRange.end})`);
+  // Convert old format to TimeSlice format
+  const timeSlices: TimeSlice[] = periods.map(period => {
+    const startYear = parseInt(period.timeRange.start.split('-')[0]);
+    const endYear = parseInt(period.timeRange.end.split('-')[0]);
     
-    // Initialize period structure
-    result[period.key] = {} as any;
-    
-    for (const recordtype of recordtypes) {
-      console.log(`📊 Processing recordtype: ${recordtype} for period ${period.key}`);
-      
-      // Accumulate counts for this recordtype and period
-      const accumulator = await accumulateCountsForRecordtype(
-        config,
-        bounds,
-        chunkConfig,
-        recordtype,
-        gridDimensions,
-        period.timeRange
-      );
-      
-      // Initialize recordtype structure
-      result[period.key][recordtype] = {
-        base: generateHeatmap(new Map(), gridDimensions), // Default empty
-        tags: {}
-      };
-      
-      // Generate base heatmap
-      const counts = accumulator.cellCounts.base.get(recordtype) || new Map();
-      result[period.key][recordtype].base = generateHeatmap(counts, gridDimensions);
-      
-      // Generate tag heatmaps
-      for (const tag of Array.from(accumulator.collectedTags)) {
-        const tagCounts = accumulator.cellCounts.tags.get(tag)?.get(recordtype) || new Map();
-        result[period.key][recordtype].tags[tag] = generateHeatmap(tagCounts, gridDimensions);
-      }
-    }
-  }
+    return {
+      key: period.key,
+      label: period.key.replace('_', '-'),
+      timeRange: period.timeRange,
+      startYear,
+      endYear,
+      durationYears: endYear - startYear
+    };
+  });
   
-  console.log(`✅ Completed heatmap generation for all periods and recordtypes`);
-  return result;
+  return generateHeatmapsForMultipleTimeSlices(
+    config,
+    bounds,
+    chunkConfig,
+    recordtypes,
+    gridDimensions,
+    timeSlices
+  );
 }
