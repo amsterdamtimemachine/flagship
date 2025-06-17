@@ -1,19 +1,22 @@
-// src/tests/heatmap-binary.test.ts - Test heatmap generation and binary serialization (UPDATED: Period-first structure)
+// src/tests/heatmap-binary.test.ts - Test heatmap generation and binary serialization (UPDATED: TimeSlice integration)
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { unlink } from "node:fs/promises";
 import { decode } from '@msgpack/msgpack';
 import {
   generateHeatmapsForRecordtype,
-  generateHeatmapBlueprint
-} from '../processing/heatmaps';
+  generateHeatmapBlueprint,
+  createTimeSlice,
+} from '../processing/heatmap';
+
+import type { TimeSlice } from '../processing';
 import {
   createVisualizationBinary
 } from '../serialization/visualization';
 import { AMSTERDAM_DATABASE_CONFIG } from '../config/defaults';
 import type { GridDimensions } from '../types/geo';
 
-describe("Heatmap Binary Serialization (Period-First Structure)", () => {
+describe("Heatmap Binary Serialization (TimeSlice Integration, Period-First Structure)", () => {
   
   // Use consistent bounds for both data fetching and grid dimensions
   const testBounds = {
@@ -35,7 +38,10 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
     maxLat: testBounds.maxLat
   };
 
-  const testBinaryPath = './test-visualization.bin';
+  // ✅ Create TimeSlice for testing
+  const testTimeSlice: TimeSlice = createTimeSlice(1900, 1950);
+
+  const testBinaryPath = './test-visualization-timeslice.bin';
 
   // Clean up test file after all tests
   afterAll(async () => {
@@ -46,8 +52,8 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
     }
   });
 
-  test("should generate text heatmaps (period-first) and save to binary", async () => {
-    console.log("🧪 Starting text heatmap generation and binary serialization test (period-first structure)...");
+  test("should generate text heatmaps (TimeSlice-based) and save to binary", async () => {
+    console.log("🧪 Starting text heatmap generation and binary serialization test (TimeSlice integration)...");
     
     const chunkConfig = {
       chunkRows: 2,
@@ -55,15 +61,11 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
       overlap: 0.001,
       delayMs: 200
     };
-    
-    const timeRange = {
-      start: '1900-01-01',
-      end: '1950-01-01'
-    };
 
     try {
-      // Step 1: Generate heatmaps for text recordtype only
-      console.log("📊 Generating heatmaps for 'text' recordtype...");
+      // ✅ Step 1: Generate heatmaps for text recordtype using TimeSlice
+      console.log("📊 Generating heatmaps for 'text' recordtype using TimeSlice...");
+      console.log(`📅 Time slice: ${testTimeSlice.label} (${testTimeSlice.durationYears} years)`);
       console.log(`📐 Using grid dimensions: ${testGridDimensions.colsAmount}x${testGridDimensions.rowsAmount}`);
       console.log(`📍 Grid bounds: lon(${testGridDimensions.minLon}, ${testGridDimensions.maxLon}), lat(${testGridDimensions.minLat}, ${testGridDimensions.maxLat})`);
       console.log(`📏 Cell size: ${testGridDimensions.cellWidth.toFixed(4)}° x ${testGridDimensions.cellHeight.toFixed(4)}°`);
@@ -74,22 +76,22 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
         chunkConfig,
         'text',
         testGridDimensions,
-        timeRange
+        testTimeSlice  // ✅ Using TimeSlice instead of timeRange
       );
 
-      // ✅ UPDATED: Test period-first structure
-      expect(textHeatmaps).toHaveProperty('1900_1950'); // Period key
-      expect(textHeatmaps['1900_1950']).toHaveProperty('text');
-      expect(textHeatmaps['1900_1950']['text']).toHaveProperty('base');
-      expect(textHeatmaps['1900_1950']['text']).toHaveProperty('tags');
+      // ✅ UPDATED: Test TimeSlice-based period-first structure
+      expect(textHeatmaps).toHaveProperty(testTimeSlice.key); // Using TimeSlice key
+      expect(textHeatmaps[testTimeSlice.key]).toHaveProperty('text');
+      expect(textHeatmaps[testTimeSlice.key]['text']).toHaveProperty('base');
+      expect(textHeatmaps[testTimeSlice.key]['text']).toHaveProperty('tags');
       
       // Verify the generated heatmap has correct dimensions
       const expectedCells = testGridDimensions.colsAmount * testGridDimensions.rowsAmount;
-      expect(textHeatmaps['1900_1950']['text'].base.countArray).toHaveLength(expectedCells);
-      console.log(`✅ Generated text heatmap with ${expectedCells} cells as expected`);
+      expect(textHeatmaps[testTimeSlice.key]['text'].base.countArray).toHaveLength(expectedCells);
+      console.log(`✅ Generated text heatmap with ${expectedCells} cells as expected for TimeSlice ${testTimeSlice.key}`);
 
       // Debug: Check actual data in heatmap
-      const countArray = Array.from(textHeatmaps['1900_1950']['text'].base.countArray);
+      const countArray = Array.from(textHeatmaps[testTimeSlice.key]['text'].base.countArray);
       const totalFeatures = countArray.reduce((sum, count) => sum + count, 0);
       const nonZeroCells = countArray.filter(count => count > 0).length;
       console.log(`📊 Heatmap data: ${totalFeatures} total features in ${nonZeroCells} cells`);
@@ -98,19 +100,19 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
       const blueprint = generateHeatmapBlueprint(testGridDimensions);
       expect(blueprint.cells).toHaveLength(expectedCells);
 
-      // Step 3: Save to binary (textHeatmaps already in correct period-first format)
-      console.log("💾 Saving text heatmaps to binary file...");
+      // ✅ Step 3: Save to binary (textHeatmaps already in correct TimeSlice-based format)
+      console.log("💾 Saving text heatmaps to binary file using TimeSlice structure...");
       await createVisualizationBinary(
         testBinaryPath,
         textHeatmaps, // Already in format: { "1900_1950": { "text": { base: ..., tags: ... } } }
         testGridDimensions,
         blueprint,
-        { start: '1900-01-01', end: '1950-01-01' },
+        testTimeSlice.timeRange, // ✅ Using TimeSlice timeRange
         ['text'], // Only text recordtype
         [] // No tags in current API data
       );
 
-      console.log("✅ Binary file created successfully");
+      console.log("✅ Binary file created successfully with TimeSlice structure");
 
       // Verify file exists
       const file = Bun.file(testBinaryPath);
@@ -127,8 +129,8 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
     }
   }, 45000);
 
-  test("should load and verify binary file metadata", async () => {
-    console.log("🔍 Loading and verifying binary file metadata...");
+  test("should load and verify binary file metadata with TimeSlice info", async () => {
+    console.log("🔍 Loading and verifying binary file metadata with TimeSlice information...");
 
     try {
       // Read the binary file
@@ -175,9 +177,9 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
       expect(metadata.heatmapBlueprint.cols).toBe(testGridDimensions.colsAmount);
       expect(metadata.heatmapBlueprint.cells).toHaveLength(testGridDimensions.colsAmount * testGridDimensions.rowsAmount);
 
-      // Verify time range
-      expect(metadata.timeRange.start).toBe('1900-01-01');
-      expect(metadata.timeRange.end).toBe('1950-01-01');
+      // ✅ Verify TimeSlice-based time range
+      expect(metadata.timeRange.start).toBe(testTimeSlice.timeRange.start);
+      expect(metadata.timeRange.end).toBe(testTimeSlice.timeRange.end);
 
       // Verify recordtypes and tags
       expect(metadata.recordtypes).toContain('text');
@@ -189,10 +191,10 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
       expect(metadata.sections.heatmaps.offset).toBeGreaterThanOrEqual(0);
       expect(metadata.sections.heatmaps.length).toBeGreaterThan(0);
 
-      console.log("✅ Metadata verification successful");
+      console.log("✅ Metadata verification successful with TimeSlice information");
       console.log(`   - Grid: ${metadata.gridDimensions.colsAmount}x${metadata.gridDimensions.rowsAmount}`);
       console.log(`   - Bounds: lon(${metadata.gridDimensions.minLon}, ${metadata.gridDimensions.maxLon}), lat(${metadata.gridDimensions.minLat}, ${metadata.gridDimensions.maxLat})`);
-      console.log(`   - Time range: ${metadata.timeRange.start} to ${metadata.timeRange.end}`);
+      console.log(`   - TimeSlice range: ${metadata.timeRange.start} to ${metadata.timeRange.end}`);
       console.log(`   - Record types: ${metadata.recordtypes.join(', ')}`);
       console.log(`   - Tags: ${metadata.tags.length} (none in current API data)`);
       console.log(`   - Heatmaps section: ${metadata.sections.heatmaps.length} bytes`);
@@ -203,8 +205,8 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
     }
   }, 10000);
 
-  test("should load and verify period-first heatmaps data from binary", async () => {
-    console.log("🔥 Loading and verifying period-first heatmaps data...");
+  test("should load and verify TimeSlice-based heatmaps data from binary", async () => {
+    console.log("🔥 Loading and verifying TimeSlice-based heatmaps data...");
 
     try {
       // Read the binary file
@@ -238,10 +240,10 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
       const heatmapsData = decode(heatmapsBytes);
       console.log("🔥 Heatmaps data loaded successfully");
 
-      // ✅ UPDATED: Verify period-first structure
-      expect(heatmapsData).toHaveProperty('1900_1950');
+      // ✅ UPDATED: Verify TimeSlice-based period-first structure
+      expect(heatmapsData).toHaveProperty(testTimeSlice.key);
       
-      const periodHeatmaps = heatmapsData['1900_1950'];
+      const periodHeatmaps = heatmapsData[testTimeSlice.key];
       expect(periodHeatmaps).toHaveProperty('text');
       expect(periodHeatmaps['text']).toHaveProperty('base');
       expect(periodHeatmaps['text']).toHaveProperty('tags');
@@ -268,9 +270,10 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
       const maxCount = Math.max(...countArray);
       const maxDensity = Math.max(...densityArray);
 
-      console.log(`📊 Text heatmap data verification (period-first structure):`);
-      console.log(`   - Period: 1900_1950`);
-      console.log(`   - Access pattern: heatmaps["1900_1950"]["text"].base`);
+      console.log(`📊 Text heatmap data verification (TimeSlice-based structure):`);
+      console.log(`   - TimeSlice: ${testTimeSlice.label} (key: ${testTimeSlice.key})`);
+      console.log(`   - Access pattern: heatmaps["${testTimeSlice.key}"]["text"].base`);
+      console.log(`   - Duration: ${testTimeSlice.durationYears} years`);
       console.log(`   - Total features: ${totalCounts}`);
       console.log(`   - Non-zero cells: ${nonZeroCells}`);
       console.log(`   - Max count: ${maxCount}`);
@@ -287,7 +290,7 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
         expect(density).not.toBeNaN();
       }
 
-      // ✅ UPDATED: Verify other recordtypes exist but are empty (period-first access)
+      // ✅ UPDATED: Verify other recordtypes exist but are empty (TimeSlice-based access)
       expect(periodHeatmaps).toHaveProperty('image');
       expect(periodHeatmaps).toHaveProperty('event');
       
@@ -297,16 +300,16 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
       expect(Array.from(imageHeatmap.countArray)).toEqual(new Array(expectedLength).fill(0));
       expect(Array.from(eventHeatmap.countArray)).toEqual(new Array(expectedLength).fill(0));
 
-      console.log("✅ Period-first heatmaps data verification successful");
+      console.log("✅ TimeSlice-based heatmaps data verification successful");
 
     } catch (error) {
-      console.error("❌ Period-first heatmaps data verification failed:", error);
+      console.error("❌ TimeSlice-based heatmaps data verification failed:", error);
       throw error;
     }
   }, 10000);
 
-  test("should handle round-trip consistency for period-first structure", async () => {
-    console.log("🔄 Testing round-trip consistency for period-first structure...");
+  test("should handle round-trip consistency for TimeSlice structure", async () => {
+    console.log("🔄 Testing round-trip consistency for TimeSlice structure...");
 
     try {
       // Load heatmaps from binary file first
@@ -326,7 +329,7 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
       
       const loadedHeatmapsData = decode(heatmapsBytes);
 
-      // Generate fresh heatmaps using the SAME parameters as the saved ones
+      // ✅ Generate fresh heatmaps using the SAME TimeSlice parameters as the saved ones
       const chunkConfig = {
         chunkRows: 2,
         chunkCols: 2,
@@ -334,23 +337,24 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
         delayMs: 100
       };
 
-      console.log("🔄 Generating fresh text heatmaps for comparison...");
+      console.log("🔄 Generating fresh text heatmaps for comparison using TimeSlice...");
       const originalHeatmaps = await generateHeatmapsForRecordtype(
         AMSTERDAM_DATABASE_CONFIG,
         testBounds,
         chunkConfig,
         'text',
         testGridDimensions, // Use same grid dimensions
-        { start: '1900-01-01', end: '1950-01-01' }
+        testTimeSlice       // ✅ Use same TimeSlice
       );
 
-      // ✅ UPDATED: Compare using period-first structure
-      const originalCountArray = Array.from(originalHeatmaps['1900_1950']['text'].base.countArray);
-      const loadedCountArray = Array.from(loadedHeatmapsData['1900_1950']['text'].base.countArray);
+      // ✅ UPDATED: Compare using TimeSlice-based structure
+      const originalCountArray = Array.from(originalHeatmaps[testTimeSlice.key]['text'].base.countArray);
+      const loadedCountArray = Array.from(loadedHeatmapsData[testTimeSlice.key]['text'].base.countArray);
 
       // Log comparison info
-      console.log(`📊 Text heatmap comparison (period-first structure):`);
-      console.log(`   - Access pattern: heatmaps["1900_1950"]["text"].base`);
+      console.log(`📊 Text heatmap comparison (TimeSlice-based structure):`);
+      console.log(`   - TimeSlice: ${testTimeSlice.label} (key: ${testTimeSlice.key})`);
+      console.log(`   - Access pattern: heatmaps["${testTimeSlice.key}"]["text"].base`);
       console.log(`   - Original array length: ${originalCountArray.length}`);
       console.log(`   - Loaded array length: ${loadedCountArray.length}`);
       console.log(`   - Original total count: ${originalCountArray.reduce((sum, c) => sum + c, 0)}`);
@@ -371,20 +375,20 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
       expect(originalCountArray.length).toBe(expectedLength);
       expect(loadedCountArray.length).toBe(expectedLength);
 
-      // ✅ UPDATED: Verify density arrays structure (period-first)
-      const originalDensityArray = Array.from(originalHeatmaps['1900_1950']['text'].base.densityArray);
-      const loadedDensityArray = Array.from(loadedHeatmapsData['1900_1950']['text'].base.densityArray);
+      // ✅ UPDATED: Verify density arrays structure (TimeSlice-based)
+      const originalDensityArray = Array.from(originalHeatmaps[testTimeSlice.key]['text'].base.densityArray);
+      const loadedDensityArray = Array.from(loadedHeatmapsData[testTimeSlice.key]['text'].base.densityArray);
 
       expect(originalDensityArray.length).toBe(expectedLength);
       expect(loadedDensityArray.length).toBe(expectedLength);
 
-      console.log("✅ Round-trip structural consistency verified for period-first structure");
+      console.log("✅ Round-trip structural consistency verified for TimeSlice structure");
 
       // Data consistency check (API data can vary between calls)
       if (loadedNonZero > 0 && originalNonZero > 0) {
         console.log("📊 Both heatmaps contain data - structures are consistent");
       } else if (loadedNonZero === 0 && originalNonZero === 0) {
-        console.log("ℹ️ Both heatmaps are empty - consistent but no data in time range");
+        console.log("ℹ️ Both heatmaps are empty - consistent but no data in TimeSlice range");
       } else {
         console.log("⚠️ Data varies between API calls - this is expected for live APIs");
       }
@@ -395,8 +399,8 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
     }
   }, 30000);
 
-  test("should verify period-first grid coordinate mapping", async () => {
-    console.log("🗺️ Testing period-first grid coordinate mapping...");
+  test("should verify TimeSlice-based grid coordinate mapping", async () => {
+    console.log("🗺️ Testing TimeSlice-based grid coordinate mapping...");
 
     try {
       // Load the saved metadata to verify grid setup
@@ -409,7 +413,8 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
 
       // Verify grid covers the correct area
       const gridDims = metadata.gridDimensions;
-      console.log(`🗺️ Grid setup verification (period-first structure):`);
+      console.log(`🗺️ Grid setup verification (TimeSlice-based structure):`);
+      console.log(`   - TimeSlice: ${testTimeSlice.label} (duration: ${testTimeSlice.durationYears} years)`);
       console.log(`   - Grid size: ${gridDims.colsAmount}x${gridDims.rowsAmount} = ${gridDims.colsAmount * gridDims.rowsAmount} cells`);
       console.log(`   - Longitude range: ${gridDims.minLon} to ${gridDims.maxLon} (width: ${(gridDims.maxLon - gridDims.minLon).toFixed(4)}°)`);
       console.log(`   - Latitude range: ${gridDims.minLat} to ${gridDims.maxLat} (height: ${(gridDims.maxLat - gridDims.minLat).toFixed(4)}°)`);
@@ -428,7 +433,7 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
       expect(cell_2_2).toBeDefined();
       expect(cell_4_4).toBeDefined();
 
-      console.log(`🗺️ Sample cell coordinates (period-first structure):`);
+      console.log(`🗺️ Sample cell coordinates (TimeSlice-based structure):`);
       console.log(`   - Cell 0_0: lon(${cell_0_0!.bounds.minLon.toFixed(4)}, ${cell_0_0!.bounds.maxLon.toFixed(4)}), lat(${cell_0_0!.bounds.minLat.toFixed(4)}, ${cell_0_0!.bounds.maxLat.toFixed(4)})`);
       console.log(`   - Cell 2_2: lon(${cell_2_2!.bounds.minLon.toFixed(4)}, ${cell_2_2!.bounds.maxLon.toFixed(4)}), lat(${cell_2_2!.bounds.minLat.toFixed(4)}, ${cell_2_2!.bounds.maxLat.toFixed(4)})`);
       console.log(`   - Cell 4_4: lon(${cell_4_4!.bounds.minLon.toFixed(4)}, ${cell_4_4!.bounds.maxLon.toFixed(4)}), lat(${cell_4_4!.bounds.minLat.toFixed(4)}, ${cell_4_4!.bounds.maxLat.toFixed(4)})`);
@@ -441,16 +446,16 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
       expect(cell_4_4!.bounds.maxLon).toBeCloseTo(gridDims.maxLon, 5);
       expect(cell_4_4!.bounds.maxLat).toBeCloseTo(gridDims.maxLat, 5);
 
-      console.log("✅ Period-first grid coordinate mapping verification successful");
+      console.log("✅ TimeSlice-based grid coordinate mapping verification successful");
 
     } catch (error) {
-      console.error("❌ Period-first grid coordinate mapping verification failed:", error);
+      console.error("❌ TimeSlice-based grid coordinate mapping verification failed:", error);
       throw error;
     }
   }, 10000);
 
-  test("should validate period-first structure access patterns", async () => {
-    console.log("🔍 Validating period-first structure access patterns...");
+  test("should validate TimeSlice structure access patterns", async () => {
+    console.log("🔍 Validating TimeSlice structure access patterns...");
 
     try {
       // Load heatmaps from binary
@@ -470,26 +475,26 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
       
       const heatmapsData = decode(heatmapsBytes);
 
-      console.log("✅ Demonstrating period-first access patterns:");
+      console.log("✅ Demonstrating TimeSlice-based access patterns:");
       
-      // ✅ Period-first access patterns
-      console.log("   1. Access period: heatmapsData['1900_1950']");
-      expect(heatmapsData).toHaveProperty('1900_1950');
+      // ✅ TimeSlice-based access patterns
+      console.log(`   1. Access TimeSlice: heatmapsData['${testTimeSlice.key}']`);
+      expect(heatmapsData).toHaveProperty(testTimeSlice.key);
       
-      console.log("   2. Access recordtype: heatmapsData['1900_1950']['text']");
-      expect(heatmapsData['1900_1950']).toHaveProperty('text');
+      console.log(`   2. Access recordtype: heatmapsData['${testTimeSlice.key}']['text']`);
+      expect(heatmapsData[testTimeSlice.key]).toHaveProperty('text');
       
-      console.log("   3. Access base heatmap: heatmapsData['1900_1950']['text'].base");
-      expect(heatmapsData['1900_1950']['text']).toHaveProperty('base');
+      console.log(`   3. Access base heatmap: heatmapsData['${testTimeSlice.key}']['text'].base`);
+      expect(heatmapsData[testTimeSlice.key]['text']).toHaveProperty('base');
       
-      console.log("   4. Access tag heatmaps: heatmapsData['1900_1950']['text'].tags");
-      expect(heatmapsData['1900_1950']['text']).toHaveProperty('tags');
+      console.log(`   4. Access tag heatmaps: heatmapsData['${testTimeSlice.key}']['text'].tags`);
+      expect(heatmapsData[testTimeSlice.key]['text']).toHaveProperty('tags');
       
-      // Verify all recordtypes exist for the period
-      const period = heatmapsData['1900_1950'];
+      // Verify all recordtypes exist for the TimeSlice
+      const period = heatmapsData[testTimeSlice.key];
       const recordtypes = ['text', 'image', 'event'];
       
-      console.log("   5. All recordtypes exist for period:");
+      console.log("   5. All recordtypes exist for TimeSlice:");
       for (const recordtype of recordtypes) {
         console.log(`      - ${recordtype}: ✓`);
         expect(period).toHaveProperty(recordtype);
@@ -506,15 +511,48 @@ describe("Heatmap Binary Serialization (Period-First Structure)", () => {
       
       console.log(`   6. Structure validation: ✓ (${expectedLength} cells per heatmap)`);
       
-      // Show data access example
+      // Show data access example with TimeSlice metadata
       const totalFeatures = Array.from(textHeatmap.countArray).reduce((sum, count) => sum + count, 0);
-      console.log(`   7. Data access example: ${totalFeatures} total text features in period 1900_1950`);
+      console.log(`   7. Data access example: ${totalFeatures} total text features in ${testTimeSlice.label}`);
+      console.log(`   8. TimeSlice metadata: ${testTimeSlice.durationYears} years, key="${testTimeSlice.key}"`);
 
-      console.log("✅ Period-first structure access patterns validated");
+      console.log("✅ TimeSlice structure access patterns validated");
 
     } catch (error) {
-      console.error("❌ Period-first structure validation failed:", error);
+      console.error("❌ TimeSlice structure validation failed:", error);
       throw error;
     }
   }, 10000);
+
+  test("should demonstrate TimeSlice vs old period approach", async () => {
+    console.log("🆚 Demonstrating TimeSlice advantages over old period approach...");
+
+    // ✅ Current TimeSlice approach
+    console.log("✅ TimeSlice approach benefits:");
+    console.log(`   - Rich metadata: ${JSON.stringify(testTimeSlice, null, 2)}`);
+    console.log(`   - Type safety: TypeScript knows structure`);
+    console.log(`   - API consistency: Same as histogram processing`);
+    console.log(`   - Easy calculations: ${testTimeSlice.durationYears} years duration`);
+    console.log(`   - Display ready: "${testTimeSlice.label}" label`);
+    console.log(`   - API ready: ${testTimeSlice.timeRange.start} to ${testTimeSlice.timeRange.end}`);
+    
+    // ❌ Old approach (deprecated)
+    console.log("❌ Old period string approach drawbacks:");
+    console.log(`   - Just a string: "1900_1950"`);
+    console.log(`   - Manual parsing required for any metadata`);
+    console.log(`   - No type safety or IntelliSense`);
+    console.log(`   - Inconsistent between heatmaps and histograms`);
+    console.log(`   - Harder to maintain and debug`);
+    
+    console.log("🎯 Migration benefits:");
+    console.log("   - Better developer experience");
+    console.log("   - Consistent API across all processing functions");
+    console.log("   - Rich analysis capabilities");
+    console.log("   - Future-proof for additional time slice metadata");
+    
+    expect(testTimeSlice.key).toBe("1900_1950"); // Same key format for compatibility
+    expect(testTimeSlice.label).toBe("1900-1950"); // But richer metadata available
+    
+    console.log("✅ TimeSlice migration maintains compatibility while adding value");
+  });
 });
