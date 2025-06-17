@@ -11,8 +11,8 @@ import type { DatabaseConfig, ChunkingConfig } from '../data-sources';
 import { streamFeaturesByChunks } from '../data-sources';
 
 export interface Heatmap {
-  densityArray: number[] | Float32Array;
-  countArray: number[] | Uint32Array;
+  densityArray: number[];
+  countArray: number[];
 }
 
 export interface HeatmapStack {
@@ -240,8 +240,8 @@ export function generateHeatmap(
   }
   
   return {
-    countArray: new Uint32Array(countArray),
-    densityArray: new Float32Array(densityArray)
+    countArray,
+    densityArray,
   };
 }
 
@@ -249,7 +249,7 @@ export function generateHeatmap(
  * Generate complete heatmap stack from accumulator
  */
 export function generateHeatmapStack(accumulator: HeatmapAccumulator): HeatmapStack {
-  const recordtypes: RecordType[] = ['image', 'text', 'event'];
+  const recordtypes: RecordType[] = ['text'];
   
   // Initialize result structure
   const result: HeatmapStack = {

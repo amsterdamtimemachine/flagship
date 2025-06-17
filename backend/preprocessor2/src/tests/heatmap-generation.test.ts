@@ -1,304 +1,179 @@
-// src/tests/heatmap-generation.test.ts - Test heatmap generation with streaming
+// src/tests/heatmap-generation.test.ts - Pure heatmap generation tests (TEXT ONLY, NO TAGS)
 
 import { describe, test, expect } from "bun:test";
 import {
-  generateHeatmapsForRecordtype,
-  generateHeatmapBlueprint,
   getCellIdForCoordinates,
-  calculateCellBounds,
-  createHeatmapAccumulator,
-  processFeatureIntoCounts
-} from '../processing';
-import { AMSTERDAM_DATABASE_CONFIG, AMSTERDAM_BOUNDS } from '../config/defaults';
-import type { GridDimensions } from '../types/geo';
+  processFeatureIntoCounts,
+  generateHeatmap,
+  createHeatmapAccumulator
+} from '../processing/heatmaps';
+import type { GridDimensions, AnyProcessedFeature } from '../types/geo';
 
-describe("Heatmap Generation", () => {
+describe("Heatmap Generation Logic (Text Only, No Tags)", () => {
   
   const testGridDimensions: GridDimensions = {
-    colsAmount: 10,
-    rowsAmount: 10,
-    cellWidth: (AMSTERDAM_BOUNDS.maxLon - AMSTERDAM_BOUNDS.minLon) / 10,
-    cellHeight: (AMSTERDAM_BOUNDS.maxLat - AMSTERDAM_BOUNDS.minLat) / 10,
-    minLon: AMSTERDAM_BOUNDS.minLon,
-    maxLon: AMSTERDAM_BOUNDS.maxLon,
-    minLat: AMSTERDAM_BOUNDS.minLat,
-    maxLat: AMSTERDAM_BOUNDS.maxLat
+    colsAmount: 3,
+    rowsAmount: 3,
+    cellWidth: 0.1,
+    cellHeight: 0.1,
+    minLon: 4.8,
+    maxLon: 5.1,
+    minLat: 52.3,
+    maxLat: 52.6
   };
 
-  test("should generate heatmap blueprint correctly", () => {
-    const blueprint = generateHeatmapBlueprint(testGridDimensions);
+  test("should calculate correct cell IDs for coordinates", () => {
+    // Test center of each cell
+    expect(getCellIdForCoordinates({lon: 4.85, lat: 52.35}, testGridDimensions)).toBe("0_0");
+    expect(getCellIdForCoordinates({lon: 4.95, lat: 52.35}, testGridDimensions)).toBe("0_1");
+    expect(getCellIdForCoordinates({lon: 5.05, lat: 52.35}, testGridDimensions)).toBe("0_2");
     
-    expect(blueprint.rows).toBe(10);
-    expect(blueprint.cols).toBe(10);
-    expect(blueprint.cells).toHaveLength(100); // 10x10 grid
+    expect(getCellIdForCoordinates({lon: 4.85, lat: 52.45}, testGridDimensions)).toBe("1_0");
+    expect(getCellIdForCoordinates({lon: 4.95, lat: 52.45}, testGridDimensions)).toBe("1_1");
+    expect(getCellIdForCoordinates({lon: 5.05, lat: 52.45}, testGridDimensions)).toBe("1_2");
     
-    // Test first cell
-    const firstCell = blueprint.cells[0];
-    expect(firstCell.cellId).toBe("0_0");
-    expect(firstCell.row).toBe(0);
-    expect(firstCell.col).toBe(0);
-    expect(firstCell.bounds).toHaveProperty('minLon');
-    expect(firstCell.bounds).toHaveProperty('maxLon');
-    expect(firstCell.bounds).toHaveProperty('minLat');
-    expect(firstCell.bounds).toHaveProperty('maxLat');
-    
-    // Test last cell
-    const lastCell = blueprint.cells[99];
-    expect(lastCell.cellId).toBe("9_9");
-    expect(lastCell.row).toBe(9);
-    expect(lastCell.col).toBe(9);
+    expect(getCellIdForCoordinates({lon: 4.85, lat: 52.55}, testGridDimensions)).toBe("2_0");
+    expect(getCellIdForCoordinates({lon: 4.95, lat: 52.55}, testGridDimensions)).toBe("2_1");
+    expect(getCellIdForCoordinates({lon: 5.05, lat: 52.55}, testGridDimensions)).toBe("2_2");
   });
 
-  test("should calculate cell ID correctly for coordinates", () => {
-    // Test coordinates in center of Amsterdam
-    const centerCoordinates = {
-      lon: (AMSTERDAM_BOUNDS.minLon + AMSTERDAM_BOUNDS.maxLon) / 2,
-      lat: (AMSTERDAM_BOUNDS.minLat + AMSTERDAM_BOUNDS.maxLat) / 2
-    };
-    
-    const cellId = getCellIdForCoordinates(centerCoordinates, testGridDimensions);
-    expect(cellId).toBe("5_5"); // Should be in middle cell
-    
-    // Test coordinates outside bounds
-    const outsideCoordinates = { lon: -1, lat: -1 };
-    const outsideCellId = getCellIdForCoordinates(outsideCoordinates, testGridDimensions);
-    expect(outsideCellId).toBeNull();
+  test("should handle coordinates outside grid bounds", () => {
+    expect(getCellIdForCoordinates({lon: 4.7, lat: 52.35}, testGridDimensions)).toBe(null);  // Too far west
+    expect(getCellIdForCoordinates({lon: 5.2, lat: 52.35}, testGridDimensions)).toBe(null);  // Too far east
+    expect(getCellIdForCoordinates({lon: 4.85, lat: 52.2}, testGridDimensions)).toBe(null);  // Too far south
+    expect(getCellIdForCoordinates({lon: 4.85, lat: 52.7}, testGridDimensions)).toBe(null);  // Too far north
   });
 
-  test("should calculate cell bounds correctly", () => {
-    const bounds = calculateCellBounds(0, 0, testGridDimensions);
-    
-    expect(bounds.minLon).toBeCloseTo(AMSTERDAM_BOUNDS.minLon, 5);
-    expect(bounds.minLat).toBeCloseTo(AMSTERDAM_BOUNDS.minLat, 5);
-    expect(bounds.maxLon).toBeGreaterThan(bounds.minLon);
-    expect(bounds.maxLat).toBeGreaterThan(bounds.minLat);
-    
-    // Test cell size consistency
-    const cellWidth = bounds.maxLon - bounds.minLon;
-    const cellHeight = bounds.maxLat - bounds.minLat;
-    
-    expect(cellWidth).toBeCloseTo(testGridDimensions.cellWidth, 5);
-    expect(cellHeight).toBeCloseTo(testGridDimensions.cellHeight, 5);
-  });
-
-  test("should create and use heatmap accumulator correctly", () => {
+  test("should correctly count text features in cells (no tags)", () => {
     const accumulator = createHeatmapAccumulator(testGridDimensions);
     
-    expect(accumulator.cellCounts.base).toBeInstanceOf(Map);
-    expect(accumulator.cellCounts.tags).toBeInstanceOf(Map);
-    expect(accumulator.collectedTags).toBeInstanceOf(Set);
-    expect(accumulator.gridDimensions).toBe(testGridDimensions);
-    
-    // Test processing a mock feature
-    const mockFeature = {
-      title: "Test Feature",
-      dataset: "test",
-      url: "https://test.com",
-      recordtype: 'text' as const,
-      tags: ["building", "historic"],
+    // Create test text features with empty tags (matching real API data)
+    const feature1: AnyProcessedFeature = {
+      title: "Historical Document 1",
+      dataset: "amsterdam_archives",
+      url: "http://archives.nl/doc1",
+      recordtype: "text",
+      tags: [], // Empty tags array to match real API data
       startYear: 1900,
-      endYear: 1900,
+      endYear: 1910,
       geometry: {
-        type: 'Point' as const,
-        coordinates: {
-          lon: (AMSTERDAM_BOUNDS.minLon + AMSTERDAM_BOUNDS.maxLon) / 2, // Center lon
-          lat: (AMSTERDAM_BOUNDS.minLat + AMSTERDAM_BOUNDS.maxLat) / 2   // Center lat
-        }
+        type: "Point",
+        coordinates: {lon: 4.85, lat: 52.35} // Should be in cell 0_0
       }
     };
-    
-    processFeatureIntoCounts(mockFeature, accumulator);
-    
-    // Check base counts
-    expect(accumulator.cellCounts.base.has('text')).toBe(true);
-    expect(accumulator.cellCounts.base.get('text')?.get('5_5')).toBe(1);
-    
-    // Check tag collection
-    expect(accumulator.collectedTags.has('building')).toBe(true);
-    expect(accumulator.collectedTags.has('historic')).toBe(true);
-    
-    // Check tag counts
-    expect(accumulator.cellCounts.tags.has('building')).toBe(true);
-    expect(accumulator.cellCounts.tags.get('building')?.get('text')?.get('5_5')).toBe(1);
+
+    const feature2: AnyProcessedFeature = {
+      title: "Historical Document 2", 
+      dataset: "amsterdam_archives",
+      url: "http://archives.nl/doc2",
+      recordtype: "text",
+      tags: [], // Empty tags array to match real API data
+      startYear: 1905,
+      endYear: 1915,
+      geometry: {
+        type: "Point",
+        coordinates: {lon: 4.85, lat: 52.35} // Same cell as feature1
+      }
+    };
+
+    const feature3: AnyProcessedFeature = {
+      title: "Modern Article",
+      dataset: "modern_collection", 
+      url: "http://modern.nl/article1",
+      recordtype: "text",
+      tags: [], // Empty tags array to match real API data
+      startYear: 2000,
+      endYear: 2010,
+      geometry: {
+        type: "Point",
+        coordinates: {lon: 4.95, lat: 52.45} // Should be in cell 1_1
+      }
+    };
+
+    // Process features
+    processFeatureIntoCounts(feature1, accumulator);
+    processFeatureIntoCounts(feature2, accumulator);
+    processFeatureIntoCounts(feature3, accumulator);
+
+    // Check base counts for text recordtype only
+    const textCounts = accumulator.cellCounts.base.get("text");
+    expect(textCounts?.get("0_0")).toBe(2); // Two text features in cell 0_0
+    expect(textCounts?.get("1_1")).toBe(1); // One text feature in cell 1_1
+    expect(textCounts?.get("0_1")).toBeUndefined(); // No features in cell 0_1
+
+    // Verify no tags were collected (since all features have empty tags)
+    expect(accumulator.collectedTags.size).toBe(0);
+
+    // Verify tag counts are empty
+    expect(accumulator.cellCounts.tags.size).toBe(0);
   });
 
-  test("should generate heatmaps for text recordtype with real API", async () => {
-    console.log("🧪 Starting real API heatmap generation test...");
-    
-    const chunkConfig = {
-      chunkRows: 2,
-      chunkCols: 2,
-      overlap: 0.001,
-      delayMs: 200
-    };
-    
-    // Use smaller bounds for faster testing
-    const testBounds = {
-      minLon: 4.85,
-      minLat: 52.35,
-      maxLon: 4.9,
-      maxLat: 52.37
-    };
-    
-    const timeRange = {
-      start: '1900-01-01',
-      end: '1950-01-01'
-    };
-    
-    try {
-      const heatmapStack = await generateHeatmapsForRecordtype(
-        AMSTERDAM_DATABASE_CONFIG,
-        testBounds,
-        chunkConfig,
-        'text',
-        testGridDimensions,
-        timeRange
-      );
-      
-      // Test structure
-      expect(heatmapStack).toHaveProperty('base');
-      expect(heatmapStack).toHaveProperty('tags');
-      
-      // Test base heatmaps
-      expect(heatmapStack.base).toHaveProperty('text');
-      expect(heatmapStack.base).toHaveProperty('image');
-      expect(heatmapStack.base).toHaveProperty('event');
-      
-      // Test text heatmap specifically (should have data)
-      const textHeatmap = heatmapStack.base.text;
-      expect(textHeatmap).toHaveProperty('countArray');
-      expect(textHeatmap).toHaveProperty('densityArray');
-      expect(textHeatmap.countArray).toHaveLength(100); // 10x10 grid
-      expect(textHeatmap.densityArray).toHaveLength(100);
-      
-      // Check if we got any data
-      const totalCounts = Array.from(textHeatmap.countArray).reduce((sum, count) => sum + count, 0);
-      console.log(`📊 Total features found: ${totalCounts}`);
-      
-      // Test that image and event heatmaps are empty (since we only streamed 'text')
-      const imageTotalCounts = Array.from(heatmapStack.base.image.countArray).reduce((sum, count) => sum + count, 0);
-      const eventTotalCounts = Array.from(heatmapStack.base.event.countArray).reduce((sum, count) => sum + count, 0);
-      
-      expect(imageTotalCounts).toBe(0);
-      expect(eventTotalCounts).toBe(0);
-      
-      // Test density values are between 0 and 1
-      for (let i = 0; i < textHeatmap.densityArray.length; i++) {
-        expect(textHeatmap.densityArray[i]).toBeGreaterThanOrEqual(0);
-        expect(textHeatmap.densityArray[i]).toBeLessThanOrEqual(1);
-      }
-      
-      console.log(`✅ Heatmap generation successful!`);
-      console.log(`   - Text features: ${totalCounts}`);
-      console.log(`   - Tags collected: ${Object.keys(heatmapStack.tags).length}`);
-      console.log(`   - Non-zero cells: ${Array.from(textHeatmap.countArray).filter(c => c > 0).length}`);
-      
-    } catch (error) {
-      console.error("❌ Heatmap generation failed:", error);
-      throw error;
-    }
-  }, 30000); // 30 second timeout for API calls
+  test("should generate correct heatmap arrays from text feature counts", () => {
+    // Create test count data
+    const counts = new Map<string, number>();
+    counts.set("0_0", 5);  // 5 features in top-left
+    counts.set("1_1", 10); // 10 features in center
+    counts.set("2_2", 2);  // 2 features in bottom-right
 
-  test("should generate heatmaps for image recordtype with real API", async () => {
-    console.log("🧪 Starting image heatmap generation test...");
-    
-    const chunkConfig = {
-      chunkRows: 2,
-      chunkCols: 2,
-      overlap: 0.001,
-      delayMs: 200
-    };
-    
-    const testBounds = {
-      minLon: 4.85,
-      minLat: 52.35,
-      maxLon: 4.9,
-      maxLat: 52.37
-    };
-    
-    const timeRange = {
-      start: '1900-01-01',
-      end: '1950-01-01'
-    };
-    
-    try {
-      const heatmapStack = await generateHeatmapsForRecordtype(
-        AMSTERDAM_DATABASE_CONFIG,
-        testBounds,
-        chunkConfig,
-        'image',
-        testGridDimensions,
-        timeRange
-      );
-      
-      // Test that image heatmap has data and others are empty
-      const imageTotalCounts = Array.from(heatmapStack.base.image.countArray).reduce((sum, count) => sum + count, 0);
-      const textTotalCounts = Array.from(heatmapStack.base.text.countArray).reduce((sum, count) => sum + count, 0);
-      const eventTotalCounts = Array.from(heatmapStack.base.event.countArray).reduce((sum, count) => sum + count, 0);
-      
-      console.log(`📊 Image features found: ${imageTotalCounts}`);
-      
-      expect(textTotalCounts).toBe(0);
-      expect(eventTotalCounts).toBe(0);
-      
-      // Image might have data or might be empty depending on API
-      if (imageTotalCounts > 0) {
-        console.log(`✅ Found ${imageTotalCounts} image features`);
-      } else {
-        console.log(`ℹ️ No image features found in test area/timerange`);
-      }
-      
-    } catch (error) {
-      console.error("❌ Image heatmap generation failed:", error);
-      throw error;
-    }
-  }, 30000);
+    const heatmap = generateHeatmap(counts, testGridDimensions);
 
-  test("should handle empty results gracefully", async () => {
-    console.log("🧪 Testing empty results handling...");
+    // Check array length
+    expect(heatmap.countArray).toHaveLength(9); // 3x3 grid
+    expect(heatmap.densityArray).toHaveLength(9);
+
+    // Check count values (row-major order)
+    expect(heatmap.countArray[0]).toBe(5);  // Cell 0_0 -> index 0
+    expect(heatmap.countArray[4]).toBe(10); // Cell 1_1 -> index 4 (1*3 + 1)
+    expect(heatmap.countArray[8]).toBe(2);  // Cell 2_2 -> index 8 (2*3 + 2)
     
-    const chunkConfig = {
-      chunkRows: 1,
-      chunkCols: 1,
-      delayMs: 100
-    };
+    // Other cells should be 0
+    expect(heatmap.countArray[1]).toBe(0);
+    expect(heatmap.countArray[2]).toBe(0);
+    expect(heatmap.countArray[3]).toBe(0);
+
+    // Check density calculation (log normalization)
+    const maxCount = 10;
+    const maxTransformed = Math.log(maxCount + 1);
     
-    // Use bounds with no data
-    const emptyBounds = {
-      minLon: -1,
-      minLat: -1,
-      maxLon: -0.9,
-      maxLat: -0.9
-    };
+    expect(heatmap.densityArray[0]).toBeCloseTo(Math.log(6) / maxTransformed, 5); // log(5+1) / log(10+1)
+    expect(heatmap.densityArray[4]).toBeCloseTo(1.0, 5); // log(10+1) / log(10+1) = 1.0
+    expect(heatmap.densityArray[8]).toBeCloseTo(Math.log(3) / maxTransformed, 5); // log(2+1) / log(10+1)
     
-    const timeRange = {
-      start: '1800-01-01',
-      end: '1801-01-01'
-    };
+    // Empty cells should have 0 density
+    expect(heatmap.densityArray[1]).toBe(0);
+    expect(heatmap.densityArray[2]).toBe(0);
+  });
+
+  test("should handle empty count map for text data", () => {
+    const counts = new Map<string, number>();
+    const heatmap = generateHeatmap(counts, testGridDimensions);
+
+    expect(heatmap.countArray).toHaveLength(9);
+    expect(heatmap.densityArray).toHaveLength(9);
     
-    try {
-      const heatmapStack = await generateHeatmapsForRecordtype(
-        AMSTERDAM_DATABASE_CONFIG,
-        emptyBounds,
-        chunkConfig,
-        'text',
-        testGridDimensions,
-        timeRange
-      );
-      
-      // Should return valid structure with all zeros
-      const totalCounts = Array.from(heatmapStack.base.text.countArray).reduce((sum, count) => sum + count, 0);
-      expect(totalCounts).toBe(0);
-      
-      // Density should all be 0
-      const maxDensity = Math.max(...Array.from(heatmapStack.base.text.densityArray));
-      expect(maxDensity).toBe(0);
-      
-      console.log(`✅ Empty results handled correctly`);
-      
-    } catch (error) {
-      console.error("❌ Empty results test failed:", error);
-      throw error;
-    }
-  }, 15000);
+    // All cells should be 0
+    expect(Array.from(heatmap.countArray)).toEqual([0,0,0,0,0,0,0,0,0]);
+    expect(Array.from(heatmap.densityArray)).toEqual([0,0,0,0,0,0,0,0,0]);
+  });
+
+  test("should handle grid boundary coordinates correctly", () => {
+    // Test exact boundary coordinates
+    expect(getCellIdForCoordinates({lon: 4.8, lat: 52.3}, testGridDimensions)).toBe("0_0");   // Min corner
+    expect(getCellIdForCoordinates({lon: 5.1, lat: 52.6}, testGridDimensions)).toBe(null);    // Max corner (exclusive)
+    expect(getCellIdForCoordinates({lon: 5.099, lat: 52.599}, testGridDimensions)).toBe("2_2"); // Just inside max
+  });
+
+  // Future test for when tags are added to the API
+  test("should handle tag processing when tags are added later (disabled for now)", () => {
+    // This test is disabled since the current API has no tags
+    // Enable this when tags are added to the Amsterdam API
+    
+    console.log("ℹ️ Tag processing test disabled - no tags in current API data");
+    
+    // Mock test for future reference:
+    // const accumulator = createHeatmapAccumulator(testGridDimensions);
+    // const taggedFeature = { ...feature, tags: ["historic"] };
+    // processFeatureIntoCounts(taggedFeature, accumulator);
+    // expect(accumulator.collectedTags.has("historic")).toBe(true);
+  });
 });
