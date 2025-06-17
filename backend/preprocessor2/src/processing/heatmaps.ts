@@ -1,4 +1,4 @@
-// src/processing/heatmaps.ts - Pure functions for heatmap generation
+// src/processing/heatmaps.ts - Pure functions for heatmap generation (UPDATED: Period-first structure)
 
 import type { 
   RecordType, 
@@ -15,17 +15,13 @@ export interface Heatmap {
   countArray: number[];
 }
 
+// ✅ UPDATED: Period-first hierarchical structure (Option 3)
 export interface HeatmapStack {
-  // Base heatmap per recordtype
-  base: {
-    [K in RecordType]: Heatmap;
-  };
-  
-  // Tag-specific heatmaps (unified tags)
-  tags: {
-    [tagName: string]: {
-      [K in RecordType]: Heatmap;
-    };
+  [period: string]: {
+    [recordType in RecordType]: {
+      base: Heatmap;
+      tags: Record<string, Heatmap>;
+    }
   };
 }
 
@@ -241,35 +237,40 @@ export function generateHeatmap(
   
   return {
     countArray,
-    densityArray,
+    densityArray
   };
 }
 
 /**
- * Generate complete heatmap stack from accumulator
+ * ✅ UPDATED: Generate complete heatmap stack from accumulator (Period-first structure)
  */
-export function generateHeatmapStack(accumulator: HeatmapAccumulator): HeatmapStack {
-  const recordtypes: RecordType[] = ['text'];
+export function generateHeatmapStack(
+  accumulator: HeatmapAccumulator, 
+  period: string
+): HeatmapStack {
+  const recordtypes: RecordType[] = ['image', 'text', 'event'];
   
-  // Initialize result structure
+  // Initialize result structure with period-first hierarchy
   const result: HeatmapStack = {
-    base: {} as any,
-    tags: {}
+    [period]: {} as any
   };
   
-  // Generate base heatmaps for each recordtype
+  // Generate heatmaps for each recordtype
   for (const recordtype of recordtypes) {
-    const counts = accumulator.cellCounts.base.get(recordtype) || new Map();
-    result.base[recordtype] = generateHeatmap(counts, accumulator.gridDimensions);
-  }
-  
-  // Generate tag heatmaps
-  for (const tag of Array.from(accumulator.collectedTags)) {
-    result.tags[tag] = {} as any;
+    // Initialize recordtype structure
+    result[period][recordtype] = {
+      base: generateHeatmap(new Map(), accumulator.gridDimensions), // Default empty
+      tags: {}
+    };
     
-    for (const recordtype of recordtypes) {
+    // Generate base heatmap for this recordtype
+    const counts = accumulator.cellCounts.base.get(recordtype) || new Map();
+    result[period][recordtype].base = generateHeatmap(counts, accumulator.gridDimensions);
+    
+    // Generate tag heatmaps for this recordtype
+    for (const tag of Array.from(accumulator.collectedTags)) {
       const tagCounts = accumulator.cellCounts.tags.get(tag)?.get(recordtype) || new Map();
-      result.tags[tag][recordtype] = generateHeatmap(tagCounts, accumulator.gridDimensions);
+      result[period][recordtype].tags[tag] = generateHeatmap(tagCounts, accumulator.gridDimensions);
     }
   }
   
@@ -304,7 +305,7 @@ export function generateHeatmapBlueprint(gridDimensions: GridDimensions): Heatma
 }
 
 /**
- * Generate heatmaps for a specific recordtype (main function)
+ * ✅ UPDATED: Generate heatmaps for a specific recordtype (returns period-first structure)
  */
 export async function generateHeatmapsForRecordtype(
   config: DatabaseConfig,
@@ -314,6 +315,11 @@ export async function generateHeatmapsForRecordtype(
   gridDimensions: GridDimensions,
   timeRange?: { start: string; end: string }
 ): Promise<HeatmapStack> {
+  
+  // Create period key from time range
+  const periodKey = timeRange ? 
+    `${timeRange.start.split('-')[0]}_${timeRange.end.split('-')[0]}` : 
+    'default';
   
   // Accumulate counts by streaming
   const accumulator = await accumulateCountsForRecordtype(
@@ -326,5 +332,62 @@ export async function generateHeatmapsForRecordtype(
   );
   
   // Generate heatmaps from accumulated counts
-  return generateHeatmapStack(accumulator);
+  return generateHeatmapStack(accumulator, periodKey);
+}
+
+/**
+ * ✅ NEW: Generate heatmaps for multiple periods and recordtypes
+ */
+export async function generateHeatmapsForMultiplePeriods(
+  config: DatabaseConfig,
+  bounds: GridCellBounds,
+  chunkConfig: ChunkingConfig,
+  recordtypes: RecordType[],
+  gridDimensions: GridDimensions,
+  periods: Array<{ key: string; timeRange: { start: string; end: string } }>
+): Promise<HeatmapStack> {
+  
+  const result: HeatmapStack = {};
+  
+  console.log(`🔥 Generating heatmaps for ${periods.length} periods and ${recordtypes.length} recordtypes`);
+  
+  for (const period of periods) {
+    console.log(`📅 Processing period: ${period.key} (${period.timeRange.start} to ${period.timeRange.end})`);
+    
+    // Initialize period structure
+    result[period.key] = {} as any;
+    
+    for (const recordtype of recordtypes) {
+      console.log(`📊 Processing recordtype: ${recordtype} for period ${period.key}`);
+      
+      // Accumulate counts for this recordtype and period
+      const accumulator = await accumulateCountsForRecordtype(
+        config,
+        bounds,
+        chunkConfig,
+        recordtype,
+        gridDimensions,
+        period.timeRange
+      );
+      
+      // Initialize recordtype structure
+      result[period.key][recordtype] = {
+        base: generateHeatmap(new Map(), gridDimensions), // Default empty
+        tags: {}
+      };
+      
+      // Generate base heatmap
+      const counts = accumulator.cellCounts.base.get(recordtype) || new Map();
+      result[period.key][recordtype].base = generateHeatmap(counts, gridDimensions);
+      
+      // Generate tag heatmaps
+      for (const tag of Array.from(accumulator.collectedTags)) {
+        const tagCounts = accumulator.cellCounts.tags.get(tag)?.get(recordtype) || new Map();
+        result[period.key][recordtype].tags[tag] = generateHeatmap(tagCounts, gridDimensions);
+      }
+    }
+  }
+  
+  console.log(`✅ Completed heatmap generation for all periods and recordtypes`);
+  return result;
 }

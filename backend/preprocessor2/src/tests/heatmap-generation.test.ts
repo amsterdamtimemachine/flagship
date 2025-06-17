@@ -1,15 +1,16 @@
-// src/tests/heatmap-generation.test.ts - Pure heatmap generation tests (TEXT ONLY, NO TAGS)
+// src/tests/heatmap-generation.test.ts - Pure heatmap generation tests (UPDATED: Period-first structure)
 
 import { describe, test, expect } from "bun:test";
 import {
   getCellIdForCoordinates,
   processFeatureIntoCounts,
   generateHeatmap,
-  createHeatmapAccumulator
+  createHeatmapAccumulator,
+  generateHeatmapStack
 } from '../processing/heatmaps';
 import type { GridDimensions, AnyProcessedFeature } from '../types/geo';
 
-describe("Heatmap Generation Logic (Text Only, No Tags)", () => {
+describe("Heatmap Generation Logic (Text Only, Period-First Structure)", () => {
   
   const testGridDimensions: GridDimensions = {
     colsAmount: 3,
@@ -108,7 +109,7 @@ describe("Heatmap Generation Logic (Text Only, No Tags)", () => {
     expect(accumulator.cellCounts.tags.size).toBe(0);
   });
 
-  test("should generate correct heatmap arrays from text feature counts", () => {
+  test("should generate correct heatmap arrays from count data", () => {
     // Create test count data
     const counts = new Map<string, number>();
     counts.set("0_0", 5);  // 5 features in top-left
@@ -144,6 +145,57 @@ describe("Heatmap Generation Logic (Text Only, No Tags)", () => {
     expect(heatmap.densityArray[2]).toBe(0);
   });
 
+  test("should generate correct period-first heatmap stack structure", () => {
+    // Create test accumulator with some data
+    const accumulator = createHeatmapAccumulator(testGridDimensions);
+    
+    // Add test feature to accumulator
+    const feature: AnyProcessedFeature = {
+      title: "Test Document",
+      dataset: "test",
+      url: "http://test.com",
+      recordtype: "text",
+      tags: [], // No tags for now
+      startYear: 1900,
+      endYear: 1910,
+      geometry: {
+        type: "Point",
+        coordinates: {lon: 4.85, lat: 52.35} // Cell 0_0
+      }
+    };
+    
+    processFeatureIntoCounts(feature, accumulator);
+    
+    // Generate heatmap stack for test period
+    const period = "1900_1950";
+    const heatmapStack = generateHeatmapStack(accumulator, period);
+    
+    // ✅ Test period-first structure
+    expect(heatmapStack).toHaveProperty(period);
+    expect(heatmapStack[period]).toHaveProperty('text');
+    expect(heatmapStack[period]).toHaveProperty('image');
+    expect(heatmapStack[period]).toHaveProperty('event');
+    
+    // Test text recordtype structure
+    expect(heatmapStack[period]['text']).toHaveProperty('base');
+    expect(heatmapStack[period]['text']).toHaveProperty('tags');
+    
+    // Test base heatmap has correct data
+    const textBaseHeatmap = heatmapStack[period]['text'].base;
+    expect(textBaseHeatmap.countArray).toHaveLength(9); // 3x3 grid
+    expect(textBaseHeatmap.densityArray).toHaveLength(9);
+    
+    // Should have 1 feature in cell 0_0
+    expect(textBaseHeatmap.countArray[0]).toBe(1);
+    
+    // Other recordtypes should be empty (no data)
+    expect(heatmapStack[period]['image'].base.countArray[0]).toBe(0);
+    expect(heatmapStack[period]['event'].base.countArray[0]).toBe(0);
+    
+    // Tags should be empty (no tags in test data)
+    expect(Object.keys(heatmapStack[period]['text'].tags)).toHaveLength(0);
+  });
+
   test("should handle empty count map for text data", () => {
     const counts = new Map<string, number>();
     const heatmap = generateHeatmap(counts, testGridDimensions);
@@ -163,6 +215,100 @@ describe("Heatmap Generation Logic (Text Only, No Tags)", () => {
     expect(getCellIdForCoordinates({lon: 5.099, lat: 52.599}, testGridDimensions)).toBe("2_2"); // Just inside max
   });
 
+  test("should demonstrate multi-period structure access patterns", () => {
+    console.log("ℹ️ Testing period-first structure access patterns");
+    
+    const accumulator = createHeatmapAccumulator(testGridDimensions);
+    
+    // Add test features
+    const feature1: AnyProcessedFeature = {
+      title: "Early Document",
+      dataset: "test",
+      url: "http://test.com/early",
+      recordtype: "text",
+      tags: [],
+      startYear: 1900,
+      endYear: 1910,
+      geometry: { type: "Point", coordinates: {lon: 4.85, lat: 52.35} }
+    };
+    
+    processFeatureIntoCounts(feature1, accumulator);
+    
+    // Generate stacks for different periods
+    const period1900 = generateHeatmapStack(accumulator, "1900_1950");
+    const period2000 = generateHeatmapStack(accumulator, "2000_2050");
+    
+    // Show access patterns
+    console.log("✅ Access patterns:");
+    console.log("   - period1900['1900_1950']['text'].base");
+    console.log("   - period1900['1900_1950']['text'].tags[tagName]");
+    
+    // Verify both periods exist independently
+    expect(period1900).toHaveProperty('1900_1950');
+    expect(period2000).toHaveProperty('2000_2050');
+    
+    // Verify structure
+    expect(period1900['1900_1950']['text'].base.countArray[0]).toBe(1);
+    expect(period2000['2000_2050']['text'].base.countArray[0]).toBe(1);
+    
+    console.log("✅ Period-first structure working correctly");
+  });
+
+  test("should handle multiple periods in single stack", () => {
+    const accumulator1 = createHeatmapAccumulator(testGridDimensions);
+    const accumulator2 = createHeatmapAccumulator(testGridDimensions);
+    
+    // Create features for different periods
+    const earlyFeature: AnyProcessedFeature = {
+      title: "Early Document",
+      dataset: "test",
+      url: "http://test.com/early",
+      recordtype: "text",
+      tags: [],
+      startYear: 1900,
+      endYear: 1910,
+      geometry: { type: "Point", coordinates: {lon: 4.85, lat: 52.35} } // Cell 0_0
+    };
+    
+    const modernFeature: AnyProcessedFeature = {
+      title: "Modern Document",
+      dataset: "test",
+      url: "http://test.com/modern",
+      recordtype: "text",
+      tags: [],
+      startYear: 2000,
+      endYear: 2010,
+      geometry: { type: "Point", coordinates: {lon: 4.95, lat: 52.45} } // Cell 1_1
+    };
+    
+    // Process features into different accumulators
+    processFeatureIntoCounts(earlyFeature, accumulator1);
+    processFeatureIntoCounts(modernFeature, accumulator2);
+    
+    // Generate separate period stacks
+    const earlyStack = generateHeatmapStack(accumulator1, "1900_1950");
+    const modernStack = generateHeatmapStack(accumulator2, "2000_2050");
+    
+    // Verify each period has correct data
+    expect(earlyStack['1900_1950']['text'].base.countArray[0]).toBe(1); // Cell 0_0
+    expect(earlyStack['1900_1950']['text'].base.countArray[4]).toBe(0); // Cell 1_1 empty
+    
+    expect(modernStack['2000_2050']['text'].base.countArray[0]).toBe(0); // Cell 0_0 empty
+    expect(modernStack['2000_2050']['text'].base.countArray[4]).toBe(1); // Cell 1_1
+    
+    // Manually combine for testing multi-period structure
+    const combinedStack = {
+      ...earlyStack,
+      ...modernStack
+    };
+    
+    expect(Object.keys(combinedStack)).toEqual(['1900_1950', '2000_2050']);
+    expect(combinedStack['1900_1950']['text'].base.countArray[0]).toBe(1);
+    expect(combinedStack['2000_2050']['text'].base.countArray[4]).toBe(1);
+    
+    console.log("✅ Multi-period structure validation complete");
+  });
+
   // Future test for when tags are added to the API
   test("should handle tag processing when tags are added later (disabled for now)", () => {
     // This test is disabled since the current API has no tags
@@ -170,10 +316,46 @@ describe("Heatmap Generation Logic (Text Only, No Tags)", () => {
     
     console.log("ℹ️ Tag processing test disabled - no tags in current API data");
     
-    // Mock test for future reference:
+    // Mock test for future reference - shows how period-first structure works with tags:
     // const accumulator = createHeatmapAccumulator(testGridDimensions);
-    // const taggedFeature = { ...feature, tags: ["historic"] };
+    // const taggedFeature = { 
+    //   ...feature, 
+    //   tags: ["historic", "document"] 
+    // };
     // processFeatureIntoCounts(taggedFeature, accumulator);
+    // const stack = generateHeatmapStack(accumulator, "1900_1950");
+    // 
     // expect(accumulator.collectedTags.has("historic")).toBe(true);
+    // expect(stack['1900_1950']['text'].tags["historic"]).toBeDefined();
+    // expect(stack['1900_1950']['text'].tags["historic"].countArray[0]).toBe(1);
+  });
+
+  test("should validate period key generation", () => {
+    // Test that period keys are valid and consistent
+    const testPeriods = ["1600_1650", "1900_1950", "2000_2025", "test_period"];
+    
+    for (const period of testPeriods) {
+      const accumulator = createHeatmapAccumulator(testGridDimensions);
+      const stack = generateHeatmapStack(accumulator, period);
+      
+      // Should have exactly one period
+      expect(Object.keys(stack)).toHaveLength(1);
+      expect(Object.keys(stack)[0]).toBe(period);
+      
+      // Should have all recordtypes
+      expect(stack[period]).toHaveProperty('text');
+      expect(stack[period]).toHaveProperty('image');  
+      expect(stack[period]).toHaveProperty('event');
+      
+      // Each recordtype should have base and tags
+      for (const recordtype of ['text', 'image', 'event'] as const) {
+        expect(stack[period][recordtype]).toHaveProperty('base');
+        expect(stack[period][recordtype]).toHaveProperty('tags');
+        expect(stack[period][recordtype].base.countArray).toHaveLength(9);
+        expect(stack[period][recordtype].base.densityArray).toHaveLength(9);
+      }
+    }
+    
+    console.log("✅ Period key validation complete");
   });
 });
