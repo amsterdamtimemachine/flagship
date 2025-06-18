@@ -18,6 +18,12 @@ export interface HeatmapDimensions {
     maxLat: number;
 }
 
+export interface HeatmapConfig {
+  colsAmount: number;
+  rowsAmount: number;
+  padding: number; // e.g., 0.05 = 5% padding
+}
+
 export interface Heatmap {
   densityArray: number[];
   countArray: number[];
@@ -39,6 +45,6 @@ export interface HeatmapBlueprint {
     cellId: string;
     row: number;
     col: number;
-    bounds: GridCellBounds;
+    bounds: HeatmapCellBounds;
   }>;
 }

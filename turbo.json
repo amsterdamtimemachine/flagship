@@ -4,12 +4,17 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".svelte-kit/**"]
+      "outputs": ["dist/**", ".svelte-kit/**", "build/**"]
     },
     "dev": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["^build"]
+    },
+    "preprocess": {
+      "dependsOn": ["@atm/shared#build"],
+      "outputs": ["data/**/*.bin", "data/**/*.json"],
+      "inputs": ["src/**", "../shared/dist/**"]
     },
     "test": {
       "dependsOn": ["^build"],
@@ -17,6 +22,9 @@
     },
     "lint": {
       "outputs": []
+    },
+    "clean": {
+      "cache": false
     }
   }
 }
