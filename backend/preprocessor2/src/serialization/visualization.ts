@@ -1,14 +1,15 @@
 // src/serialization/visualization.ts - Binary serialization for visualization data
 
-import { encode } from '@msgpack/msgpack';
+import { encode, decode } from '@msgpack/msgpack';
 import type { RecordType, GridDimensions } from '../types/geo';
-import type { HeatmapStack, HeatmapBlueprint } from '../processing';
+import type { HeatmapStack, HeatmapBlueprint, HistogramStack, TimeSlice } from '../processing';
 
 export interface VisualizationMetadata {
   version: string;
   timestamp: string;
   gridDimensions: GridDimensions;
   heatmapBlueprint: HeatmapBlueprint;
+  timeSlices: TimeSlice[];
   timeRange: {
     start: string;
     end: string;
@@ -20,21 +21,31 @@ export interface VisualizationMetadata {
       offset: number;
       length: number;
     };
-    histograms?: {
+    histograms: {
       offset: number;
       length: number;
     };
   };
+  stats?: {
+    totalFeatures: number;
+    featuresPerRecordtype: Record<RecordType, number>;
+    timeSliceCount: number;
+    gridCellCount: number;
+  };
 }
 
-export interface HeatmapsData {
-  [timePeriod: string]: HeatmapStack;
+export interface VisualizationData {
+  heatmaps: HeatmapStack;
+  histograms: HistogramStack;
 }
 
 export class VisualizationBinaryWriter {
   private writer: any;
   private currentOffset: number = 0;
-  private sections: VisualizationMetadata['sections'] = { heatmaps: { offset: 0, length: 0 } };
+  private sections: VisualizationMetadata['sections'] = { 
+    heatmaps: { offset: 0, length: 0 },
+    histograms: { offset: 0, length: 0 }
+  };
 
   constructor(private binaryPath: string) {}
 
@@ -50,22 +61,20 @@ export class VisualizationBinaryWriter {
     this.writer.write(placeholderSize);
     this.currentOffset += 4;
     
-    // Reserve space for metadata (we'll calculate actual size later)
-    // For now, just track that we'll write metadata here
     console.log(`📝 Initialized visualization binary writer for ${this.binaryPath}`);
   }
 
   /**
    * Write heatmaps data to the binary file
    */
-  async writeHeatmaps(heatmapsData: HeatmapsData): Promise<void> {
+  async writeHeatmaps(heatmapStack: HeatmapStack): Promise<void> {
     console.log(`🔥 Writing heatmaps data...`);
     
     // Store the absolute offset (including reserved metadata space)
     const heatmapsStartOffset = this.currentOffset;
     
     // Encode heatmaps data
-    const encodedHeatmaps = encode(heatmapsData);
+    const encodedHeatmaps = encode(heatmapStack);
     
     // Write to file
     this.writer.write(encodedHeatmaps);
@@ -82,53 +91,62 @@ export class VisualizationBinaryWriter {
   }
 
   /**
-   * Write histograms data to the binary file (placeholder for future implementation)
+   * Write histograms data to the binary file
    */
-  async writeHistograms(histogramsData: any): Promise<void> {
+  async writeHistograms(histogramStack: HistogramStack): Promise<void> {
     console.log(`📊 Writing histograms data...`);
     
-    // Calculate relative offset from start of data sections
-    const currentDataOffset = this.currentOffset - 4; // Subtract metadata space reservation
+    // Store the absolute offset
+    const histogramsStartOffset = this.currentOffset;
     
     // Encode histograms data
-    const encodedHistograms = encode(histogramsData);
+    const encodedHistograms = encode(histogramStack);
     
     // Write to file
     this.writer.write(encodedHistograms);
     
     // Store relative offset (histograms come after heatmaps)
     this.sections.histograms = {
-      offset: this.sections.heatmaps.length, // Offset relative to data start
+      offset: this.sections.heatmaps.length, // Offset relative to data start (after heatmaps)
       length: encodedHistograms.byteLength
     };
     
     this.currentOffset += encodedHistograms.byteLength;
     
-    console.log(`✅ Histograms written: ${encodedHistograms.byteLength} bytes`);
+    console.log(`✅ Histograms written: ${encodedHistograms.byteLength} bytes at offset ${histogramsStartOffset}`);
   }
 
   /**
-   * Finalize the binary file by writing metadata at the beginning
+   * Finalize with enhanced metadata including TimeSlices
    */
   async finalize(
     gridDimensions: GridDimensions,
     heatmapBlueprint: HeatmapBlueprint,
-    timeRange: { start: string; end: string },
+    timeSlices: TimeSlice[],
     recordtypes: RecordType[],
-    tags: string[]
+    tags: string[],
+    stats?: VisualizationMetadata['stats']
   ): Promise<void> {
     console.log(`📋 Finalizing visualization binary...`);
     
+    // Calculate overall time range from TimeSlices
+    const timeRange = timeSlices.length > 0 ? {
+      start: timeSlices[0].timeRange.start,
+      end: timeSlices[timeSlices.length - 1].timeRange.end
+    } : { start: '', end: '' };
+    
     // Create metadata
     const metadata: VisualizationMetadata = {
-      version: '1.0.0',
+      version: '2.0.0',
       timestamp: new Date().toISOString(),
       gridDimensions,
       heatmapBlueprint,
+      timeSlices,
       timeRange,
       recordtypes,
       tags,
-      sections: this.sections
+      sections: this.sections,
+      stats
     };
     
     // Encode metadata
@@ -160,17 +178,99 @@ export class VisualizationBinaryWriter {
     await newWriter.end();
     
     console.log(`✅ Visualization binary finalized:`);
+    console.log(`   - Version: ${metadata.version}`);
     console.log(`   - Metadata: ${metadataSize} bytes`);
+    console.log(`   - TimeSlices: ${timeSlices.length}`);
     console.log(`   - Heatmaps: ${this.sections.heatmaps.length} bytes`);
-    if (this.sections.histograms) {
-      console.log(`   - Histograms: ${this.sections.histograms.length} bytes`);
-    }
+    console.log(`   - Histograms: ${this.sections.histograms.length} bytes`);
     console.log(`   - Total size: ${4 + metadataSize + this.currentOffset - 4} bytes`);
+    
+    if (stats) {
+      console.log(`   - Features: ${stats.totalFeatures} total across ${stats.timeSliceCount} time slices`);
+    }
   }
 }
 
 /**
- * Utility function to merge multiple heatmap accumulators (for future use)
+ * Create visualization binary with both heatmaps and histograms
+ */
+export async function createVisualizationBinary(
+  binaryPath: string,
+  heatmapStack: HeatmapStack,
+  histogramStack: HistogramStack,
+  gridDimensions: GridDimensions,
+  heatmapBlueprint: HeatmapBlueprint,
+  timeSlices: TimeSlice[],
+  recordtypes: RecordType[],
+  tags: string[],
+  stats?: VisualizationMetadata['stats']
+): Promise<void> {
+  const writer = new VisualizationBinaryWriter(binaryPath);
+  
+  try {
+    await writer.initialize();
+    
+    // Write both data types (both required)
+    await writer.writeHeatmaps(heatmapStack);
+    await writer.writeHistograms(histogramStack);
+    
+    await writer.finalize(
+      gridDimensions,
+      heatmapBlueprint,
+      timeSlices,
+      recordtypes,
+      tags,
+      stats
+    );
+    
+    console.log(`🎉 Successfully created visualization binary: ${binaryPath}`);
+  } catch (error) {
+    console.error(`❌ Failed to create visualization binary:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Generate visualization statistics from existing interfaces
+ */
+export function generateVisualizationStats(
+  heatmapStack: HeatmapStack,
+  histogramStack: HistogramStack,
+  timeSlices: TimeSlice[]
+): VisualizationMetadata['stats'] {
+  let totalFeatures = 0;
+  const featuresPerRecordtype: Record<RecordType, number> = {
+    text: 0,
+    image: 0,
+    event: 0
+  };
+  
+  // Count features from heatmaps (spatial aggregation)
+  for (const [timeSliceKey, timeSliceData] of Object.entries(heatmapStack)) {
+    for (const [recordtype, recordtypeData] of Object.entries(timeSliceData)) {
+      const counts = Array.from(recordtypeData.base.countArray);
+      const recordtypeTotal = counts.reduce((sum, count) => sum + count, 0);
+      
+      featuresPerRecordtype[recordtype as RecordType] += recordtypeTotal;
+      totalFeatures += recordtypeTotal;
+    }
+  }
+  
+  // Get grid cell count from first heatmap
+  const firstTimeSlice = Object.values(heatmapStack)[0];
+  const firstRecordtype = Object.values(firstTimeSlice)[0];
+  const gridCellCount = firstRecordtype.base.countArray.length;
+  
+  return {
+    totalFeatures,
+    featuresPerRecordtype,
+    timeSliceCount: timeSlices.length,
+    gridCellCount
+  };
+}
+
+/**
+ * Merge multiple heatmap stacks
  */
 export function mergeHeatmapStacks(stacks: HeatmapStack[]): HeatmapStack {
   if (stacks.length === 0) {
@@ -181,40 +281,160 @@ export function mergeHeatmapStacks(stacks: HeatmapStack[]): HeatmapStack {
     return stacks[0];
   }
   
-  // For now, return the first stack
-  // TODO: Implement proper merging logic when needed
-  console.warn('⚠️ HeatmapStack merging not yet implemented, returning first stack');
-  return stacks[0];
+  // Merge all stacks into one
+  const merged: HeatmapStack = {};
+  
+  for (const stack of stacks) {
+    for (const [timeSliceKey, timeSliceData] of Object.entries(stack)) {
+      if (!merged[timeSliceKey]) {
+        merged[timeSliceKey] = timeSliceData;
+      } else {
+        // Merge recordtypes within the same time slice
+        for (const [recordtype, recordtypeData] of Object.entries(timeSliceData)) {
+          if (!merged[timeSliceKey][recordtype as RecordType]) {
+            merged[timeSliceKey][recordtype as RecordType] = recordtypeData;
+          } else {
+            console.warn(`⚠️ Recordtype ${recordtype} in time slice ${timeSliceKey} exists in multiple stacks, using first occurrence`);
+          }
+        }
+      }
+    }
+  }
+  
+  console.log(`✅ Merged ${stacks.length} heatmap stacks into ${Object.keys(merged).length} time slices`);
+  return merged;
 }
 
 /**
- * Helper function to create complete visualization binary from heatmaps
+ * Merge multiple histogram stacks
  */
-export async function createVisualizationBinary(
-  binaryPath: string,
-  heatmapsData: HeatmapsData,
-  gridDimensions: GridDimensions,
-  heatmapBlueprint: HeatmapBlueprint,
-  timeRange: { start: string; end: string },
-  recordtypes: RecordType[],
-  tags: string[]
-): Promise<void> {
-  const writer = new VisualizationBinaryWriter(binaryPath);
+export function mergeHistogramStacks(stacks: HistogramStack[]): HistogramStack {
+  if (stacks.length === 0) {
+    throw new Error('Cannot merge empty array of histogram stacks');
+  }
   
-  try {
-    await writer.initialize();
-    await writer.writeHeatmaps(heatmapsData);
-    await writer.finalize(
-      gridDimensions,
-      heatmapBlueprint,
-      timeRange,
-      recordtypes,
-      tags
+  if (stacks.length === 1) {
+    return stacks[0];
+  }
+  
+  // Merge all stacks into one
+  const merged: HistogramStack = {};
+  
+  for (const stack of stacks) {
+    for (const [timeSliceKey, timeSliceData] of Object.entries(stack)) {
+      if (!merged[timeSliceKey]) {
+        merged[timeSliceKey] = timeSliceData;
+      } else {
+        // Merge recordtypes within the same time slice
+        for (const [recordtype, recordtypeData] of Object.entries(timeSliceData)) {
+          if (!merged[timeSliceKey][recordtype as RecordType]) {
+            merged[timeSliceKey][recordtype as RecordType] = recordtypeData;
+          } else {
+            console.warn(`⚠️ Recordtype ${recordtype} in time slice ${timeSliceKey} exists in multiple stacks, using first occurrence`);
+          }
+        }
+      }
+    }
+  }
+  
+  console.log(`✅ Merged ${stacks.length} histogram stacks into ${Object.keys(merged).length} time slices`);
+  return merged;
+}
+
+/**
+ * Convenience function to create visualization data from separate stacks
+ */
+export function createVisualizationData(
+  heatmapStacks: HeatmapStack[],
+  histogramStacks: HistogramStack[]
+): VisualizationData {
+  const heatmaps = mergeHeatmapStacks(heatmapStacks);
+  const histograms = mergeHistogramStacks(histogramStacks);
+  
+  return {
+    heatmaps,
+    histograms
+  };
+}
+
+/**
+ * Binary reader class for loading visualization data
+ */
+export class VisualizationBinaryReader {
+  constructor(private binaryPath: string) {}
+  
+  /**
+   * Read metadata from binary file
+   */
+  async readMetadata(): Promise<VisualizationMetadata> {
+    const file = Bun.file(this.binaryPath);
+    const buffer = await file.arrayBuffer();
+    
+    // Read metadata size
+    const dataView = new DataView(buffer);
+    const metadataSize = dataView.getUint32(0, false);
+    
+    // Read and decode metadata
+    const metadataBytes = new Uint8Array(buffer, 4, metadataSize);
+    const metadata = decode(metadataBytes) as VisualizationMetadata;
+    
+    return metadata;
+  }
+  
+  /**
+   * Read heatmaps data from binary file
+   */
+  async readHeatmaps(): Promise<HeatmapStack> {
+    const metadata = await this.readMetadata();
+    const file = Bun.file(this.binaryPath);
+    const buffer = await file.arrayBuffer();
+    
+    const dataView = new DataView(buffer);
+    const metadataSize = dataView.getUint32(0, false);
+    const dataStartOffset = 4 + metadataSize;
+    
+    const heatmapsBytes = new Uint8Array(
+      buffer,
+      dataStartOffset + metadata.sections.heatmaps.offset,
+      metadata.sections.heatmaps.length
     );
     
-    console.log(`🎉 Successfully created visualization binary: ${binaryPath}`);
-  } catch (error) {
-    console.error(`❌ Failed to create visualization binary:`, error);
-    throw error;
+    return decode(heatmapsBytes) as HeatmapStack;
+  }
+  
+  /**
+   * Read histograms data from binary file
+   */
+  async readHistograms(): Promise<HistogramStack> {
+    const metadata = await this.readMetadata();
+    const file = Bun.file(this.binaryPath);
+    const buffer = await file.arrayBuffer();
+    
+    const dataView = new DataView(buffer);
+    const metadataSize = dataView.getUint32(0, false);
+    const dataStartOffset = 4 + metadataSize;
+    
+    const histogramsBytes = new Uint8Array(
+      buffer,
+      dataStartOffset + metadata.sections.histograms.offset,
+      metadata.sections.histograms.length
+    );
+    
+    return decode(histogramsBytes) as HistogramStack;
+  }
+  
+  /**
+   * Read complete visualization data from binary file
+   */
+  async readComplete(): Promise<VisualizationData & { metadata: VisualizationMetadata }> {
+    const metadata = await this.readMetadata();
+    const heatmaps = await this.readHeatmaps();
+    const histograms = await this.readHistograms();
+    
+    return {
+      heatmaps,
+      histograms,
+      metadata
+    };
   }
 }
