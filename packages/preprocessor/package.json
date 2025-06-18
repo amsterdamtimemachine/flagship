@@ -1,0 +1,27 @@
+{
+  "name": "@atm/preprocessor",
+  "version": "1.0.0",
+  "description": "Data preprocessor for Amsterdam Time Machine",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "bun run src/index.ts",
+    "preprocess": "bun run src/index.ts",
+    "clean": "rm -rf dist data",
+    "test": "bun test",
+    "test:db": "bun test src/tests/database.test.ts",
+    "test:streaming": "bun test src/tests/streaming.test.ts"
+  },
+  "dependencies": {
+    "@atm/shared": "workspace:*",
+    "@msgpack/msgpack": "^3.1.2"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "bun-types": "latest",
+    "typescript": "^5.0.0"
+  }
+}
+
