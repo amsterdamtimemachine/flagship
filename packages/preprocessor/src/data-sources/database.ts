@@ -49,7 +49,7 @@ export async function fetchBatch(
   }
 }
 
-export function convertRawFeature(rawFeature: RawFeature, recordtype: RecordType): AnyProcessedFeature {
+export function convertRawFeature(rawFeature: RawFeature, recordType: RecordType): AnyProcessedFeature {
     // Parse WKT geometry
     const coordinates = parseWKTPoint(rawFeature.geom);
     
@@ -57,7 +57,7 @@ export function convertRawFeature(rawFeature: RawFeature, recordtype: RecordType
         title: rawFeature.tit,
         dataset: rawFeature.ds,
         url: rawFeature.url,
-        recordtype,
+        recordType,
         tags: rawFeature.tags || [],
         
         // Temporal data
@@ -72,14 +72,14 @@ export function convertRawFeature(rawFeature: RawFeature, recordtype: RecordType
     };
 
     // Assign properties based on record type
-    if (recordtype === 'image') {
+    if (recordType === 'image') {
         return {
             ...baseFeature,
             properties: {
                 thumb: rawFeature.url
             }
         } as ImageFeature;
-    } else if (recordtype === 'event') {
+    } else if (recordType === 'event') {
         return {
             ...baseFeature,
             properties: {
@@ -118,7 +118,9 @@ function parseWKTPoint(wktGeom: string): Coordinates {
   return {lon: lon, lat: lat};
 }
 
-
+/**
+ * Get feature statistics from API response
+ */
 export function analyzeFeatures(features: ProcessedFeature[]): {
   totalFeatures: number;
   datasets: Record<string, number>;
@@ -138,8 +140,8 @@ export function analyzeFeatures(features: ProcessedFeature[]): {
     datasets[feature.dataset] = (datasets[feature.dataset] || 0) + 1;
     
     // Record type analysis
-    if (feature.recordtype) {
-      recordTypes[feature.recordtype] = (recordTypes[feature.recordtype] || 0) + 1;
+    if (feature.recordType) {
+      recordTypes[feature.recordType] = (recordTypes[feature.recordType] || 0) + 1;
     }
     
     // Time range analysis

@@ -1,20 +1,18 @@
-import { HeatmapBlueprint, HeatmapStack, HeatmapDimensions } from "./heatmap";
+import { HeatmapBlueprint, HeatmapTimeline, HeatmapDimensions } from "./heatmap";
 import { TimeSlice } from "./temporal";
 import { RecordType } from "./feature";
-
-
 
 export interface VisualizationMetadata {
   version: string;
   timestamp: string;
-  gridDimensions: HeatmapDimensions;
+  heatmapDimensions: HeatmapDimensions;
   heatmapBlueprint: HeatmapBlueprint;
   timeSlices: TimeSlice[];
   timeRange: {
     start: string;
     end: string;
   };
-  recordtypes: RecordType[];
+  recordTypes: RecordType[];
   tags: string[];
   sections: {
     heatmaps: {
@@ -35,6 +33,6 @@ export interface VisualizationMetadata {
 }
 
 export interface VisualizationData {
-  heatmaps: HeatmapStack;
+  heatmaps: HeatmapTimeline;
   histograms: HistogramStack;
 }
