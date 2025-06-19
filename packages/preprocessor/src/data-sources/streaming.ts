@@ -28,7 +28,7 @@ export async function* streamFeaturesByChunks(
   
   let processedChunks = 0;
   const totalChunks = chunks.length;
-  let totalStats = { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 };
+  const totalStats = { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 };
   
   for (const chunk of chunks) {
     processedChunks++;
@@ -93,7 +93,7 @@ async function fetchChunkFeatures(
   const batchSize = config.batchSize || 500; // Smaller batches for chunks
   let hasMore = true;
   let requestCount = 0;
-  let stats = { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 };
+  const stats = { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 };
   
   while (hasMore) {
     requestCount++;
