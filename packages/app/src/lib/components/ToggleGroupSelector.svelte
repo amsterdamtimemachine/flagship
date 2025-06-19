@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createToggleGroup, melt } from '@melt-ui/svelte';
 	import { mergeCss } from '$utils/utils';
-	import type { BinaryMetadata, ContentClass } from '@atm/shared-types';
+	import type { BinaryMetadata, ContentClass } from '@atm/shared/types';
 
 	interface Props {
 		featuresStatistics: BinaryMetadata['featuresStatistics'];

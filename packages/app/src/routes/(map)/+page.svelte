@@ -14,63 +14,68 @@
 	let { data }: { data: PageData } = $props();
 
 	// Derived data from server
-	let dimensions = $derived(data?.metadata?.dimensions);
-	let heatmaps = $derived(data?.heatmaps?.heatmaps);
-	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
-	let timePeriods = $derived(data?.metadata?.timePeriods);
-	let histogram = $derived(data?.histogram?.histogram);
-
-	// Centralized state management
-	const controller = createMapController();
-	
-	// Derived state from controller
-	let currentPeriod = $derived(controller.currentPeriod);
-	let selectedCellId = $derived(controller.selectedCellId);
-	let cellData = $derived(controller.cellData);
-	let cellLoading = $derived(controller.isLoadingCell);
-	let showCellModal = $derived(controller.showCellModal);
-	
-	// Combine server errors with controller errors for ErrorHandler
-	let allErrors = $derived.by(() => {
-		const serverErrors = data.errorData?.errors || [];
-		const controllerErrors = controller.errors || [];
-		return createPageErrorData([...serverErrors, ...controllerErrors]);
-	});
-	
-	let currentHeatmap = $derived.by(() => {
-		if (heatmaps && currentPeriod) {
-			return heatmaps[currentPeriod];
-		}
-		return null;
-	});
-
-	// Debounced period changes to avoid too many API calls
-	const debouncedPeriodChange = debounce((period: string) => {
-		controller.setPeriod(period);
-	}, 300);
-
-	onMount(() => {
-		// Initialize controller with server data
-		controller.initialize(data.currentPeriod);
-	});
-
-	// Handle period change from slider
-	function handlePeriodChange(period: string) {
-		debouncedPeriodChange(period);
-	}
-
-	// Handle cell selection from map
-	function handleCellClick(cellId: string | null) {
-		controller.selectCell(cellId);
-	}
-
-	// Handle cell modal close
-	function handleCellClose() {
-		// Clear any cell-related errors when closing
-		controller.clearErrors();
-		controller.selectCell(null);
-	}
+//	let dimensions = $derived(data?.metadata?.dimensions);
+//	let heatmaps = $derived(data?.heatmaps?.heatmaps);
+//	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
+//	let timePeriods = $derived(data?.metadata?.timePeriods);
+//	let histogram = $derived(data?.histogram?.histogram);
+//
+//	// Centralized state management
+//	const controller = createMapController();
+//	
+//	// Derived state from controller
+//	let currentPeriod = $derived(controller.currentPeriod);
+//	let selectedCellId = $derived(controller.selectedCellId);
+//	let cellData = $derived(controller.cellData);
+//	let cellLoading = $derived(controller.isLoadingCell);
+//	let showCellModal = $derived(controller.showCellModal);
+//	
+//	// Combine server errors with controller errors for ErrorHandler
+//	let allErrors = $derived.by(() => {
+//		const serverErrors = data.errorData?.errors || [];
+//		const controllerErrors = controller.errors || [];
+//		return createPageErrorData([...serverErrors, ...controllerErrors]);
+//	});
+//	
+//	let currentHeatmap = $derived.by(() => {
+//		if (heatmaps && currentPeriod) {
+//			return heatmaps[currentPeriod];
+//		}
+//		return null;
+//	});
+//
+//	// Debounced period changes to avoid too many API calls
+//	const debouncedPeriodChange = debounce((period: string) => {
+//		controller.setPeriod(period);
+//	}, 300);
+//
+//	onMount(() => {
+//		// Initialize controller with server data
+//		controller.initialize(data.currentPeriod);
+//	});
+//
+//	// Handle period change from slider
+//	function handlePeriodChange(period: string) {
+//		debouncedPeriodChange(period);
+//	}
+//
+//	// Handle cell selection from map
+//	function handleCellClick(cellId: string | null) {
+//		controller.selectCell(cellId);
+//	}
+//
+//	// Handle cell modal close
+//	function handleCellClose() {
+//		// Clear any cell-related errors when closing
+//		controller.clearErrors();
+//		controller.selectCell(null);
+//	}
 </script>
+
+<div/>
+
+
+<!--
 
 <ErrorHandler errorData={allErrors} />
 
@@ -84,7 +89,6 @@
 			handleCellClick={handleCellClick}
 		/>
 
-		<!-- Cell Modal -->
 		{#if showCellModal}
 			<div class="z-40 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
 				{#if cellLoading}
@@ -106,6 +110,8 @@
 		/>
 	{/if}
 </div>
+
+-->
 
 <style>
 	.loader {
