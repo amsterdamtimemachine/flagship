@@ -1,3 +1,4 @@
+import type { Geometry } from './spatial';
 export type RecordType = 'image' | 'text' | 'event';
 
 export interface EventProperties {

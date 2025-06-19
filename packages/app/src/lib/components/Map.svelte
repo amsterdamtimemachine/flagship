@@ -11,7 +11,7 @@
 		type Polygon,
 		type GeoJSONProperties
 	} from 'maplibre-gl';
-	import type { Heatmap, HeatmapCell, GridDimensions } from '@atm/shared-types';
+	import type { Heatmap, HeatmapDimensions, HeatmapBlueprintCell } from '@atm/shared/types';
 	import { mergeCss } from '$utils/utils';
 
 	interface CellProperties extends GeoJSONProperties {
@@ -23,8 +23,8 @@
 
 	export interface MapProps {
 		heatmap: Heatmap;
-		heatmapBlueprint: HeatmapCell[];
-		dimensions: GridDimensions;
+		heatmapBlueprint: HeatmapBlueprintCell[];
+		dimensions: HeatmapDimensions;
 		selectedCellId: string | null;
 		className?: string;
 		handleCellClick?: (cellId: string | null) => void;

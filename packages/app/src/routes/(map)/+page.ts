@@ -1,7 +1,7 @@
 // (map)/+page.ts - Remove all cell-related logic
 import { fetchApi } from '$api';
 import { error } from '@sveltejs/kit';
-import type { MetadataResponse, HeatmapsResponse, HistogramResponse } from '@atm/shared-types';
+import type { MetadataResponse, HeatmapTimelineResponse, HistogramResponse } from '@atm/shared/type';
 import type { AppError } from '$types/error';
 import type { PageLoad } from './$types';
 import { createPageErrorData, createPeriodNotFoundError } from '$utils/error';
@@ -28,7 +28,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		
 		[metadata, heatmaps, histogram] = await Promise.all([
 			fetchApi<MetadataResponse>(metadataUrl, fetch),
-			fetchApi<HeatmapsResponse>(heatmapsUrl, fetch),
+			fetchApi<HeatmapTimelineResponse>(heatmapsUrl, fetch),
 			fetchApi<HistogramResponse>(histogramUrl, fetch)
 		]);
 	} catch (err) {

@@ -37,7 +37,7 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"@atm/shared": "*",
+    "@atm/shared": "workspace:*",
 		"@melt-ui/svelte": "^0.86.6",
 		"clsx": "^2.1.1",
 		"lodash.debounce": "^4.0.8",
