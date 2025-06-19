@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import GridFeatures from '$components/GridFeatures.svelte';
-	import type { CellFeaturesResponse } from '@atm/shared-types';
+	import type { HeatmapCellResponse } from '@atm/shared/types';
 	import { fetchApi } from '$api';
 	import { formatDate } from '$utils/utils';
 	import { PUBLIC_SERVER_DEV_URL, PUBLIC_SERVER_PROD_URL } from '$env/static/public';
 	
 	interface Props {
-		data: { cellFeatures: CellFeaturesResponse };
+		data: { cellFeatures: HeatmapCellResponse };
 		onClose?: () => void; // Optional close handler
 	}
 	

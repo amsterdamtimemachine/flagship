@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { GeoFeature } from '@atm/shared-types';
+	import type { EventFeature } from '@atm/shared/types';
 	import { pickAndConvertObjectToArray, prettifyKey } from '$utils/utils';
 
 	interface Props {
-		feature: GeoFeature<'Image'>;
+		feature: EventFeature;
 	}
 
 	let { feature }: Props = $props();

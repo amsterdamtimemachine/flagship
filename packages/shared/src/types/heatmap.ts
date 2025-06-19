@@ -42,15 +42,18 @@ export interface HeatmapCellBounds {
     maxLat: number;
 }
 
+
+export interface HeatmapBlueprintCell {
+  cellId: string;
+  row: number;
+  col: number;
+  bounds: HeatmapCellBounds;
+}
+
 export interface HeatmapBlueprint {
   rows: number;
   cols: number;
-  cells: Array<{
-    cellId: string;
-    row: number;
-    col: number;
-    bounds: HeatmapCellBounds;
-  }>;
+  cells: HeatmapBlueprintCell[];
 }
 
 export interface HeatmapCellCounts {
@@ -62,7 +65,7 @@ export interface HeatmapCellCounts {
 
 export interface HeatmapAccumulator {
   cellCounts: HeatmapCellCounts;
-  gridDimensions: HeatmapResolution;
+  heatmapDimensions: HeatmapDimensions;
   collectedTags: Set<string>;
 }
 

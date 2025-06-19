@@ -1,5 +1,7 @@
 import type { RecordType, RawFeature, AnyProcessedFeature } from './feature'; 
-import type { HeatmapCellBounds } from './heatmap';
+import type { Heatmap } from './heatmap';
+import type { Histogram } from './histogram';
+import type { TimeRange } from './temporal';
 
 export interface DatabaseConfig {
   baseUrl: string;
@@ -20,11 +22,49 @@ export interface ApiQueryParams {
   offset?: number;
 }
 
+// response from the DB
 export interface ApiResponse {
   data: RawFeature[];
   total: number;
 }
 
+// responses from sveltekit server to the frontend
+export interface MetadataResponse {
+  data: any;
+}
+// WIP: this needs to be adjusted to reflect actual metadata from the updated api
+
+//extends Pick<BinaryMetadata, 'dimensions' | 'timeRange'  | 'heatmapBlueprint' | 'featuresStatistics'> { timePeriods: string[] }
+
+export interface HeatmapCellResponse {
+    cellId: string;
+    currentPage: number;
+    totalPages: number;
+    featureCount: number;
+    period: string;
+    features: AnyProcessedFeature[];
+}
+
+
+export interface HeatmapResponse {
+    heatmap: Heatmap;
+    timeRange: TimeRange;
+    availablePeriods: string[];
+}
+
+
+export interface HeatmapTimelineResponse {
+    heatmaps: Record<string, Heatmap>;  // period -> heatmap
+    timeRange: TimeRange
+    availablePeriods: string[];
+}
+
+
+export interface HistogramResponse {
+    histogram: Histogram;
+    timeRange: TimeRange;
+    availablePeriods: string[];
+}
 
 // export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'timeRange'  | 'heatmapBlueprint' | 'featuresStatistics'> { timePeriods: string[] }
 // 

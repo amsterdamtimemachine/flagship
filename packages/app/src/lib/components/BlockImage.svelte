@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { GeoFeature } from '@atm/shared-types';
+	import type { ImageFeature } from '@atm/shared/types';
 	type Props = {
-		feature: GeoFeature<'Image'>;
+		feature: ImageFeature;
 	};
 
 	let { feature }: Props = $props();

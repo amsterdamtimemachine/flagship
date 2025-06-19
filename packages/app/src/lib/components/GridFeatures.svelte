@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { GeoFeatures } from '@atm/shared-types';
+	import type { AnyProcessedFeature } from '@atm/shared/types';
 	import Masonry from 'svelte-masonry';
 	import BlockImage from '$components/BlockImage.svelte';
 	import BlockEvent from '$components/BlockEvent.svelte';
 	type Props = {
-		features: GeoFeatures[];
+		features: AnyProcessedFeature[];
 	};
 
 	let { features }: Props = $props();
