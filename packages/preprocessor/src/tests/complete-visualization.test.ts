@@ -14,7 +14,7 @@ import {
 import type {
   TimeSlice,
   HistogramStack,
-  VisualizationData
+  VisualizationData,
   HeatmapDimensions,
   RecordType
 } from '@atm/shared/types';

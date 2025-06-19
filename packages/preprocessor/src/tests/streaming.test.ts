@@ -197,7 +197,7 @@ describe("Streaming Features", () => {
       chunkConfig
     );
     
-    for await (const { chunk, features } of streamGenerator) {
+    for await (const { _chunk, _features } of streamGenerator) {
       chunkCount++;
       if (chunkCount >= 2) break; // Process 2 chunks
     }
@@ -228,7 +228,7 @@ describe("Streaming Features", () => {
       chunkConfig
     );
     
-    for await (const { chunk, features } of streamGenerator) {
+    for await (const { _chunk, features } of streamGenerator) {
       if (features.length > 0) {
         const feature = features[0];
         
