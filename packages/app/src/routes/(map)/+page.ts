@@ -8,7 +8,7 @@ import { createPageErrorData, createPeriodNotFoundError } from '$utils/error';
 import {
 	PUBLIC_SERVER_DEV_URL,
 	PUBLIC_SERVER_PROD_URL,
-	PUBLIC_DEFAULT_CONTENT_CLASS
+	PUBLIC_DEFAULT_RECORDTYPE	
 } from '$env/static/public';
 
 export const load: PageLoad = async ({ fetch, url }) => {
