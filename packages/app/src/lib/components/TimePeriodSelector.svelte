@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { type Histogram } from '@atm/shared-types';
+	import type { Histogram } from '@atm/shared/types';
 	import { Slider } from 'melt/builders';
 
 	interface Props {
