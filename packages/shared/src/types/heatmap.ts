@@ -1,10 +1,26 @@
 import type { RecordType } from './feature';
 
-export interface HeatmapCellBounds {
-    minLon: number;
-    maxLon: number;
-    minLat: number;
-    maxLat: number;
+export interface Heatmap {
+  densityArray: number[];
+  countArray: number[];
+}
+
+export interface HeatmapTimeline {
+  [timeSliceKey: string]: {
+    [recordType in RecordType]: {
+      base: Heatmap;
+      tags: Record<string, Heatmap>;
+    }
+  };
+}
+
+export interface HeatmapResolutions {
+  [resolution: string]: HeatmapTimeline;
+}
+
+export interface HeatmapResolutionConfig {
+  cols: number;
+  rows: number;
 }
 
 export interface HeatmapDimensions {
@@ -18,24 +34,12 @@ export interface HeatmapDimensions {
     maxLat: number;
 }
 
-export interface HeatmapConfig {
-  colsAmount: number;
-  rowsAmount: number;
-  padding: number; // e.g., 0.05 = 5% padding
-}
-
-export interface Heatmap {
-  densityArray: number[];
-  countArray: number[];
-}
-
-export interface HeatmapStack {
-  [periodKey: string]: {
-    [recordType in RecordType]: {
-      base: Heatmap;
-      tags: Record<string, Heatmap>;
-    }
-  };
+// Generic Bounds from spatial.ts should be used instead of this
+export interface HeatmapCellBounds { 
+    minLon: number;
+    maxLon: number;
+    minLat: number;
+    maxLat: number;
 }
 
 export interface HeatmapBlueprint {
@@ -48,3 +52,18 @@ export interface HeatmapBlueprint {
     bounds: HeatmapCellBounds;
   }>;
 }
+
+export interface HeatmapCellCounts {
+  // Base counts per recordtype per cell
+  base: Map<RecordType, Map<string, number>>;
+  // Tag counts per tag per recordtype per cell  
+  tags: Map<string, Map<RecordType, Map<string, number>>>;
+}
+
+export interface HeatmapAccumulator {
+  cellCounts: HeatmapCellCounts;
+  gridDimensions: HeatmapResolution;
+  collectedTags: Set<string>;
+}
+
+

@@ -28,7 +28,7 @@ export async function* streamFeaturesByChunks(
   
   let processedChunks = 0;
   const totalChunks = chunks.length;
-  const totalStats = { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 };
+  let totalStats = { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 };
   
   for (const chunk of chunks) {
     processedChunks++;
@@ -36,7 +36,7 @@ export async function* streamFeaturesByChunks(
     
     try {
       // Fetch features for this chunk
-      const result = await fetchChunkFeatures(config, chunk.bounds, options?.timeRange, options?.recordtype);
+      const result = await fetchChunkFeatures(config, chunk.bounds, options?.timeRange, options?.recordType);
       
       // Update total stats
       totalStats.totalRaw += result.stats.totalRaw;
@@ -80,12 +80,12 @@ async function fetchChunkFeatures(
   config: DatabaseConfig,
   bounds: HeatmapCellBounds,
   timeRange?: { start: string; end: string },
-  recordtype?: RecordType
+  recordType?: RecordType
 ): Promise<{ features: AnyProcessedFeature[]; stats: ChunkResult['stats'] }> {
   console.log(`📍 Fetching chunk data for bounds:`, {
     lat: [bounds.minLat.toFixed(3), bounds.maxLat.toFixed(3)],
     lon: [bounds.minLon.toFixed(3), bounds.maxLon.toFixed(3)],
-    recordtype: recordtype || 'all'
+    recordType: recordType || 'all'
   });
   
   const features: AnyProcessedFeature[] = [];
@@ -93,7 +93,7 @@ async function fetchChunkFeatures(
   const batchSize = config.batchSize || 500; // Smaller batches for chunks
   let hasMore = true;
   let requestCount = 0;
-  const stats = { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 };
+  let stats = { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 };
   
   while (hasMore) {
     requestCount++;
@@ -107,7 +107,7 @@ async function fetchChunkFeatures(
       end_year: timeRange?.end || '2024-12-31',
       limit: batchSize,
       offset: offset,
-      ...(recordtype && { recordtype }), // Add recordtype filter if provided
+      ...(recordType && { recordType }), // Add recordType filter if provided
       ...config.defaultParams
     };
     
@@ -120,9 +120,9 @@ async function fetchChunkFeatures(
         // Convert API features to ProcessedFeatures
         for (const apiFeature of response.data) {
           try {
-            // Use the queried recordtype or default to 'text'
-            const featureRecordType = recordtype || 'text';
-            const processedFeature = convertRawFeature(apiFeature, featureRecordType);
+            // Use the queried recordType or default to 'text'
+            const featurerecordType = recordType || 'text';
+            const processedFeature = convertRawFeature(apiFeature, featurerecordType);
             
             features.push(processedFeature);
             stats.validProcessed++;
@@ -190,3 +190,7 @@ export function createSpatialChunks(
   console.log(`✅ Created ${chunks.length} spatial chunks`);
   return chunks;
 }
+
+
+
+

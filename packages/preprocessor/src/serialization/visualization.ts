@@ -1,43 +1,14 @@
 // src/serialization/visualization.ts - Binary serialization for visualization data
 
 import { encode, decode } from '@msgpack/msgpack';
-import type { RecordType, GridDimensions } from '../types/geo';
-import type { HeatmapStack, HeatmapBlueprint, HistogramStack, TimeSlice } from '../processing';
-
-export interface VisualizationMetadata {
-  version: string;
-  timestamp: string;
-  gridDimensions: GridDimensions;
-  heatmapBlueprint: HeatmapBlueprint;
-  timeSlices: TimeSlice[];
-  timeRange: {
-    start: string;
-    end: string;
-  };
-  recordtypes: RecordType[];
-  tags: string[];
-  sections: {
-    heatmaps: {
-      offset: number;
-      length: number;
-    };
-    histograms: {
-      offset: number;
-      length: number;
-    };
-  };
-  stats?: {
-    totalFeatures: number;
-    featuresPerRecordtype: Record<RecordType, number>;
-    timeSliceCount: number;
-    gridCellCount: number;
-  };
-}
-
-export interface VisualizationData {
-  heatmaps: HeatmapStack;
-  histograms: HistogramStack;
-}
+import type {
+  VisualizationMetadata,
+  VisualizationData,
+  HeatmapTimeline, 
+  HeatmapBlueprint, 
+  HistogramStack, 
+  TimeSlice 
+} from '@atm/shared/types';
 
 export class VisualizationBinaryWriter {
   private writer: any;
@@ -67,14 +38,14 @@ export class VisualizationBinaryWriter {
   /**
    * Write heatmaps data to the binary file
    */
-  async writeHeatmaps(heatmapStack: HeatmapStack): Promise<void> {
+  async writeHeatmaps(heatmapTimeline: HeatmapStack): Promise<void> {
     console.log(`🔥 Writing heatmaps data...`);
     
     // Store the absolute offset (including reserved metadata space)
     const heatmapsStartOffset = this.currentOffset;
     
     // Encode heatmaps data
-    const encodedHeatmaps = encode(heatmapStack);
+    const encodedHeatmaps = encode(heatmapTimeline);
     
     // Write to file
     this.writer.write(encodedHeatmaps);
@@ -120,10 +91,10 @@ export class VisualizationBinaryWriter {
    * Finalize with enhanced metadata including TimeSlices
    */
   async finalize(
-    gridDimensions: GridDimensions,
+    heatmapDimensions: heatmapDimensions,
     heatmapBlueprint: HeatmapBlueprint,
     timeSlices: TimeSlice[],
-    recordtypes: RecordType[],
+    recordTypes: RecordType[],
     tags: string[],
     stats?: VisualizationMetadata['stats']
   ): Promise<void> {
@@ -139,11 +110,11 @@ export class VisualizationBinaryWriter {
     const metadata: VisualizationMetadata = {
       version: '2.0.0',
       timestamp: new Date().toISOString(),
-      gridDimensions,
+      heatmapDimensions,
       heatmapBlueprint,
       timeSlices,
       timeRange,
-      recordtypes,
+      recordTypes,
       tags,
       sections: this.sections,
       stats
@@ -196,12 +167,12 @@ export class VisualizationBinaryWriter {
  */
 export async function createVisualizationBinary(
   binaryPath: string,
-  heatmapStack: HeatmapStack,
+  heatmapTimeline: HeatmapStack,
   histogramStack: HistogramStack,
-  gridDimensions: GridDimensions,
+  heatmapDimensions: heatmapDimensions,
   heatmapBlueprint: HeatmapBlueprint,
   timeSlices: TimeSlice[],
-  recordtypes: RecordType[],
+  recordTypes: RecordType[],
   tags: string[],
   stats?: VisualizationMetadata['stats']
 ): Promise<void> {
@@ -211,14 +182,14 @@ export async function createVisualizationBinary(
     await writer.initialize();
     
     // Write both data types (both required)
-    await writer.writeHeatmaps(heatmapStack);
+    await writer.writeHeatmaps(heatmapTimeline);
     await writer.writeHistograms(histogramStack);
     
     await writer.finalize(
-      gridDimensions,
+      heatmapDimensions,
       heatmapBlueprint,
       timeSlices,
-      recordtypes,
+      recordTypes,
       tags,
       stats
     );
@@ -234,36 +205,36 @@ export async function createVisualizationBinary(
  * Generate visualization statistics from existing interfaces
  */
 export function generateVisualizationStats(
-  heatmapStack: HeatmapStack,
+  heatmapTimeline: HeatmapStack,
   histogramStack: HistogramStack,
   timeSlices: TimeSlice[]
 ): VisualizationMetadata['stats'] {
   let totalFeatures = 0;
-  const featuresPerRecordtype: Record<RecordType, number> = {
+  const featuresPerrecordType: Record<recordType, number> = {
     text: 0,
     image: 0,
     event: 0
   };
   
   // Count features from heatmaps (spatial aggregation)
-  for (const [timeSliceKey, timeSliceData] of Object.entries(heatmapStack)) {
-    for (const [recordtype, recordtypeData] of Object.entries(timeSliceData)) {
-      const counts = Array.from(recordtypeData.base.countArray);
-      const recordtypeTotal = counts.reduce((sum, count) => sum + count, 0);
+  for (const [timeSliceKey, timeSliceData] of Object.entries(heatmapTimeline)) {
+    for (const [recordType, recordTypeData] of Object.entries(timeSliceData)) {
+      const counts = Array.from(recordTypeData.base.countArray);
+      const recordTypeTotal = counts.reduce((sum, count) => sum + count, 0);
       
-      featuresPerRecordtype[recordtype as RecordType] += recordtypeTotal;
-      totalFeatures += recordtypeTotal;
+      featuresPerrecordType[recordType as recordType] += recordTypeTotal;
+      totalFeatures += recordTypeTotal;
     }
   }
   
   // Get grid cell count from first heatmap
-  const firstTimeSlice = Object.values(heatmapStack)[0];
-  const firstRecordtype = Object.values(firstTimeSlice)[0];
-  const gridCellCount = firstRecordtype.base.countArray.length;
+  const firstTimeSlice = Object.values(heatmapTimeline)[0];
+  const firstrecordType = Object.values(firstTimeSlice)[0];
+  const gridCellCount = firstrecordType.base.countArray.length;
   
   return {
     totalFeatures,
-    featuresPerRecordtype,
+    featuresPerrecordType,
     timeSliceCount: timeSlices.length,
     gridCellCount
   };
@@ -289,12 +260,12 @@ export function mergeHeatmapStacks(stacks: HeatmapStack[]): HeatmapStack {
       if (!merged[timeSliceKey]) {
         merged[timeSliceKey] = timeSliceData;
       } else {
-        // Merge recordtypes within the same time slice
-        for (const [recordtype, recordtypeData] of Object.entries(timeSliceData)) {
-          if (!merged[timeSliceKey][recordtype as RecordType]) {
-            merged[timeSliceKey][recordtype as RecordType] = recordtypeData;
+        // Merge recordTypes within the same time slice
+        for (const [recordType, recordTypeData] of Object.entries(timeSliceData)) {
+          if (!merged[timeSliceKey][recordType as recordType]) {
+            merged[timeSliceKey][recordType as recordType] = recordTypeData;
           } else {
-            console.warn(`⚠️ Recordtype ${recordtype} in time slice ${timeSliceKey} exists in multiple stacks, using first occurrence`);
+            console.warn(`⚠️ recordType ${recordType} in time slice ${timeSliceKey} exists in multiple stacks, using first occurrence`);
           }
         }
       }
@@ -325,12 +296,12 @@ export function mergeHistogramStacks(stacks: HistogramStack[]): HistogramStack {
       if (!merged[timeSliceKey]) {
         merged[timeSliceKey] = timeSliceData;
       } else {
-        // Merge recordtypes within the same time slice
-        for (const [recordtype, recordtypeData] of Object.entries(timeSliceData)) {
-          if (!merged[timeSliceKey][recordtype as RecordType]) {
-            merged[timeSliceKey][recordtype as RecordType] = recordtypeData;
+        // Merge recordTypes within the same time slice
+        for (const [recordType, recordTypeData] of Object.entries(timeSliceData)) {
+          if (!merged[timeSliceKey][recordType as recordType]) {
+            merged[timeSliceKey][recordType as recordType] = recordTypeData;
           } else {
-            console.warn(`⚠️ Recordtype ${recordtype} in time slice ${timeSliceKey} exists in multiple stacks, using first occurrence`);
+            console.warn(`⚠️ recordType ${recordType} in time slice ${timeSliceKey} exists in multiple stacks, using first occurrence`);
           }
         }
       }
@@ -345,10 +316,10 @@ export function mergeHistogramStacks(stacks: HistogramStack[]): HistogramStack {
  * Convenience function to create visualization data from separate stacks
  */
 export function createVisualizationData(
-  heatmapStacks: HeatmapStack[],
+  heatmapTimelines: HeatmapStack[],
   histogramStacks: HistogramStack[]
 ): VisualizationData {
-  const heatmaps = mergeHeatmapStacks(heatmapStacks);
+  const heatmaps = mergeHeatmapStacks(heatmapTimelines);
   const histograms = mergeHistogramStacks(histogramStacks);
   
   return {
