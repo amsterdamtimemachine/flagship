@@ -47,41 +47,61 @@ export async function postApi<T>(endpoint: string, data?: any, options?: Request
 	}
 }
 
-// $api.ts
-//import type { HeatmapsResponse, ContentClass } from '@atm/shared-types';
-//import { PUBLIC_SERVER_DEV_URL, PUBLIC_SERVER_PROD_URL } from '$env/static/public';
-//
-//// New fetchHeatmaps function that uses your existing fetchApi
-//export async function fetchHeatmaps(
-//	selectedClasses: Set<ContentClass> | ContentClass[],
-//	selectedTags: Set<string> | string[],
-//	fetchFn: FetchFunction = fetch
-//): Promise<HeatmapsResponse> {
-//	const baseUrl =
-//		import.meta.env.MODE === 'production' ? PUBLIC_SERVER_PROD_URL : PUBLIC_SERVER_DEV_URL;
-//
-//	// Convert collections to arrays if needed
-//	const classesArray = Array.isArray(selectedClasses)
-//		? selectedClasses
-//		: Array.from(selectedClasses);
-//
-//	const tagsArray = Array.isArray(selectedTags) ? selectedTags : Array.from(selectedTags);
-//
-//	// Build the URL with parameters
-//	const classesParam = classesArray.join(',');
-//	const tagsParam = tagsArray.join(',');
-//
-//	let heatmapsUrl = `${baseUrl}/grid/heatmaps`;
-//
-//	// Add query parameters only if they're not empty
-//	const params = [];
-//	if (classesParam) params.push(`contentClasses=${classesParam}`);
-//	if (tagsParam) params.push(`tags=${tagsParam}`);
-//	if (params.length > 0) {
-//		heatmapsUrl += `?${params.join('&')}`;
-//	}
-//	console.log(heatmapsUrl);
-//
-//	// Use your existing fetchApi function
-//	return fetchApi<HeatmapsResponse>(heatmapsUrl, fetchFn);
-//}
+// API functions for visualization data
+import type { 
+	RecordType, 
+	HistogramApiResponse, 
+	VisualizationMetadata 
+} from '@atm/shared/types';
+import type { HeatmapTimelineApiResponse } from '$lib/server/api-service';
+
+/**
+ * Fetch histogram data for a specific recordType and optional tags
+ */
+export async function fetchHistogram(
+	recordType: RecordType,
+	tags?: string[],
+	fetchFn: FetchFunction = fetch
+): Promise<HistogramApiResponse> {
+	// Build the URL with parameters
+	const url = new URL('/api/histogram', window.location.origin);
+	url.searchParams.set('recordType', recordType);
+	
+	if (tags && tags.length > 0) {
+		url.searchParams.set('tags', tags.join(','));
+	}
+
+	console.log(`📊 Fetching histogram: ${url.toString()}`);
+	return fetchApi<HistogramApiResponse>(url.toString(), fetchFn);
+}
+
+/**
+ * Fetch heatmap timeline for a specific recordType and optional tags
+ * Returns all time periods at single resolution
+ */
+export async function fetchHeatmapTimeline(
+	recordType: RecordType,
+	tags?: string[],
+	fetchFn: FetchFunction = fetch
+): Promise<HeatmapTimelineApiResponse> {
+	// Build the URL with parameters
+	const url = new URL('/api/heatmaps', window.location.origin);
+	url.searchParams.set('recordType', recordType);
+	
+	if (tags && tags.length > 0) {
+		url.searchParams.set('tags', tags.join(','));
+	}
+
+	console.log(`🔥 Fetching heatmap timeline: ${url.toString()}`);
+	return fetchApi<HeatmapTimelineApiResponse>(url.toString(), fetchFn);
+}
+
+/**
+ * Fetch visualization metadata (timeSlices, recordTypes, tags, etc.)
+ */
+export async function fetchVisualizationMetadata(
+	fetchFn: FetchFunction = fetch
+): Promise<VisualizationMetadata & { success: boolean }> {
+	console.log('📋 Fetching visualization metadata');
+	return fetchApi<VisualizationMetadata & { success: boolean }>('/api/metadata', fetchFn);
+}

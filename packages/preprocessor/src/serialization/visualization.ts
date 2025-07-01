@@ -102,6 +102,7 @@ export class VisualizationBinaryWriter {
     recordTypes: RecordType[],
     resolutions: HeatmapResolutionConfig[],
     tags: string[],
+    bounds: { minLon: number; maxLon: number; minLat: number; maxLat: number },
     stats?: VisualizationMetadata['stats']
   ): Promise<void> {
     console.log(`📋 Finalizing visualization binary...`);
@@ -111,6 +112,22 @@ export class VisualizationBinaryWriter {
       start: timeSlices[0].timeRange.start,
       end: timeSlices[timeSlices.length - 1].timeRange.end
     } : { start: '', end: '' };
+    
+    // Generate dimensions for all resolutions
+    const resolutionDimensions: Record<string, HeatmapDimensions> = {};
+    for (const resolution of resolutions) {
+      const resolutionKey = `${resolution.cols}x${resolution.rows}`;
+      resolutionDimensions[resolutionKey] = {
+        colsAmount: resolution.cols,
+        rowsAmount: resolution.rows,
+        cellWidth: (bounds.maxLon - bounds.minLon) / resolution.cols,
+        cellHeight: (bounds.maxLat - bounds.minLat) / resolution.rows,
+        minLon: bounds.minLon,
+        maxLon: bounds.maxLon,
+        minLat: bounds.minLat,
+        maxLat: bounds.maxLat
+      };
+    }
     
     // Create metadata
     const metadata: VisualizationMetadata = {
@@ -122,6 +139,7 @@ export class VisualizationBinaryWriter {
       timeRange,
       recordTypes,
       resolutions,
+      resolutionDimensions,
       tags,
       sections: this.sections,
       stats
@@ -182,6 +200,7 @@ export async function createVisualizationBinary(
   recordTypes: RecordType[],
   resolutions: HeatmapResolutionConfig[],
   tags: string[],
+  bounds: { minLon: number; maxLon: number; minLat: number; maxLat: number },
   stats?: VisualizationMetadata['stats']
 ): Promise<void> {
   const writer = new VisualizationBinaryWriter(binaryPath);
@@ -200,6 +219,7 @@ export async function createVisualizationBinary(
       recordTypes,
       resolutions,
       tags,
+      bounds,
       stats
     );
     

@@ -1,5 +1,5 @@
 import type { RecordType, RawFeature, AnyProcessedFeature } from './feature'; 
-import type { Heatmap } from './heatmap';
+import type { Heatmap, HeatmapTimeline } from './heatmap';
 import type { Histogram } from './histogram';
 import type { TimeRange } from './temporal';
 
@@ -52,13 +52,15 @@ export interface HeatmapResponse {
     availablePeriods: string[];
 }
 
-
-export interface HeatmapTimelineResponse {
-    heatmaps: Record<string, Heatmap>;  // period -> heatmap
-    timeRange: TimeRange
-    availablePeriods: string[];
+export interface HeatmapTimelineApiResponse {
+  heatmapTimeline: HeatmapTimeline;
+  recordType: RecordType;
+  tags?: string[];
+  resolution: string;
+  success: boolean;
+  message?: string;
+  processingTime?: number;
 }
-
 
 export interface HistogramResponse {
     histogram: Histogram;
@@ -66,42 +68,3 @@ export interface HistogramResponse {
     availablePeriods: string[];
 }
 
-// export interface MetadataResponse extends Pick<BinaryMetadata, 'dimensions' | 'timeRange'  | 'heatmapBlueprint' | 'featuresStatistics'> { timePeriods: string[] }
-// 
-// export interface CellFeaturesResponse {
-//     cellId: string;
-//     currentPage: number;
-//     totalPages: number;
-//     featureCount: number;
-//     period: string;
-//     features: GeoFeatures[];
-// }
-// 
-// export interface HeatmapResponse {
-//     heatmap: Heatmap;
-//     timeRange: {
-//         start: string;
-//         end: string;
-//     };
-//     availablePeriods: string[];
-// }
-// 
-// 
-// export interface HeatmapsResponse {
-//     heatmaps: Record<string, Heatmap>;  // period -> heatmap
-//     timeRange: {
-//         start: string;
-//         end: string;
-//     };
-//     availablePeriods: string[];
-// }
-// 
-// 
-// export interface HistogramResponse {
-//     histogram: Histogram;
-//     timeRange: {
-//         start: string;
-//         end: string;
-//     };
-//     availablePeriods: string[];
-// }
