@@ -10,12 +10,13 @@ import type {
   Heatmap,
   HeatmapTimeline,
   HeatmapResolutions,
-  HeatmapResolutionConfigr,
+  HeatmapResolutionConfig,
   HeatmapCellBounds,
   HeatmapBlueprint,
   HeatmapCellCounts,
-  HeatmapAccumulator
-} from '@atm/shared/type';
+  HeatmapAccumulator,
+  TimeSlice
+} from '@atm/shared/types';
 import { streamFeaturesByChunks } from '../data-sources/streaming';
 
 /**
@@ -75,14 +76,14 @@ export function calculateCellBounds(
 /**
  * Create empty heatmap accumulator
  */
-export function createHeatmapAccumulator(heatmapDimensions: HeatmapDimensions): heatmapaccumulator {
+export function createHeatmapAccumulator(heatmapDimensions: HeatmapDimensions): HeatmapAccumulator {
   return {
-    cellcounts: {
+    cellCounts: {
       base: new Map(),
       tags: new Map()
     },
     heatmapDimensions: heatmapDimensions,
-    collectedtags: new Set()
+    collectedTags: new Set()
   };
 }
 
@@ -91,7 +92,7 @@ export function createHeatmapAccumulator(heatmapDimensions: HeatmapDimensions): 
  */
 export function processFeatureIntoCounts(
   feature: AnyProcessedFeature,
-  accumulator: heatmapaccumulator
+  accumulator: HeatmapAccumulator
 ): void {
   // Get cell position
   const coordinates = getFeatureCoordinates(feature);
@@ -102,26 +103,26 @@ export function processFeatureIntoCounts(
   const recordType = feature.recordType;
   
   // Initialize base counts for this recordType if needed
-  if (!accumulator.cellcounts.base.has(recordType)) {
-    accumulator.cellcounts.base.set(recordType, new Map());
+  if (!accumulator.cellCounts.base.has(recordType)) {
+    accumulator.cellCounts.base.set(recordType, new Map());
   }
   
   // Increment base count
-  const baseCounts = accumulator.cellcounts.base.get(recordType)!;
+  const baseCounts = accumulator.cellCounts.base.get(recordType)!;
   baseCounts.set(cellId, (baseCounts.get(cellId) || 0) + 1);
   
   // Process tags if they exist
   const tags = feature.tags || [];
   for (const tag of tags) {
     // Track this tag globally
-    accumulator.collectedtags.add(tag);
+    accumulator.collectedTags.add(tag);
     
     // Initialize tag structure if needed
-    if (!accumulator.cellcounts.tags.has(tag)) {
-      accumulator.cellcounts.tags.set(tag, new Map());
+    if (!accumulator.cellCounts.tags.has(tag)) {
+      accumulator.cellCounts.tags.set(tag, new Map());
     }
     
-    const tagCounts = accumulator.cellcounts.tags.get(tag)!;
+    const tagCounts = accumulator.cellCounts.tags.get(tag)!;
     if (!tagCounts.has(recordType)) {
       tagCounts.set(recordType, new Map());
     }
@@ -140,12 +141,12 @@ export async function accumulateCountsForMultipleResolutions(
   bounds: HeatmapCellBounds,
   chunkConfig: ChunkingConfig,
   recordType: RecordType,
-  resolutionConfigs: heatmapresolutionconfig[],
+  resolutionConfigs: HeatmapResolutionConfig[],
   timeSlice: TimeSlice
-): Promise<Map<string, heatmapaccumulator>> {
+): Promise<Map<string, HeatmapAccumulator>> {
   
   // Create accumulators for each resolution
-  const accumulators = new Map<string, heatmapaccumulator>();
+  const accumulators = new Map<string, HeatmapAccumulator>();
   
   for (const resConfig of resolutionConfigs) {
     const resolutionKey = `${resConfig.cols}x${resConfig.rows}`;
@@ -167,10 +168,10 @@ export async function accumulateCountsForMultipleResolutions(
   
   // Convert bounds for streaming (legacy format)
   const streamBounds = {
-    minLon: bounds.minlon,
-    maxLon: bounds.maxlon,
-    minLat: bounds.minlat,
-    maxLat: bounds.maxlat
+    minLon: bounds.minLon,
+    maxLon: bounds.maxLon,
+    minLat: bounds.minLat,
+    maxLat: bounds.maxLat
   };
   
   // Stream data once, process into ALL resolutions simultaneously
@@ -190,10 +191,10 @@ export async function accumulateCountsForMultipleResolutions(
   
   console.log(`✅ Completed accumulation for ${recordType} in ${timeSlice.label}:`);
   for (const [resolutionKey, accumulator] of accumulators) {
-    const cellsWithData = accumulator.cellcounts.base.get(recordType)?.size || 0;
+    const cellsWithData = accumulator.cellCounts.base.get(recordType)?.size || 0;
     console.log(`   - ${resolutionKey}: ${cellsWithData} cells with data`);
   }
-  console.log(`   - Unique tags found: ${accumulators.values().next().value.collectedtags.size}`);
+  console.log(`   - Unique tags found: ${accumulators.values().next().value.collectedTags.size}`);
   
   return accumulators;
 }
@@ -204,7 +205,7 @@ export async function accumulateCountsForMultipleResolutions(
 export function generateHeatmap(
   counts: Map<string, number>,
   heatmapDimensions: HeatmapDimensions
-): heatmap {
+): Heatmap {
   const totalCells = heatmapDimensions.rowsAmount * heatmapDimensions.colsAmount;
   const countarray = new Array<number>(totalCells).fill(0);
   
@@ -239,13 +240,13 @@ export function generateHeatmap(
  * Generate complete heatmap timeline from accumulator using TimeSlice
  */
 export function generateHeatmapTimelineFromAccumulator(
-  accumulator: heatmapaccumulator, 
+  accumulator: HeatmapAccumulator, 
   timeSlice: TimeSlice
-): heatmaptimeline {
+): HeatmapTimeline {
   const recordTypes: RecordType[] = ['image', 'text', 'event'];
   
   // Initialize result structure with timeline hierarchy using TimeSlice key
-  const result: heatmaptimeline = {
+  const result: HeatmapTimeline = {
     [timeSlice.key]: {} as any
   };
   
@@ -258,12 +259,12 @@ export function generateHeatmapTimelineFromAccumulator(
     };
     
     // Generate base heatmap for this recordType
-    const counts = accumulator.cellcounts.base.get(recordType) || new Map();
+    const counts = accumulator.cellCounts.base.get(recordType) || new Map();
     result[timeSlice.key][recordType].base = generateHeatmap(counts, accumulator.heatmapDimensions);
     
     // Generate tag heatmaps for this recordType
-    for (const tag of Array.from(accumulator.collectedtags)) {
-      const tagCounts = accumulator.cellcounts.tags.get(tag)?.get(recordType) || new Map();
+    for (const tag of Array.from(accumulator.collectedTags)) {
+      const tagCounts = accumulator.cellCounts.tags.get(tag)?.get(recordType) || new Map();
       result[timeSlice.key][recordType].tags[tag] = generateHeatmap(tagCounts, accumulator.heatmapDimensions);
     }
   }
@@ -274,7 +275,7 @@ export function generateHeatmapTimelineFromAccumulator(
 /**
  * Generate heatmap blueprint from grid dimensions
  */
-export function generateHeatmapBlueprint(heatmapDimensions: HeatmapDimensions): heatmapblueprint {
+export function generateHeatmapBlueprint(heatmapDimensions: HeatmapDimensions): HeatmapBlueprint {
   const cells = [];
   
   for (let row = 0; row < heatmapDimensions.rowsAmount; row++) {
@@ -306,11 +307,11 @@ export async function generateHeatmapResolutions(
   bounds: HeatmapCellBounds,
   chunkConfig: ChunkingConfig,
   recordTypes: RecordType[],
-  resolutionConfigs: heatmapresolutionconfig[],
+  resolutionConfigs: HeatmapResolutionConfig[],
   timeSlices: TimeSlice[]
-): Promise<heatmapresolutions> {
+): Promise<HeatmapResolutions> {
   
-  const result: heatmapresolutions = {};
+  const result: HeatmapResolutions = {};
   
   // Initialize all resolutions
   for (const resConfig of resolutionConfigs) {
@@ -350,12 +351,12 @@ export async function generateHeatmapResolutions(
         };
         
         // Generate base heatmap
-        const counts = accumulator.cellcounts.base.get(recordType) || new Map();
+        const counts = accumulator.cellCounts.base.get(recordType) || new Map();
         result[resolutionKey][timeSlice.key][recordType].base = generateHeatmap(counts, accumulator.heatmapDimensions);
         
         // Generate tag heatmaps
-        for (const tag of Array.from(accumulator.collectedtags)) {
-          const tagCounts = accumulator.cellcounts.tags.get(tag)?.get(recordType) || new Map();
+        for (const tag of Array.from(accumulator.collectedTags)) {
+          const tagCounts = accumulator.cellCounts.tags.get(tag)?.get(recordType) || new Map();
           result[resolutionKey][timeSlice.key][recordType].tags[tag] = generateHeatmap(tagCounts, accumulator.heatmapDimensions);
         }
       }
@@ -371,19 +372,19 @@ export async function generateHeatmapResolutions(
 /**
  * Generate heatmaps for a specific recordType using TimeSlice (single resolution)
  */
-export async function generateHeatmapTimelineForrecordType(
+export async function generateHeatmapTimelineForRecordType(
   config: DatabaseConfig,
   bounds: HeatmapCellBounds,
   chunkConfig: ChunkingConfig,
   recordType: RecordType,
   heatmapDimensions: HeatmapDimensions,
   timeSlice: TimeSlice
-): Promise<heatmaptimeline> {
+): Promise<HeatmapTimeline> {
   
   console.log(`📊 Generating heatmap timeline for recordType: ${recordType} in period: ${timeSlice.label}`);
   
   // Use single resolution config
-  const resolutionConfigs: heatmapresolutionconfig[] = [{
+  const resolutionConfigs: HeatmapResolutionConfig[] = [{
     cols: heatmapDimensions.colsAmount,
     rows: heatmapDimensions.rowsAmount
   }];
@@ -415,10 +416,10 @@ export async function generateHeatmapTimelineForMultipleTimeSlices(
   recordTypes: RecordType[],
   heatmapDimensions: HeatmapDimensions,
   timeSlices: TimeSlice[]
-): Promise<heatmaptimeline> {
+): Promise<HeatmapTimeline> {
   
   // Use single resolution
-  const resolutionConfigs: heatmapresolutionconfig[] = [{
+  const resolutionConfigs: HeatmapResolutionConfig[] = [{
     cols: heatmapDimensions.colsAmount,
     rows: heatmapDimensions.rowsAmount
   }];

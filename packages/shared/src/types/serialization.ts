@@ -1,4 +1,5 @@
-import { HeatmapBlueprint, HeatmapTimeline, HeatmapDimensions } from "./heatmap";
+import { HeatmapBlueprint, HeatmapTimeline, HeatmapDimensions, HeatmapResolutions, HeatmapResolutionConfig } from "./heatmap";
+import { Histogram } from "./histogram";
 import { TimeSlice } from "./temporal";
 import { RecordType } from "./feature";
 
@@ -14,6 +15,7 @@ export interface VisualizationMetadata {
   };
   recordTypes: RecordType[];
   tags: string[];
+  resolutions: HeatmapResolutionConfig[];
   sections: {
     heatmaps: {
       offset: number;
@@ -26,13 +28,21 @@ export interface VisualizationMetadata {
   };
   stats?: {
     totalFeatures: number;
-    featuresPerRecordtype: Record<RecordType, number>;
+    featuresPerRecordType: Record<RecordType, number>;
     timeSliceCount: number;
     gridCellCount: number;
+    resolutionCount: number;
   };
 }
 
+export interface Histograms {
+  [recordType: string]: {
+    base: Histogram;                    // Timeline for this recordType (all periods)
+    tags: Record<string, Histogram>;   // Timeline for this recordType+tag (all periods)
+  }
+}
+
 export interface VisualizationData {
-  heatmaps: HeatmapTimeline;
-  histograms: HistogramStack;
+  heatmaps: HeatmapResolutions;
+  histograms: Histograms;
 }
