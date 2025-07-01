@@ -12,7 +12,7 @@ import type {
   HistogramAccumulator,
   HistogramRequest,
   HistogramApiResponse
-} from '../types/geo';
+} from '@atm/shared/types';
 import { streamFeaturesByChunks } from '../data-sources/streaming';
 
 /**

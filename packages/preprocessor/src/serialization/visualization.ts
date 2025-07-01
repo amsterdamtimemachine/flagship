@@ -2,11 +2,16 @@
 
 import { encode, decode } from '@msgpack/msgpack';
 import type {
+  RecordType,
   VisualizationMetadata,
   VisualizationData,
-  HeatmapTimeline, 
-  HeatmapBlueprint, 
-  HistogramStack, 
+  HeatmapTimeline,
+  HeatmapResolutions,
+  HeatmapDimensions,
+  HeatmapBlueprint,
+  HeatmapResolutionConfig,
+  Histogram,
+  Histograms,
   TimeSlice 
 } from '@atm/shared/types';
 
@@ -38,14 +43,14 @@ export class VisualizationBinaryWriter {
   /**
    * Write heatmaps data to the binary file
    */
-  async writeHeatmaps(heatmapTimeline: HeatmapStack): Promise<void> {
+  async writeHeatmaps(heatmapResolutions: HeatmapResolutions): Promise<void> {
     console.log(`🔥 Writing heatmaps data...`);
     
     // Store the absolute offset (including reserved metadata space)
     const heatmapsStartOffset = this.currentOffset;
     
     // Encode heatmaps data
-    const encodedHeatmaps = encode(heatmapTimeline);
+    const encodedHeatmaps = encode(heatmapResolutions);
     
     // Write to file
     this.writer.write(encodedHeatmaps);
@@ -64,14 +69,14 @@ export class VisualizationBinaryWriter {
   /**
    * Write histograms data to the binary file
    */
-  async writeHistograms(histogramStack: HistogramStack): Promise<void> {
+  async writeHistograms(histograms: Histograms): Promise<void> {
     console.log(`📊 Writing histograms data...`);
     
     // Store the absolute offset
     const histogramsStartOffset = this.currentOffset;
     
     // Encode histograms data
-    const encodedHistograms = encode(histogramStack);
+    const encodedHistograms = encode(histograms);
     
     // Write to file
     this.writer.write(encodedHistograms);
@@ -91,10 +96,11 @@ export class VisualizationBinaryWriter {
    * Finalize with enhanced metadata including TimeSlices
    */
   async finalize(
-    heatmapDimensions: heatmapDimensions,
+    heatmapDimensions: HeatmapDimensions,
     heatmapBlueprint: HeatmapBlueprint,
     timeSlices: TimeSlice[],
     recordTypes: RecordType[],
+    resolutions: HeatmapResolutionConfig[],
     tags: string[],
     stats?: VisualizationMetadata['stats']
   ): Promise<void> {
@@ -115,6 +121,7 @@ export class VisualizationBinaryWriter {
       timeSlices,
       timeRange,
       recordTypes,
+      resolutions,
       tags,
       sections: this.sections,
       stats
@@ -167,12 +174,13 @@ export class VisualizationBinaryWriter {
  */
 export async function createVisualizationBinary(
   binaryPath: string,
-  heatmapTimeline: HeatmapStack,
-  histogramStack: HistogramStack,
-  heatmapDimensions: heatmapDimensions,
+  heatmapResolutions: HeatmapResolutions,
+  histograms: Histograms,
+  heatmapDimensions: HeatmapDimensions,
   heatmapBlueprint: HeatmapBlueprint,
   timeSlices: TimeSlice[],
   recordTypes: RecordType[],
+  resolutions: HeatmapResolutionConfig[],
   tags: string[],
   stats?: VisualizationMetadata['stats']
 ): Promise<void> {
@@ -182,14 +190,15 @@ export async function createVisualizationBinary(
     await writer.initialize();
     
     // Write both data types (both required)
-    await writer.writeHeatmaps(heatmapTimeline);
-    await writer.writeHistograms(histogramStack);
+    await writer.writeHeatmaps(heatmapResolutions);
+    await writer.writeHistograms(histograms);
     
     await writer.finalize(
       heatmapDimensions,
       heatmapBlueprint,
       timeSlices,
       recordTypes,
+      resolutions,
       tags,
       stats
     );
@@ -205,127 +214,271 @@ export async function createVisualizationBinary(
  * Generate visualization statistics from existing interfaces
  */
 export function generateVisualizationStats(
-  heatmapTimeline: HeatmapStack,
-  histogramStack: HistogramStack,
+  heatmapResolutions: HeatmapResolutions,
+  histograms: Histograms,
   timeSlices: TimeSlice[]
 ): VisualizationMetadata['stats'] {
   let totalFeatures = 0;
-  const featuresPerrecordType: Record<recordType, number> = {
+  const featuresPerRecordType: Record<RecordType, number> = {
     text: 0,
     image: 0,
     event: 0
   };
   
-  // Count features from heatmaps (spatial aggregation)
-  for (const [timeSliceKey, timeSliceData] of Object.entries(heatmapTimeline)) {
-    for (const [recordType, recordTypeData] of Object.entries(timeSliceData)) {
-      const counts = Array.from(recordTypeData.base.countArray);
-      const recordTypeTotal = counts.reduce((sum, count) => sum + count, 0);
-      
-      featuresPerrecordType[recordType as recordType] += recordTypeTotal;
-      totalFeatures += recordTypeTotal;
+  // Use the first resolution for counting (all resolutions have same data, different spatial detail)
+  const firstResolutionKey = Object.keys(heatmapResolutions)[0];
+  if (firstResolutionKey) {
+    const heatmapTimeline = heatmapResolutions[firstResolutionKey];
+    
+    // Count features from heatmaps (spatial aggregation)
+    for (const [timeSliceKey, timeSliceData] of Object.entries(heatmapTimeline)) {
+      for (const [recordType, recordTypeData] of Object.entries(timeSliceData)) {
+        const counts = Array.from(recordTypeData.base.countarray || []);
+        const recordTypeTotal = counts.reduce((sum, count) => sum + count, 0);
+        
+        featuresPerRecordType[recordType as RecordType] += recordTypeTotal;
+        totalFeatures += recordTypeTotal;
+      }
     }
+    
+    // Get grid cell count from first heatmap
+    const firstTimeSlice = Object.values(heatmapTimeline)[0];
+    const firstRecordType = Object.values(firstTimeSlice)[0];
+    const gridCellCount = firstRecordType.base.countarray?.length || 0;
+    
+    return {
+      totalFeatures,
+      featuresPerRecordType,
+      timeSliceCount: timeSlices.length,
+      gridCellCount,
+      resolutionCount: Object.keys(heatmapResolutions).length
+    };
   }
   
-  // Get grid cell count from first heatmap
-  const firstTimeSlice = Object.values(heatmapTimeline)[0];
-  const firstrecordType = Object.values(firstTimeSlice)[0];
-  const gridCellCount = firstrecordType.base.countArray.length;
+  // Fallback to histograms if no heatmaps
+  for (const [recordType, recordTypeData] of Object.entries(histograms)) {
+    const baseHistogram = recordTypeData.base;
+    featuresPerRecordType[recordType as RecordType] = baseHistogram.totalFeatures;
+    totalFeatures += baseHistogram.totalFeatures;
+  }
   
   return {
     totalFeatures,
-    featuresPerrecordType,
+    featuresPerRecordType,
     timeSliceCount: timeSlices.length,
-    gridCellCount
+    gridCellCount: 0,
+    resolutionCount: Object.keys(heatmapResolutions).length
   };
 }
 
 /**
- * Merge multiple heatmap stacks
+ * Merge multiple heatmap resolutions - not typically needed since generateHeatmapResolutions returns complete structure
  */
-export function mergeHeatmapStacks(stacks: HeatmapStack[]): HeatmapStack {
-  if (stacks.length === 0) {
-    throw new Error('Cannot merge empty array of heatmap stacks');
+export function mergeHeatmapResolutions(resolutions: HeatmapResolutions[]): HeatmapResolutions {
+  if (resolutions.length === 0) {
+    throw new Error('Cannot merge empty array of heatmap resolutions');
   }
   
-  if (stacks.length === 1) {
-    return stacks[0];
+  if (resolutions.length === 1) {
+    return resolutions[0];
   }
   
-  // Merge all stacks into one
-  const merged: HeatmapStack = {};
+  // Merge all resolutions into one
+  const merged: HeatmapResolutions = {};
   
-  for (const stack of stacks) {
-    for (const [timeSliceKey, timeSliceData] of Object.entries(stack)) {
-      if (!merged[timeSliceKey]) {
-        merged[timeSliceKey] = timeSliceData;
+  for (const resolutionSet of resolutions) {
+    for (const [resolutionKey, heatmapTimeline] of Object.entries(resolutionSet)) {
+      if (!merged[resolutionKey]) {
+        merged[resolutionKey] = heatmapTimeline;
       } else {
-        // Merge recordTypes within the same time slice
-        for (const [recordType, recordTypeData] of Object.entries(timeSliceData)) {
-          if (!merged[timeSliceKey][recordType as recordType]) {
-            merged[timeSliceKey][recordType as recordType] = recordTypeData;
-          } else {
-            console.warn(`⚠️ recordType ${recordType} in time slice ${timeSliceKey} exists in multiple stacks, using first occurrence`);
-          }
-        }
+        console.warn(`⚠️ Resolution ${resolutionKey} exists in multiple sets, using first occurrence`);
       }
     }
   }
   
-  console.log(`✅ Merged ${stacks.length} heatmap stacks into ${Object.keys(merged).length} time slices`);
+  console.log(`✅ Merged ${resolutions.length} heatmap resolution sets into ${Object.keys(merged).length} resolutions`);
   return merged;
 }
 
 /**
- * Merge multiple histogram stacks
+ * Merge multiple histogram collections
  */
-export function mergeHistogramStacks(stacks: HistogramStack[]): HistogramStack {
-  if (stacks.length === 0) {
-    throw new Error('Cannot merge empty array of histogram stacks');
+export function mergeHistograms(histogramCollections: Histograms[]): Histograms {
+  if (histogramCollections.length === 0) {
+    return {};
   }
   
-  if (stacks.length === 1) {
-    return stacks[0];
+  if (histogramCollections.length === 1) {
+    return histogramCollections[0];
   }
   
-  // Merge all stacks into one
-  const merged: HistogramStack = {};
+  // Merge all histogram collections into one
+  const merged: Histograms = {};
   
-  for (const stack of stacks) {
-    for (const [timeSliceKey, timeSliceData] of Object.entries(stack)) {
-      if (!merged[timeSliceKey]) {
-        merged[timeSliceKey] = timeSliceData;
+  for (const histograms of histogramCollections) {
+    for (const [recordType, recordTypeData] of Object.entries(histograms)) {
+      if (!merged[recordType]) {
+        merged[recordType] = recordTypeData;
       } else {
-        // Merge recordTypes within the same time slice
-        for (const [recordType, recordTypeData] of Object.entries(timeSliceData)) {
-          if (!merged[timeSliceKey][recordType as recordType]) {
-            merged[timeSliceKey][recordType as recordType] = recordTypeData;
-          } else {
-            console.warn(`⚠️ recordType ${recordType} in time slice ${timeSliceKey} exists in multiple stacks, using first occurrence`);
-          }
-        }
+        console.warn(`⚠️ RecordType ${recordType} exists in multiple histogram collections, using first occurrence`);
       }
     }
   }
   
-  console.log(`✅ Merged ${stacks.length} histogram stacks into ${Object.keys(merged).length} time slices`);
+  console.log(`✅ Merged ${histogramCollections.length} histogram collections into ${Object.keys(merged).length} recordTypes`);
   return merged;
 }
 
 /**
- * Convenience function to create visualization data from separate stacks
+ * Convenience function to create visualization data from resolutions and histograms
  */
 export function createVisualizationData(
-  heatmapTimelines: HeatmapStack[],
-  histogramStacks: HistogramStack[]
+  heatmapResolutions: HeatmapResolutions,
+  histograms: Histograms
 ): VisualizationData {
-  const heatmaps = mergeHeatmapStacks(heatmapTimelines);
-  const histograms = mergeHistogramStacks(histogramStacks);
-  
   return {
-    heatmaps,
+    heatmaps: heatmapResolutions,
     histograms
   };
+}
+
+/**
+ * Generate visualization binary directly from HeatmapResolutions and generated histograms
+ */
+export async function generateVisualizationBinaryFromResolutions(
+  binaryPath: string,
+  heatmapResolutions: HeatmapResolutions,
+  config: any, // DatabaseConfig
+  bounds: any, // HeatmapCellBounds  
+  chunkConfig: any, // ChunkingConfig
+  timeSlices: TimeSlice[],
+  recordTypes: RecordType[],
+  tags: string[] = []
+): Promise<void> {
+  console.log(`🎯 Generating visualization binary from HeatmapResolutions...`);
+  
+  // Generate default histograms
+  const histograms = await generateDefaultHistograms(
+    config,
+    bounds,
+    chunkConfig,
+    timeSlices,
+    recordTypes,
+    tags
+  );
+  
+  // Extract resolutions config from the HeatmapResolutions keys
+  const resolutions: HeatmapResolutionConfig[] = Object.keys(heatmapResolutions).map(key => {
+    const [cols, rows] = key.split('x').map(Number);
+    return { cols, rows };
+  });
+  
+  // Get dimensions from first resolution for metadata
+  const firstResolutionKey = Object.keys(heatmapResolutions)[0];
+  const firstResolution = heatmapResolutions[firstResolutionKey];
+  
+  // Extract dimensions from first heatmap
+  const firstTimeSlice = Object.values(firstResolution)[0];
+  const firstRecordType = Object.values(firstTimeSlice)[0];
+  const gridCellCount = firstRecordType.base.countarray?.length || 0;
+  
+  // Calculate dimensions from grid cell count and first resolution
+  const firstResConfig = resolutions[0];
+  const expectedCellCount = firstResConfig.cols * firstResConfig.rows;
+  
+  const heatmapDimensions: HeatmapDimensions = {
+    colsAmount: firstResConfig.cols,
+    rowsAmount: firstResConfig.rows,
+    cellWidth: (bounds.maxLon - bounds.minLon) / firstResConfig.cols,
+    cellHeight: (bounds.maxLat - bounds.minLat) / firstResConfig.rows,
+    minLon: bounds.minLon,
+    maxLon: bounds.maxLon,
+    minLat: bounds.minLat,
+    maxLat: bounds.maxLat
+  };
+  
+  // Generate blueprint from dimensions
+  const { generateHeatmapBlueprint } = await import('../processing/heatmap');
+  const heatmapBlueprint = generateHeatmapBlueprint(heatmapDimensions);
+  
+  // Generate stats
+  const stats = generateVisualizationStats(heatmapResolutions, histograms, timeSlices);
+  
+  // Create the binary
+  await createVisualizationBinary(
+    binaryPath,
+    heatmapResolutions,
+    histograms,
+    heatmapDimensions,
+    heatmapBlueprint,
+    timeSlices,
+    recordTypes,
+    resolutions,
+    tags,
+    stats
+  );
+  
+  console.log(`✅ Generated visualization binary with ${resolutions.length} resolutions and ${histograms.length} histograms`);
+}
+
+/**
+ * Generate default histograms for common use cases
+ */
+export async function generateDefaultHistograms(
+  config: any, // DatabaseConfig
+  bounds: any, // HeatmapCellBounds
+  chunkConfig: any, // ChunkingConfig  
+  timeSlices: TimeSlice[],
+  recordTypes: RecordType[],
+  tags: string[] = []
+): Promise<Histograms> {
+  console.log(`📊 Generating default histograms...`);
+  
+  const { generateFilteredHistogram } = await import('../processing/histogram');
+  const histograms: Histograms = {};
+  
+  // Generate histogram for each record type
+  for (const recordType of recordTypes) {
+    console.log(`📈 Generating histograms for recordType: ${recordType}`);
+    
+    // Initialize structure for this recordType
+    histograms[recordType] = {
+      base: {} as Histogram,
+      tags: {}
+    };
+    
+    // Generate base histogram (all features for this recordType)
+    const baseResponse = await generateFilteredHistogram(config, bounds, chunkConfig, {
+      recordType,
+      timeSlices
+    });
+    
+    if (baseResponse.success) {
+      histograms[recordType].base = baseResponse.histogram;
+    } else {
+      console.warn(`⚠️ Failed to generate base histogram for ${recordType}: ${baseResponse.message}`);
+    }
+    
+    // Generate tag-specific histograms for this recordType
+    for (const tag of tags.slice(0, 5)) { // Limit to first 5 tags per recordType
+      console.log(`📈 Generating histogram for ${recordType} + tag: ${tag}`);
+      
+      const tagResponse = await generateFilteredHistogram(config, bounds, chunkConfig, {
+        recordType,
+        tags: [tag],
+        timeSlices
+      });
+      
+      if (tagResponse.success) {
+        histograms[recordType].tags[tag] = tagResponse.histogram;
+      } else {
+        console.warn(`⚠️ Failed to generate histogram for ${recordType}+${tag}: ${tagResponse.message}`);
+      }
+    }
+  }
+  
+  console.log(`✅ Generated structured histograms for ${recordTypes.length} recordTypes`);
+  return histograms;
 }
 
 /**
@@ -355,7 +508,7 @@ export class VisualizationBinaryReader {
   /**
    * Read heatmaps data from binary file
    */
-  async readHeatmaps(): Promise<HeatmapStack> {
+  async readHeatmaps(): Promise<HeatmapResolutions> {
     const metadata = await this.readMetadata();
     const file = Bun.file(this.binaryPath);
     const buffer = await file.arrayBuffer();
@@ -370,13 +523,13 @@ export class VisualizationBinaryReader {
       metadata.sections.heatmaps.length
     );
     
-    return decode(heatmapsBytes) as HeatmapStack;
+    return decode(heatmapsBytes) as HeatmapResolutions;
   }
   
   /**
    * Read histograms data from binary file
    */
-  async readHistograms(): Promise<HistogramStack> {
+  async readHistograms(): Promise<Histograms> {
     const metadata = await this.readMetadata();
     const file = Bun.file(this.binaryPath);
     const buffer = await file.arrayBuffer();
@@ -391,7 +544,7 @@ export class VisualizationBinaryReader {
       metadata.sections.histograms.length
     );
     
-    return decode(histogramsBytes) as HistogramStack;
+    return decode(histogramsBytes) as Histograms;
   }
   
   /**

@@ -7,11 +7,10 @@ import type { Bounds } from "./spatial";
 
 /**
  * Single bin representing one time period for a specific filter
- * Contains ONLY the data matching the filter criteria
  */
 export interface HistogramBin {
-  timeSlice: TimeSlice;                              // Full TimeSlice object
-  count: number;                                     // Count matching the filter criteria for this period
+  timeSlice: TimeSlice;                              
+  count: number;                                     
 }
 
 /**
