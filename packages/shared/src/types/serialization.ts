@@ -6,7 +6,7 @@ import { RecordType } from "./feature";
 export interface VisualizationMetadata {
   version: string;
   timestamp: string;
-  heatmapDimensions: HeatmapDimensions;
+  heatmapDimensions: HeatmapDimensions; // Primary resolution (backward compatibility)
   heatmapBlueprint: HeatmapBlueprint;
   timeSlices: TimeSlice[];
   timeRange: {
@@ -16,6 +16,7 @@ export interface VisualizationMetadata {
   recordTypes: RecordType[];
   tags: string[];
   resolutions: HeatmapResolutionConfig[];
+  resolutionDimensions: Record<string, HeatmapDimensions>; // All resolutions with their dimensions
   sections: {
     heatmaps: {
       offset: number;
