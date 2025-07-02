@@ -153,12 +153,12 @@ export async function accumulateCountsForMultipleResolutions(
     const heatmapDimensions: HeatmapDimensions = {
       colsAmount: resConfig.cols,
       rowsAmount: resConfig.rows,
-      cellWidth: (bounds.maxlon - bounds.minlon) / resConfig.cols,
-      cellHeight: (bounds.maxlat - bounds.minlat) / resConfig.rows,
-      minLon: bounds.minlon,
-      maxLon: bounds.maxlon,
-      minLat: bounds.minlat,
-      maxLat: bounds.maxlat
+      cellWidth: (bounds.maxLon - bounds.minLon) / resConfig.cols,
+      cellHeight: (bounds.maxLat - bounds.minLat) / resConfig.rows,
+      minLon: bounds.minLon,
+      maxLon: bounds.maxLon,
+      minLat: bounds.minLat,
+      maxLat: bounds.maxLat
     };
     
     accumulators.set(resolutionKey, createHeatmapAccumulator(heatmapDimensions));
@@ -280,11 +280,11 @@ export function generateHeatmapBlueprint(heatmapDimensions: HeatmapDimensions): 
   
   for (let row = 0; row < heatmapDimensions.rowsAmount; row++) {
     for (let col = 0; col < heatmapDimensions.colsAmount; col++) {
-      const cellid = `${row}_${col}`;
+      const cellId = `${row}_${col}`;
       const bounds = calculateCellBounds(row, col, heatmapDimensions);
       
       cells.push({
-        cellid,
+        cellId,
         row,
         col,
         bounds

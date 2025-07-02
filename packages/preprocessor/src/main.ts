@@ -39,7 +39,7 @@ async function main() {
   try {
     // Get configuration from preset
     const config = getPreset(PRESET as keyof typeof PRESETS);
-    console.log(`Grid dimensions: ${config.grid.colsAmount}x${config.grid.rowsAmount}`);
+    console.log(`Canonical resolution: ${config.resolutionCanonical.colsAmount}x${config.resolutionCanonical.rowsAmount}`);
     console.log(`Chunking: ${config.chunking.chunkRows}x${config.chunking.chunkCols} chunks`);
 
     // Define time periods
@@ -61,7 +61,7 @@ async function main() {
 
     // Define resolutions to generate
     const resolutions: HeatmapResolutionConfig[] = [
-      { cols: config.grid.colsAmount, rows: config.grid.rowsAmount }
+      { cols: config.resolutionCanonical.colsAmount, rows: config.resolutionCanonical.rowsAmount }
     ];
 
     // Add test resolutions if requested
@@ -76,7 +76,7 @@ async function main() {
     console.log(`Resolutions: ${resolutions.map(r => `${r.cols}x${r.rows}`).join(', ')}`);
 
     // Calculate bounds with padding
-    const padding = config.grid.padding;
+    const padding = config.resolutionCanonical.padding;
     const lonRange = AMSTERDAM_BOUNDS.maxLon - AMSTERDAM_BOUNDS.minLon;
     const latRange = AMSTERDAM_BOUNDS.maxLat - AMSTERDAM_BOUNDS.minLat;
     

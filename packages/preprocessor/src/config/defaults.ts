@@ -12,10 +12,10 @@ export const AMSTERDAM_DATABASE_CONFIG: DatabaseConfig = {
 };
 
 export const AMSTERDAM_BOUNDS = {
-  minLon: 4.7,
-  maxLon: 5.1,
-  minLat: 52.2,
-  maxLat: 52.5
+  minLon: 4.85,  // Focused on central Amsterdam where we know data exists
+  maxLon: 4.95,  // Based on test data coordinates
+  minLat: 52.35, // Area that returned 20+ features in tests
+  maxLat: 52.4   // More focused than the original wide bounds
 };
 
 export const DEFAULT_GRID_CONFIG: HeatmapConfig = {
@@ -50,28 +50,28 @@ export const PRESETS = {
   // For testing and development (small grid, single chunk)
   DEVELOPMENT: {
     database: AMSTERDAM_DATABASE_CONFIG,
-    grid: { colsAmount: 20, rowsAmount: 20, padding: 0.05 },
+    resolutionCanonical: { colsAmount: 5, rowsAmount: 5, padding: 0.05 },
     chunking: HIGH_PERFORMANCE_CHUNKING
   },
   
   // For production (balanced memory and performance)
   PRODUCTION: {
     database: AMSTERDAM_DATABASE_CONFIG,
-    grid: DEFAULT_GRID_CONFIG,
+    resolutionCanonical: DEFAULT_GRID_CONFIG,
     chunking: DEFAULT_CHUNKING
   },
   
   // For memory-constrained servers
   MEMORY_EFFICIENT: {
     database: { ...AMSTERDAM_DATABASE_CONFIG, batchSize: 100 },
-    grid: DEFAULT_GRID_CONFIG,
+    resolutionCanonical: DEFAULT_GRID_CONFIG,
     chunking: MEMORY_EFFICIENT_CHUNKING
   },
   
   // For high-resolution processing
   HIGH_RESOLUTION: {
     database: AMSTERDAM_DATABASE_CONFIG,
-    grid: { colsAmount: 200, rowsAmount: 200, padding: 0.05 },
+    resolutionCanonical: { colsAmount: 200, rowsAmount: 200, padding: 0.05 },
     chunking: MEMORY_EFFICIENT_CHUNKING // Use more chunks for high-res
   }
 };

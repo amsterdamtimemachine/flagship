@@ -47,28 +47,36 @@
 
 	const cellIdMap = $derived.by(() => {
 		const idMap = new Map<number, string>();
+		if (!heatmapBlueprint || !dimensions) {
+			return idMap;
+		}
+		
 		heatmapBlueprint.forEach((cell) => {
 			const index = cell.row * dimensions.colsAmount + cell.col;
 			idMap.set(index, cell.cellId);
 		});
+		
+		
 		return idMap;
 	});
 
+
+
 	let activeCells = $derived.by(() => {
-		if (!isMapLoaded || !map || !heatmap) {
+		if (!isMapLoaded || !map || !heatmap || !heatmap.countarray || !cellIdMap.size) {
 			return new Map<string, { value: number; count: number }>();
 		}
 
-		const { densityArray, countArray } = heatmap;
+		const { densityarray, countarray } = heatmap;
 		const result = new Map<string, { value: number; count: number }>();
 
-		for (let i = 0; i < countArray.length; i++) {
-			const count = countArray[i];
+		for (let i = 0; i < countarray.length; i++) {
+			const count = countarray[i];
 			if (count > 0) {
 				const cellId = cellIdMap.get(i);
 				if (cellId) {
 					result.set(cellId, {
-						value: densityArray[i] || 0,
+						value: densityarray[i] || 0,
 						count
 					});
 				}
@@ -84,6 +92,11 @@
 		resetAllCells();
 		setActiveCells();
 	});
+
+	$effect(() => {
+		console.log("blueprint!");
+		console.log(heatmapBlueprint);
+	}
 
 	// Handle selected cell changes - THIS FIXES THE HIGHLIGHTING ISSUE
 	$effect(() => {
@@ -107,15 +120,17 @@
 	});
 
 	function resetAllCells(): void {
-		if (!map) return;
-		cellIdMap.forEach((cellId, _) => {
-			map.setFeatureState(
-				{ source: 'heatmap', id: cellId },
-				{
-					value: 0,
-					count: 0
-				}
-			);
+		if (!map || !cellIdMap.size) return;
+		cellIdMap.forEach((cellId) => {
+			if (cellId) {
+				map.setFeatureState(
+					{ source: 'heatmap', id: cellId },
+					{
+						value: 0,
+						count: 0
+					}
+				);
+			}
 		});
 	}
 
@@ -127,7 +142,7 @@
 	}
 
 	function generateHeatmapCells(
-		blueprint: HeatmapCell[]
+		blueprint: HeatmapBlueprintCell[]
 	): FeatureCollection<Polygon, CellProperties> {
 		const features = blueprint.map(
 			(cell): Feature<Polygon, CellProperties> => ({
@@ -161,11 +176,13 @@
 	}
 
 	function updateSelectedCell(cellId: string | null): void {
-		if (!isMapLoaded || !map) return;
+		if (!isMapLoaded || !map || !cellIdMap.size) return;
 
 		// Clear all previous highlights
 		cellIdMap.forEach((id) => {
-			map.setFeatureState({ source: 'heatmap', id }, { selected: false });
+			if (id) {
+				map.setFeatureState({ source: 'heatmap', id }, { selected: false });
+			}
 		});
 
 		// Set new highlight
@@ -182,10 +199,10 @@
 		map = new maplibre.Map({
 			container: mapContainer,
 			style: STYLE_URL,
-			maxBounds: [
-				[west, south],
-				[east, north]
-			],
+		//	maxBounds: [
+		//		[west, south],
+		//		[east, north]
+		//	],
 			center: [4.895645, 52.372219], 
 			minZoom: 10,
 			maxZoom: 14,
@@ -199,9 +216,11 @@
 
 		map.on('load', () => {
 			// Heatmap geometry
+			const geojsonData = generateHeatmapCells(heatmapBlueprint);
+			
 			map.addSource('heatmap', {
 				type: 'geojson',
-				data: generateHeatmapCells(heatmapBlueprint),
+				data: geojsonData,
 				promoteId: 'id'
 			});
 
@@ -212,7 +231,12 @@
 				source: 'heatmap',
 				paint: {
 					'fill-color': '#0000ff',
-					'fill-opacity': ['coalesce', ['feature-state', 'value'], 0]
+					'fill-opacity': [
+						'case',
+						['>', ['feature-state', 'count'], 0],
+						['*', ['feature-state', 'value'], 0.8], // Scale value to max 0.8 opacity
+						0
+					]
 				}
 			});
 

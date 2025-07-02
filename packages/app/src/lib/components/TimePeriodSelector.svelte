@@ -9,8 +9,9 @@
 	}
 	let { histogram, period = undefined, onPeriodChange = undefined,  }: Props = $props();
 
-	const timePeriods = $derived(histogram?.bins?.map((bin) => bin.period) || []);
-	const displayPeriods = $derived(createDisplayPeriods(timePeriods));
+	// Extract time period keys from new histogram structure
+	const timePeriods = $derived(histogram?.bins?.map((bin) => bin.timeSlice.key) || []);
+	const displayPeriods = $derived(createDisplayPeriods(histogram?.bins || []));
 	const thumbScaleFactor = $derived((histogram.bins.length - 1) / histogram.bins.length);
 	const thumbOffset = $derived((100 / histogram.bins.length - 1) / 2);
 	const thumbWidth = $derived(100 / histogram.bins.length);
@@ -37,18 +38,18 @@
 		})
 	);
 
-	function createDisplayPeriods(periods: string[]): string[] {
-		if (!periods.length) return [];
-		const result = periods.map((period) => {
-			const [start] = period.split('_');
-			return start;
+	function createDisplayPeriods(bins: any[]): string[] {
+		if (!bins.length) return [];
+		
+		// Extract start years from TimeSlice objects
+		const result = bins.map((bin) => {
+			return bin.timeSlice.startYear.toString();
 		});
 
-		// Add the end period of the last bin for the final tick
-		const lastPeriod = periods[periods.length - 1];
-		const [, end] = lastPeriod.split('_');
-		if (end) {
-			result.push(end);
+		// Add the end year of the last bin for the final tick
+		const lastBin = bins[bins.length - 1];
+		if (lastBin?.timeSlice?.endYear) {
+			result.push(lastBin.timeSlice.endYear.toString());
 		}
 
 		return result;
@@ -86,7 +87,7 @@
 						fill="#60a5fa"
 						class="transition-colors duration-200"
 					>
-						<title>Period: {bin.period}, Count: {bin.count}</title>
+						<title>Period: {bin.timeSlice.label}, Count: {bin.count}</title>
 					</rect>
 				{/each}
 
