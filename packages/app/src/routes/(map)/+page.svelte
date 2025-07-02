@@ -51,9 +51,18 @@
 	}, 300);
 
 	onMount(() => {
-		// Initialize controller with first available time period
+		// Initialize controller with period from URL or first available time period
+		const urlParams = new URLSearchParams(window.location.search);
+		const periodFromUrl = urlParams.get('period');
 		const firstPeriod = histogram?.bins?.[0]?.timeSlice?.key;
-		controller.initialize(firstPeriod || '');
+		
+		// Use period from URL if valid, otherwise fall back to first period
+		let initialPeriod = firstPeriod || '';
+		if (periodFromUrl && histogram?.bins?.some(bin => bin.timeSlice.key === periodFromUrl)) {
+			initialPeriod = periodFromUrl;
+		}
+		
+		controller.initialize(initialPeriod);
 	});
 
 	// Handle period change from slider
@@ -63,7 +72,22 @@
 
 	// Handle cell selection from map
 	function handleCellClick(cellId: string | null) {
-		controller.selectCell(cellId);
+		if (cellId && heatmapBlueprint) {
+			// Find the cell bounds from the blueprint
+			const cell = heatmapBlueprint.find(c => c.cellId === cellId);
+			if (cell?.bounds) {
+				controller.selectCell(cellId, {
+					minlat: cell.bounds.minlat,
+					maxlat: cell.bounds.maxlat,
+					minlon: cell.bounds.minlon,
+					maxlon: cell.bounds.maxlon
+				});
+			} else {
+				controller.selectCell(cellId);
+			}
+		} else {
+			controller.selectCell(null);
+		}
 	}
 
 	// Handle cell modal close

@@ -105,3 +105,49 @@ export async function fetchVisualizationMetadata(
 	console.log('📋 Fetching visualization metadata');
 	return fetchApi<VisualizationMetadata & { success: boolean }>('/api/metadata', fetchFn);
 }
+
+/**
+ * Fetch geodata directly from the external database API
+ */
+export async function fetchGeodataFromDatabase(
+	params: {
+		min_lat: number;
+		min_lon: number;
+		max_lat: number;
+		max_lon: number;
+		start_year: string;
+		end_year: string;
+		page?: number;
+		recordType?: string;
+		limit?: number;
+	},
+	fetchFn: FetchFunction = fetch
+): Promise<any> {
+	// Build the URL with parameters - switch between proxy and direct
+	// Use proxy, use direct url once cors headers are added to the db api
+	const url = new URL('/api/geodata', window.location.origin);
+	// Use direct: const url = new URL('https://atmbackend.create.humanities.uva.nl/api/geodata');
+	//const url = new URL('https://atmbackend.create.humanities.uva.nl/api/geodata');
+	
+	// Add all parameters to the URL
+	Object.entries(params).forEach(([key, value]) => {
+		if (value !== undefined) {
+			url.searchParams.set(key, value.toString());
+		}
+	});
+
+	console.log(`🌍 Fetching geodata via proxy: ${url.toString()}`);
+	
+	try {
+		const response = await fetchFn(url.toString());
+		
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+		
+		return await response.json();
+	} catch (err) {
+		const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+		throw new Error(`Database API Error: ${errorMessage}`);
+	}
+}

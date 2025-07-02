@@ -3,17 +3,15 @@
 import { browser } from '$app/environment';
 import { page } from '$app/state';
 import { replaceState } from '$app/navigation';
-import { fetchApi } from '$api';
+import { fetchGeodataFromDatabase } from '$api';
 import { createCellNotFoundError, createCellLoadError, createEmptyCellError } from '$utils/error';
-import type { CellFeaturesResponse } from '@atm/shared-types';
 import type { AppError } from '$types/error';
-import {
-	PUBLIC_SERVER_DEV_URL,
-	PUBLIC_SERVER_PROD_URL
-} from '$env/static/public';
 
 interface CellData {
-	cellFeatures: CellFeaturesResponse;
+	geodata: any; // Database API response
+	cellId: string;
+	period: string;
+	bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number };
 }
 
 /**
@@ -29,10 +27,6 @@ export function createMapController() {
 	let isLoadingCell = $state(false);
 	let isRouterReady = $state(false);
 	let errors = $state<AppError[]>([]);
-
-	const baseUrl = import.meta.env.MODE === 'production' 
-		? PUBLIC_SERVER_PROD_URL 
-		: PUBLIC_SERVER_DEV_URL;
 
 	/**
 	 * Initializes the controller with server data and syncs with URL parameters.
@@ -61,7 +55,7 @@ export function createMapController() {
 		
 		// If a cell is currently selected, reload its data for the new period
 		if (cellData) {
-			loadCellData(cellData.cellFeatures.cellId, newPeriod);
+			loadCellData(cellData.cellId, newPeriod, cellData.bounds);
 		}
 	}
 
@@ -69,11 +63,11 @@ export function createMapController() {
 	 * Selects a cell and loads its data. Updates URL to reflect selection.
 	 * Pass null to deselect the current cell.
 	 */
-	async function selectCell(cellId: string | null) {
+	async function selectCell(cellId: string | null, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) {
 		if (cellId) {
 			selectedCellId = cellId;
 			updateUrlParams({ cell: cellId });
-			await loadCellData(cellId, currentPeriod);
+			await loadCellData(cellId, currentPeriod, bounds);
 			
 			// Only deselect if loading completely failed (no cellData at all)
 			if (!cellData) {
@@ -88,50 +82,61 @@ export function createMapController() {
 	}
 
 	/**
-	 * Loads cell data from the API for the given cell and period.
-	 * Automatically includes current filter parameters from URL.
+	 * Loads cell data from the database API for the given cell and period.
+	 * Fetches geodata directly from the external API using cell bounds.
 	 * Handles errors gracefully without breaking the app.
 	 */
-	async function loadCellData(cellId: string, period: string) {
+	async function loadCellData(cellId: string, period: string, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) {
 		if (!browser) return;
 		
 		isLoadingCell = true;
 		cellData = null; // Clear existing data while loading
 		
 		try {
-			// Build API URL with current filters
-			const contentClasses = page.url.searchParams.get('contentClasses') || '';
-			const tags = page.url.searchParams.get('tags') || '';
+			// Parse period to get start and end years
+			const [startYear, endYear] = period.split('_').map(y => parseInt(y));
 			
-			let apiUrl = `${baseUrl}/grid/cell/${cellId}?period=${period}&page=1`;
-			if (contentClasses) apiUrl += `&contentClasses=${contentClasses}`;
-			if (tags) apiUrl += `&tags=${tags}`;
+			// Use cell bounds if provided, otherwise fall back to broad bounds
+			const params = {
+				min_lat: bounds?.minlat ?? 1,
+				min_lon: bounds?.minlon ?? 1,
+				max_lat: bounds?.maxlat ?? 85,
+				max_lon: bounds?.maxlon ?? 55,
+				start_year: `${startYear}-01-01`,
+				end_year: `${endYear}-01-01`,
+				page: 1
+			};
 			
-			console.log('Loading cell data for:', cellId, 'URL:', apiUrl); // Debug log
+			console.log('Loading geodata for cell:', cellId, 'period:', period, 'params:', params);
 			
-			const cellFeatures = await fetchApi<CellFeaturesResponse>(apiUrl);
+			const geodata = await fetchGeodataFromDatabase(params);
 			
 			// Always set cellData - whether cell has content or not
-			cellData = { cellFeatures };
-			console.log('Cell data loaded successfully:', $state.snapshot(cellData)); // Debug log using snapshot
+			cellData = { 
+				geodata,
+				cellId,
+				period,
+				bounds
+			};
+			console.log('Geodata loaded successfully:', $state.snapshot(cellData));
 			
 		} catch (error: any) {
-			console.error('Error loading cell data:', error);
+			console.error('Error loading geodata:', error);
 			cellData = null; // No modal for non-existent cells
 			
 			// Create appropriate error based on response
 			let cellError: AppError;
-			if (error?.status === 404) {
-				console.log('Creating 404 error for cell:', cellId); // Debug log
+			if (error?.message?.includes('404')) {
+				console.log('Creating 404 error for cell:', cellId);
 				cellError = createCellNotFoundError(cellId, period);
 			} else {
 				const reason = error?.message || 'Network error';
-				console.log('Creating general error for cell:', cellId, 'reason:', reason); // Debug log
+				console.log('Creating general error for cell:', cellId, 'reason:', reason);
 				cellError = createCellLoadError(cellId, period, reason);
 			}
 			
 			// Add error to the errors array for ErrorHandler
-			console.log('Adding error to errors array:', cellError); // Debug log
+			console.log('Adding error to errors array:', cellError);
 			errors = [...errors, cellError];
 			
 		} finally {
