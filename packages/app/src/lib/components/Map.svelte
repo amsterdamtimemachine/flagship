@@ -93,11 +93,6 @@
 		setActiveCells();
 	});
 
-	$effect(() => {
-		console.log("blueprint!");
-		console.log(heatmapBlueprint);
-	}
-
 	// Handle selected cell changes - THIS FIXES THE HIGHLIGHTING ISSUE
 	$effect(() => {
 		if (isMapLoaded && map) {
@@ -158,11 +153,11 @@
 					type: 'Polygon',
 					coordinates: [
 						[
-							[cell.bounds.minLon, cell.bounds.minLat],
-							[cell.bounds.maxLon, cell.bounds.minLat],
-							[cell.bounds.maxLon, cell.bounds.maxLat],
-							[cell.bounds.minLon, cell.bounds.maxLat],
-							[cell.bounds.minLon, cell.bounds.minLat]
+							[cell.bounds.minlon, cell.bounds.minlat],
+							[cell.bounds.maxlon, cell.bounds.minlat],
+							[cell.bounds.maxlon, cell.bounds.maxlat],
+							[cell.bounds.minlon, cell.bounds.maxlat],
+							[cell.bounds.minlon, cell.bounds.minlat]
 						]
 					]
 				}
@@ -231,12 +226,7 @@
 				source: 'heatmap',
 				paint: {
 					'fill-color': '#0000ff',
-					'fill-opacity': [
-						'case',
-						['>', ['feature-state', 'count'], 0],
-						['*', ['feature-state', 'value'], 0.8], // Scale value to max 0.8 opacity
-						0
-					]
+					'fill-opacity': ['coalesce', ['feature-state', 'value'], 0]
 				}
 			});
 
