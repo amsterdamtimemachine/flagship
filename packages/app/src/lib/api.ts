@@ -1,7 +1,7 @@
 // src/lib/api.ts
 
 import { error } from '@sveltejs/kit';
-import { loadingStore } from '$lib/stores/loadingStore';
+import { loadingStore } from '$stores/loadingStore.svelte';
 
 type FetchFunction = typeof fetch;
 
