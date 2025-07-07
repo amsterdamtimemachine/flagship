@@ -1,12 +1,12 @@
 // src/lib/api.ts
 
 import { error } from '@sveltejs/kit';
-import { loadingStore } from '$stores/loadingStore.svelte';
+import { loadingState } from '$state/loadingState.svelte';
 
 type FetchFunction = typeof fetch;
 
 export async function fetchApi<T>(endpoint: string, fetchFn: FetchFunction = fetch): Promise<T> {
-	loadingStore.startLoading();
+	loadingState.startLoading();
 
 	try {
 		const response = await fetchFn(endpoint);
@@ -19,7 +19,7 @@ export async function fetchApi<T>(endpoint: string, fetchFn: FetchFunction = fet
 		const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
 		error(500, { message: errorMessage, code: 'API_ERROR' });
 	} finally {
-		loadingStore.stopLoading();
+		loadingState.stopLoading();
 	}
 }
 

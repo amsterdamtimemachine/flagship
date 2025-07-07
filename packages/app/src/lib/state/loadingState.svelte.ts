@@ -1,4 +1,4 @@
-function createLoadingStore() {
+function createLoadingState() {
 	let isLoading = $state(false);
 	let loadingCount = 0;
 
@@ -21,4 +21,4 @@ function createLoadingStore() {
 	};
 }
 
-export const loadingStore = createLoadingStore();
+export const loadingState = createLoadingState();
