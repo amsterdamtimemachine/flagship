@@ -124,10 +124,7 @@ export async function fetchGeodataFromDatabase(
 	fetchFn: FetchFunction = fetch
 ): Promise<any> {
 	// Build the URL with parameters - switch between proxy and direct
-	// Use proxy, use direct url once cors headers are added to the db api
-	const url = new URL('/api/geodata', window.location.origin);
-	// Use direct: const url = new URL('https://atmbackend.create.humanities.uva.nl/api/geodata');
-	//const url = new URL('https://atmbackend.create.humanities.uva.nl/api/geodata');
+	const url = new URL('https://atmbackend.create.humanities.uva.nl/api/geodata');
 	
 	// Add all parameters to the URL
 	Object.entries(params).forEach(([key, value]) => {
