@@ -6,19 +6,20 @@
   },
   "packageManager": "bun@1.1.38",
   "workspaces": [
-    "frontend",
-    "backend/server",
-    "backend/preprocessor",
-    "packages/shared-types"
+    "packages/*"
   ],
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "preprocess": "turbo run preprocess",
     "test": "turbo run test",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "dev:app": "turbo run dev --filter=@atm/app",
+    "dev:preprocessor": "turbo run dev --filter=@atm/preprocessor",
+    "build:shared": "turbo run build --filter=@atm/shared",
+    "clean": "turbo run clean"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
     "turbo": "^2.5.3"
   }
 }
