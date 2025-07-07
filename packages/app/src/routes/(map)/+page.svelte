@@ -27,7 +27,6 @@
 	let currentPeriod = $derived(controller.currentPeriod);
 	let selectedCellId = $derived(controller.selectedCellId);
 	let cellData = $derived(controller.cellData);
-	let cellLoading = $derived(controller.isLoadingCell);
 	let showCellModal = $derived(controller.showCellModal);
 	
 	// Combine server errors with controller errors for ErrorHandler
@@ -114,13 +113,7 @@
 
 		{#if showCellModal}
 			<div class="z-40 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
-				{#if cellLoading}
-					<div class="flex items-center justify-center h-20">
-						<div class="loader"></div>
-					</div>
-				{:else if cellData}
-					<CellView data={cellData} onClose={handleCellClose} />
-				{/if}
+				<CellView data={cellData} onClose={handleCellClose} />
 			</div>
 		{/if}
 	</div>

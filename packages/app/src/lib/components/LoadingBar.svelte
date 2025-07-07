@@ -9,7 +9,7 @@
 	}
 
 	let { 
-		class: className = '',
+		class: className = undefined,
 	}: Props = $props();
 
 	// Use melt-ui Progress builder

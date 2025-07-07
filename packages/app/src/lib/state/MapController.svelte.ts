@@ -3,6 +3,7 @@
 import { browser } from '$app/environment';
 import { page } from '$app/state';
 import { replaceState } from '$app/navigation';
+import { loadingState } from '$state/loadingState.svelte';
 import { fetchGeodataFromDatabase } from '$api';
 import { createCellNotFoundError, createCellLoadError, createEmptyCellError } from '$utils/error';
 import type { AppError } from '$types/error';
@@ -24,7 +25,6 @@ export function createMapController() {
 	let currentPeriod = $state<string>('');
 	let selectedCellId = $state<string | null>(null);
 	let cellData = $state<CellData | null>(null);
-	let isLoadingCell = $state(false);
 	let isRouterReady = $state(false);
 	let errors = $state<AppError[]>([]);
 
@@ -89,7 +89,7 @@ export function createMapController() {
 	async function loadCellData(cellId: string, period: string, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) {
 		if (!browser) return;
 		
-		isLoadingCell = true;
+		loadingState.startLoading();
 		cellData = null; // Clear existing data while loading
 		
 		try {
@@ -140,7 +140,7 @@ export function createMapController() {
 			errors = [...errors, cellError];
 			
 		} finally {
-			isLoadingCell = false;
+			loadingState.stopLoading();
 		}
 	}
 
@@ -183,7 +183,6 @@ export function createMapController() {
 		get currentPeriod() { return currentPeriod; },
 		get selectedCellId() { return selectedCellId; },
 		get cellData() { return cellData; },
-		get isLoadingCell() { return isLoadingCell; },
 		get showCellModal() { return !!cellData; },
 		get errors() { return errors; },
 

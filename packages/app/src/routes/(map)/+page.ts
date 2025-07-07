@@ -22,8 +22,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
   try {
     console.log('🔄 Loading metadata from API...');
     
-    const response = await fetch('/api/metadata');
-    
+    const response = await fetch('/api/metadata'); 
+
     if (!response.ok) {
       errors.push(createError(
         'error',

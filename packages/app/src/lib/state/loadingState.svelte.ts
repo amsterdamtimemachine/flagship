@@ -7,6 +7,7 @@ function createLoadingState() {
 			return isLoading;
 		},
 		startLoading: () => {
+			console.log("starting loading!");
 			loadingCount++;
 			isLoading = true;
 		},

@@ -133,7 +133,7 @@ export async function fetchGeodataFromDatabase(
 		}
 	});
 
-	console.log(`🌍 Fetching geodata via proxy: ${url.toString()}`);
+	console.log(`🌍 Fetching geodata: ${url.toString()}`);
 	
 	try {
 		const response = await fetchFn(url.toString());
