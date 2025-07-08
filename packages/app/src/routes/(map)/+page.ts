@@ -3,6 +3,7 @@ import type { PageLoad } from './$types';
 import type { VisualizationMetadata, HistogramApiResponse, HeatmapTimelineApiResponse, RecordType } from '@atm/shared/types';
 import type { AppError } from '$types/error';
 import { createPageErrorData, createError, createValidationError } from '$utils/error';
+import { loadingState } from '$lib/state/loadingState.svelte';
 
 interface MetadataApiResponse extends VisualizationMetadata {
   success: boolean;
@@ -10,6 +11,8 @@ interface MetadataApiResponse extends VisualizationMetadata {
 }
 
 export const load: PageLoad = async ({ fetch, url }) => {
+  loadingState.startLoading();
+  
   const errors: AppError[] = [];
   let metadata: VisualizationMetadata | null = null;
   let histogram: HistogramApiResponse | null = null;
@@ -223,6 +226,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
   
   // Wait for both data requests to complete
   await Promise.all([histogramPromise, heatmapPromise]);
+  
+  loadingState.stopLoading();
   
   return {
     metadata,
