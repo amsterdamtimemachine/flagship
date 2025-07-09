@@ -6,6 +6,7 @@
 	import { createPageErrorData } from '$utils/error';
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
+	import ToggleGroup from '$components/ToggleGroup.svelte';
 	import CellView from '$components/CellView.svelte';
 	import ErrorHandler from '$lib/components/ErrorHandler.svelte';
 	
@@ -15,6 +16,7 @@
 
 	// Derived data from server
 	let dimensions = $derived(data?.metadata?.heatmapDimensions);
+	let recordTypes = $derived(data?.metadata?.recordTypes);
 	let heatmaps = $derived(data?.heatmaps?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
 //	let timePeriods = $derived(data?.metadata?.timePeriods);
@@ -101,6 +103,7 @@
 
 <div class="relative flex flex-col w-screen h-screen">
 	<div class="relative flex-1">
+		<ToggleGroup items={recordTypes} class="absolute z-50"/>
 		{#if currentHeatmap && heatmapBlueprint && dimensions}
 			<Map
 				heatmap={currentHeatmap}
@@ -112,7 +115,7 @@
 		{/if}
 
 		{#if showCellModal}
-			<div class="z-40 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
+			<div class="z-50 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
 				<CellView data={cellData} onClose={handleCellClose} />
 			</div>
 		{/if}
