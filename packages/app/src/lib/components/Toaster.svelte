@@ -19,7 +19,7 @@
 	import { fade } from 'svelte/transition';
 </script>
 
-<div {...toaster.root} class="">
+<div {...toaster.root}>
 	{#each toaster.toasts.slice().reverse() as toast, index (toast.id)}
 		<div 
 			{...toast.content}
