@@ -7,6 +7,7 @@
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
+	import ToggleGroupSimple from '$components/ToggleGroupSimple.svelte';
 	import CellView from '$components/CellView.svelte';
 	import ErrorHandler from '$lib/components/ErrorHandler.svelte';
 	
@@ -39,9 +40,19 @@
 	});
 	
 	let currentHeatmap = $derived.by(() => {
-		if (heatmaps && currentPeriod && data.currentRecordType) {
+		if (heatmaps && currentPeriod && data.currentRecordTypes && data.currentRecordTypes.length > 0) {
 			const timeSliceData = heatmaps[currentPeriod];
-			return timeSliceData?.[data.currentRecordType]?.base;
+			if (timeSliceData) {
+				// Merge heatmaps from all selected recordTypes
+				const mergedHeatmap = [];
+				for (const recordType of data.currentRecordTypes) {
+					const recordTypeData = timeSliceData[recordType];
+					if (recordTypeData?.base) {
+						mergedHeatmap.push(...recordTypeData.base);
+					}
+				}
+				return mergedHeatmap.length > 0 ? mergedHeatmap : null;
+			}
 		}
 		return null;
 	});
@@ -103,7 +114,7 @@
 
 <div class="relative flex flex-col w-screen h-screen">
 	<div class="relative flex-1">
-		<ToggleGroup items={recordTypes} class="absolute z-50"/>
+		<ToggleGroup items={["A", "B,", "C"]} class="absolute z-50"/>
 		{#if currentHeatmap && heatmapBlueprint && dimensions}
 			<Map
 				heatmap={currentHeatmap}

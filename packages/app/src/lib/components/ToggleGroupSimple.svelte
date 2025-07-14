@@ -1,50 +1,34 @@
 <script lang="ts">
-	import { createToggleGroup, melt } from '@melt-ui/svelte';
-	import { mergeCss } from '$utils/utils';
+  import { createToggleGroup, melt } from '@melt-ui/svelte';
 
-	interface Props {
-		items: string[];
-		selectedItems?: string[];
-		onItemSelected?: (selected: string[]) => void;
-		className?: string;
-	}
+  interface Props {
+    items: string[];
+  }
 
-	let { items, 
-				selectedItems = [], 
-				onItemSelected,
-				class: className
-			}: Props = $props();
-	
-	const {
-		elements: { root, item },
-		states: { value }
-	} = createToggleGroup({
-		type: 'multiple',
-		onValueChanged: ({curr, next}) => {
-			if(onItemsSelected) {
-				onItemSelected(next);
-			}
-			return next; 
-		},
-	});
+  let { items }: Props = $props();
+
+  const {
+    elements: { root, item },
+  } = createToggleGroup({
+    type: 'multiple',
+  });
 </script>
 
 <div
-	use:melt={$root}
-	class={mergeCss("flex items-center data-[orientation='vertical']:flex-col", className)}
-	aria-label="Toggle selection"
+  use:melt={$root}
+  class="flex items-center data-[orientation='vertical']:flex-col"
+  aria-label="Toggle selection"
 >
-	{#each items as itemValue}
-		<button
-			class="toggle-item"
-			use:melt={$item(itemValue)}
-			aria-label="Toggle {itemValue}"
-		>
-			{itemValue}
-		</button>
-	{/each}
+  {#each items as itemValue}
+    <button
+      class="toggle-item"
+      use:melt={$item(itemValue)}
+      aria-label="Toggle {itemValue}"
+    >
+      {itemValue}
+    </button>
+  {/each}
 </div>
-
 
 <style lang="postcss">
   .toggle-item {

@@ -17,7 +17,7 @@ export interface ApiQueryParams {
   max_lon: number;
   start_year: string;
   end_year: string;
-  recordtype?: RecordType;
+  recordtypes?: RecordType[];
   limit?: number;
   offset?: number;
 }
@@ -54,7 +54,7 @@ export interface HeatmapResponse {
 
 export interface HeatmapTimelineApiResponse {
   heatmapTimeline: HeatmapTimeline;
-  recordType: RecordType;
+  recordTypes: RecordType[];
   tags?: string[];
   resolution: string;
   success: boolean;
@@ -64,6 +64,8 @@ export interface HeatmapTimelineApiResponse {
 
 export interface HistogramResponse {
     histogram: Histogram;
+    recordTypes: RecordType[];
+    tags?: string[];
     timeRange: TimeRange;
     availablePeriods: string[];
 }

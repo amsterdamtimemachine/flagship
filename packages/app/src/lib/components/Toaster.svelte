@@ -1,5 +1,8 @@
 <script lang="ts" context="module">
-	import { createToaster } from '@melt-ui/svelte';
+	import { createToaster, createSync } from '@melt-ui/svelte';
+	import { melt } from '@melt-ui/svelte';
+	import { flip } from 'svelte/animate';
+	import { fly } from 'svelte/transition';
 
 	export type ToastData = {
 		title: string;
@@ -15,12 +18,6 @@
 	} = createToaster<ToastData>();
 
 	export const addToast = helpers.addToast;
-</script>
-
-<script lang="ts">
-	import { melt } from '@melt-ui/svelte';
-	import { flip } from 'svelte/animate';
-	import { fly } from 'svelte/transition';
 </script>
 
 <div
@@ -54,7 +51,7 @@
 							class:bg-yellow-500={data.type === 'warning'}
 							class:bg-green-500={data.type === 'success'}
 							class:bg-blue-500={data.type === 'info'}
-						/>
+						></span>
 					</h3>
 					<div use:melt={$description(id)} class="text-sm text-gray-600">
 						{data.description}

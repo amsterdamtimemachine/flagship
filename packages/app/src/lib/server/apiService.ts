@@ -27,42 +27,127 @@ export class VisualizationApiService {
   }
 
   /**
-   * Get histogram for a specific recordType and optional tags
+   * Merge multiple histograms into a single histogram
    */
-  async getHistogram(recordType: RecordType, tags?: string[]): Promise<HistogramApiResponse> {
+  private mergeHistograms(histograms: Histogram[]): Histogram {
+    if (histograms.length === 0) {
+      throw new Error('No histograms to merge');
+    }
+    
+    if (histograms.length === 1) {
+      return histograms[0];
+    }
+
+    const merged: Histogram = {
+      bins: [],
+      maxCount: 0,
+      timeRange: histograms[0].timeRange,
+      totalFeatures: 0
+    };
+
+    // Merge bins by period
+    const binMap = new Map<string, number>();
+    
+    for (const histogram of histograms) {
+      merged.totalFeatures += histogram.totalFeatures;
+      merged.maxCount = Math.max(merged.maxCount, histogram.maxCount);
+      
+      for (const bin of histogram.bins) {
+        const existing = binMap.get(bin.period) || 0;
+        binMap.set(bin.period, existing + bin.count);
+      }
+    }
+
+    // Convert map back to bins array
+    merged.bins = Array.from(binMap.entries()).map(([period, count]) => ({
+      period,
+      count
+    }));
+
+    // Update maxCount after merging
+    merged.maxCount = Math.max(...merged.bins.map(bin => bin.count));
+
+    return merged;
+  }
+
+  /**
+   * Merge heatmap timelines across multiple recordTypes
+   */
+  private mergeHeatmapTimelines(timeline: HeatmapTimeline, recordTypes: RecordType[], tag?: string): HeatmapTimeline {
+    const merged: HeatmapTimeline = {};
+    
+    for (const [timeSliceKey, timeSliceData] of Object.entries(timeline)) {
+      const mergedTimeSlice: any = {};
+      
+      // Merge all recordTypes for this time slice
+      for (const recordType of recordTypes) {
+        const recordTypeData = timeSliceData[recordType];
+        if (recordTypeData) {
+          if (tag) {
+            // Use tag-specific heatmap if available
+            if (recordTypeData.tags[tag]) {
+              mergedTimeSlice[recordType] = {
+                base: recordTypeData.tags[tag],
+                tags: { [tag]: recordTypeData.tags[tag] }
+              };
+            }
+          } else {
+            // Use base heatmap
+            mergedTimeSlice[recordType] = recordTypeData;
+          }
+        }
+      }
+      
+      // Only include time slices that have data for at least one recordType
+      if (Object.keys(mergedTimeSlice).length > 0) {
+        merged[timeSliceKey] = mergedTimeSlice;
+      }
+    }
+    
+    return merged;
+  }
+
+  /**
+   * Get histogram for specific recordTypes and optional tags
+   */
+  async getHistogram(recordTypes: RecordType[], tags?: string[]): Promise<HistogramApiResponse> {
     const startTime = Date.now();
 
     try {
       await this.initialize();
 
-      console.log(`📊 Fetching histogram for recordType: ${recordType}`);
+      console.log(`📊 Fetching histogram for recordTypes: ${recordTypes.join(', ')}`);
       if (tags && tags.length > 0) {
         console.log(`🏷️ With tags: ${tags.join(', ')}`);
       }
 
       const histograms = await this.binaryHandler.readHistograms();
       
-      if (!histograms[recordType]) {
-        throw new Error(`RecordType "${recordType}" not found in histograms data`);
+      // Validate all recordTypes exist
+      const missingTypes = recordTypes.filter(type => !histograms[type]);
+      if (missingTypes.length > 0) {
+        throw new Error(`RecordTypes "${missingTypes.join(', ')}" not found in histograms data`);
       }
 
       let histogram: Histogram;
 
       if (!tags || tags.length === 0) {
-        // Return base histogram for the recordType
-        histogram = histograms[recordType].base;
-        console.log(`📈 Returning base histogram: ${histogram.totalFeatures} total features`);
+        // Merge base histograms for all recordTypes
+        histogram = this.mergeHistograms(recordTypes.map(type => histograms[type].base));
+        console.log(`📈 Returning merged base histogram: ${histogram.totalFeatures} total features`);
       } else if (tags.length === 1) {
-        // Single tag - return specific tag histogram if available
+        // Single tag - merge specific tag histograms if available
         const tag = tags[0];
-        const tagHistograms = histograms[recordType].tags;
+        const tagHistograms = recordTypes.map(type => {
+          const typeTagHistograms = histograms[type].tags;
+          if (!typeTagHistograms[tag]) {
+            throw new Error(`Tag "${tag}" not found for recordType "${type}"`);
+          }
+          return typeTagHistograms[tag];
+        });
         
-        if (tagHistograms[tag]) {
-          histogram = tagHistograms[tag];
-          console.log(`📈 Returning tag histogram for "${tag}": ${histogram.totalFeatures} total features`);
-        } else {
-          throw new Error(`Tag "${tag}" not found for recordType "${recordType}"`);
-        }
+        histogram = this.mergeHistograms(tagHistograms);
+        console.log(`📈 Returning merged tag histogram for "${tag}": ${histogram.totalFeatures} total features`);
       } else {
         // Multiple tags - for now, return error as we don't have intersection logic
         throw new Error("Multiple tags filtering not yet implemented");
@@ -72,6 +157,8 @@ export class VisualizationApiService {
 
       return {
         histogram: this.binaryHandler.prepareForJsonResponse(histogram),
+        recordTypes,
+        tags,
         success: true,
         processingTime
       };
@@ -83,12 +170,12 @@ export class VisualizationApiService {
       return {
         histogram: {
           bins: [],
-          recordType,
-          tags,
           maxCount: 0,
           timeRange: { start: '', end: '' },
           totalFeatures: 0
         },
+        recordTypes,
+        tags,
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error',
         processingTime
@@ -100,13 +187,13 @@ export class VisualizationApiService {
    * Get HeatmapTimeline for a specific recordType and optional tags
    * Always returns all periods at single resolution (first available resolution)
    */
-  async getHeatmapTimeline(recordType: RecordType, tags?: string[]): Promise<HeatmapTimelineApiResponse> {
+  async getHeatmapTimeline(recordTypes: RecordType[], tags?: string[]): Promise<HeatmapTimelineApiResponse> {
     const startTime = Date.now();
 
     try {
       await this.initialize();
 
-      console.log(`🔥 Fetching heatmap timeline for recordType: ${recordType}`);
+      console.log(`🔥 Fetching heatmap timeline for recordTypes: ${recordTypes.join(', ')}`);
       if (tags && tags.length > 0) {
         console.log(`🏷️ With tags: ${tags.join(', ')}`);
       }
@@ -126,42 +213,30 @@ export class VisualizationApiService {
       console.log(`📐 Using resolution: ${selectedResolution}`);
       console.log(`📅 Available time periods: ${Object.keys(heatmapTimeline).length}`);
 
-      // Validate that the recordType exists in the data
+      // Validate that all recordTypes exist in the data
       const firstTimeSlice = Object.values(heatmapTimeline)[0];
-      if (!firstTimeSlice || !firstTimeSlice[recordType]) {
-        throw new Error(`RecordType "${recordType}" not found in heatmap data`);
+      const missingTypes = recordTypes.filter(type => !firstTimeSlice || !firstTimeSlice[type]);
+      if (missingTypes.length > 0) {
+        throw new Error(`RecordTypes "${missingTypes.join(', ')}" not found in heatmap data`);
       }
 
       // If tags are specified, we need to filter/modify the timeline
       let resultTimeline: HeatmapTimeline;
 
       if (!tags || tags.length === 0) {
-        // Return full timeline with base heatmaps for this recordType
-        resultTimeline = heatmapTimeline;
-        console.log(`🔥 Returning base heatmap timeline for recordType "${recordType}"`);
+        // Return merged timeline with base heatmaps for all recordTypes
+        resultTimeline = this.mergeHeatmapTimelines(heatmapTimeline, recordTypes);
+        console.log(`🔥 Returning merged base heatmap timeline for recordTypes "${recordTypes.join(', ')}": ${Object.keys(resultTimeline).length} periods`);
       } else if (tags.length === 1) {
-        // Single tag - create timeline with tag-specific heatmaps
+        // Single tag - create timeline with tag-specific heatmaps merged across recordTypes
         const tag = tags[0];
-        resultTimeline = {};
-        
-        for (const [timeSliceKey, timeSliceData] of Object.entries(heatmapTimeline)) {
-          const recordTypeData = timeSliceData[recordType];
-          if (recordTypeData && recordTypeData.tags[tag]) {
-            // Create a timeline with only the requested recordType and tag
-            resultTimeline[timeSliceKey] = {
-              [recordType]: {
-                base: recordTypeData.tags[tag], // Use tag heatmap as base
-                tags: { [tag]: recordTypeData.tags[tag] }
-              }
-            } as any;
-          }
-        }
+        resultTimeline = this.mergeHeatmapTimelines(heatmapTimeline, recordTypes, tag);
         
         if (Object.keys(resultTimeline).length === 0) {
-          throw new Error(`Tag "${tag}" not found for recordType "${recordType}" in any time period`);
+          throw new Error(`Tag "${tag}" not found for recordTypes "${recordTypes.join(', ')}" in any time period`);
         }
         
-        console.log(`🏷️ Returning tag-filtered timeline for "${tag}": ${Object.keys(resultTimeline).length} periods`);
+        console.log(`🏷️ Returning tag-filtered merged timeline for "${tag}": ${Object.keys(resultTimeline).length} periods`);
       } else {
         // Multiple tags - not implemented yet
         throw new Error("Multiple tags filtering not yet implemented");
@@ -171,7 +246,7 @@ export class VisualizationApiService {
 
       return {
         heatmapTimeline: this.binaryHandler.prepareForJsonResponse(resultTimeline),
-        recordType,
+        recordTypes,
         tags,
         resolution: selectedResolution,
         success: true,
@@ -184,7 +259,7 @@ export class VisualizationApiService {
 
       return {
         heatmapTimeline: {},
-        recordType,
+        recordTypes,
         tags,
         resolution: '',
         success: false,

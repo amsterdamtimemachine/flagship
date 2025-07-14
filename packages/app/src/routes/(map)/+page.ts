@@ -19,7 +19,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
   let heatmaps: HeatmapTimelineApiResponse | null = null;
   
   // Parse URL parameters
-  const recordTypeParam = url.searchParams.get('recordType') as RecordType;
+  const recordTypesParam = url.searchParams.get('recordTypes');
   const tagsParam = url.searchParams.get('tags');
   
   try {
@@ -92,25 +92,31 @@ export const load: PageLoad = async ({ fetch, url }) => {
     ));
   }
   
-  // Determine recordType to use for histogram
-  let currentRecordType: RecordType = 'text'; // Default fallback
+  // Determine recordTypes to use for histogram and heatmap
+  let currentRecordTypes: RecordType[] = ['text']; // Default fallback
   
   if (metadata?.recordTypes) {
-    // Validate recordType parameter against available types
-    if (recordTypeParam && metadata.recordTypes.includes(recordTypeParam)) {
-      currentRecordType = recordTypeParam;
-    } else {
-      // Use first available recordType as default
-      currentRecordType = metadata.recordTypes[0] || 'text';
+    // Handle recordTypes parameter
+    if (recordTypesParam) {
+      const requestedTypes = recordTypesParam.split(',').map(t => t.trim()) as RecordType[];
+      const validTypes = requestedTypes.filter(type => metadata.recordTypes.includes(type));
       
-      // Add validation error if invalid recordType was provided
-      if (recordTypeParam && !metadata.recordTypes.includes(recordTypeParam)) {
+      if (validTypes.length > 0) {
+        currentRecordTypes = validTypes;
+      } else {
+        // Use first available recordType as default
+        currentRecordTypes = [metadata.recordTypes[0] || 'text'];
+        
+        // Add validation error for invalid recordTypes
         errors.push(createValidationError(
-          'recordType',
-          recordTypeParam,
-          `Must be one of: ${metadata.recordTypes.join(', ')}`
+          'recordTypes',
+          recordTypesParam,
+          `Must contain at least one of: ${metadata.recordTypes.join(', ')}`
         ));
       }
+    } else {
+      // Use first available recordType as default when no recordTypes specified
+      currentRecordTypes = [metadata.recordTypes[0] || 'text'];
     }
   }
   
@@ -126,9 +132,9 @@ export const load: PageLoad = async ({ fetch, url }) => {
   // Histogram promise
   const histogramPromise = (async () => {
     try {
-      console.log(`📊 Loading histogram for recordType: ${currentRecordType}, tags: ${tags?.join(', ') || 'none'}`);
+      console.log(`📊 Loading histogram for recordTypes: ${currentRecordTypes.join(', ')}, tags: ${tags?.join(', ') || 'none'}`);
       
-      const histogramUrl = `/api/histogram?recordType=${currentRecordType}${tags ? `&tags=${tags.join(',')}` : ''}`;
+      const histogramUrl = `/api/histogram?recordTypes=${currentRecordTypes.join(',')}${tags ? `&tags=${tags.join(',')}` : ''}`;
       const histogramResponse = await fetch(histogramUrl);
       
       if (!histogramResponse.ok) {
@@ -136,7 +142,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
           'warning',
           'Histogram Load Failed',
           `Failed to load histogram data: HTTP ${histogramResponse.status}`,
-          { recordType: currentRecordType, tags, status: histogramResponse.status }
+          { recordTypes: currentRecordTypes, tags, status: histogramResponse.status }
         ));
       } else {
         const histogramData = await histogramResponse.json() as HistogramApiResponse;
@@ -146,13 +152,13 @@ export const load: PageLoad = async ({ fetch, url }) => {
             'warning',
             'Histogram API Error',
             histogramData.message || 'Failed to get histogram data',
-            { recordType: currentRecordType, tags, response: histogramData }
+            { recordTypes: currentRecordTypes, tags, response: histogramData }
           ));
         } else {
           histogram = histogramData;
           
           console.log('✅ Histogram loaded successfully:', {
-            recordType: currentRecordType,
+            recordTypes: currentRecordTypes,
             tags: tags,
             totalFeatures: histogram.histogram.totalFeatures,
             timePeriods: histogram.histogram.bins.length,
@@ -170,7 +176,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
         'Histogram Load Error',
         'Could not load histogram data. The map will still function but temporal data may be limited.',
         { 
-          recordType: currentRecordType,
+          recordTypes: currentRecordTypes,
           tags,
           error: err instanceof Error ? err.message : 'Unknown error'
         }
@@ -181,9 +187,9 @@ export const load: PageLoad = async ({ fetch, url }) => {
   // Heatmap timeline promise
   const heatmapPromise = (async () => {
     try {
-      console.log(`🔥 Loading heatmap timeline for recordType: ${currentRecordType}, tags: ${tags?.join(', ') || 'none'}`);
+      console.log(`🔥 Loading heatmap timeline for recordTypes: ${currentRecordTypes.join(', ')}, tags: ${tags?.join(', ') || 'none'}`);
       
-      const heatmapUrl = `/api/heatmaps?recordType=${currentRecordType}${tags ? `&tags=${tags.join(',')}` : ''}`;
+      const heatmapUrl = `/api/heatmaps?recordTypes=${currentRecordTypes.join(',')}${tags ? `&tags=${tags.join(',')}` : ''}`;
       const heatmapResponse = await fetch(heatmapUrl);
       
       if (!heatmapResponse.ok) {
@@ -191,7 +197,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
           'warning',
           'Heatmap Load Failed',
           `Failed to load heatmap timeline: HTTP ${heatmapResponse.status}`,
-          { recordType: currentRecordType, tags, status: heatmapResponse.status }
+          { recordTypes: currentRecordTypes, tags, status: heatmapResponse.status }
         ));
       } else {
         const heatmapData = await heatmapResponse.json() as HeatmapTimelineApiResponse;
@@ -201,7 +207,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
             'warning',
             'Heatmap API Error',
             heatmapData.message || 'Failed to get heatmap timeline data',
-            { recordType: currentRecordType, tags, response: heatmapData }
+            { recordTypes: currentRecordTypes, tags, response: heatmapData }
           ));
         } else {
           heatmaps = heatmapData;  
@@ -216,7 +222,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
         'Heatmap Load Error',
         'Could not load heatmap timeline. Spatial visualization may be limited.',
         { 
-          recordType: currentRecordType,
+          recordTypes: currentRecordTypes,
           tags,
           error: err instanceof Error ? err.message : 'Unknown error'
         }
@@ -228,12 +234,14 @@ export const load: PageLoad = async ({ fetch, url }) => {
   await Promise.all([histogramPromise, heatmapPromise]);
   
   loadingState.stopLoading();
+
+  console.log(heatmaps);
   
   return {
     metadata,
     histogram,
     heatmaps,
-    currentRecordType,
+    currentRecordTypes,
     tags,
     errorData: createPageErrorData(errors)
   };

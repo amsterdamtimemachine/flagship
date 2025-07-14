@@ -25,5 +25,5 @@ export interface ChunkResult {
 
 export interface StreamingOptions {
   timeRange?: { start: string; end: string };
-  recordtype?: RecordType; 
+  recordtypes?: RecordType[]; 
 }

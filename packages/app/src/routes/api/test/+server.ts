@@ -2,14 +2,15 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { RecordType, HistogramApiResponse, TimeSlice } from '@atm/shared/types';
-import type { HeatmapTimelineApiResponse } from '$lib/server/api-service';
+import type { HeatmapTimelineApiResponse } from '@atm/shared/types';
 
 export const GET: RequestHandler = async ({ url }) => {
   const endpoint = url.searchParams.get('endpoint') || 'histogram';
-  const recordType = (url.searchParams.get('recordType') || 'text') as RecordType;
+  const recordTypesParam = url.searchParams.get('recordTypes') || 'text';
+  const recordTypes = recordTypesParam.split(',').map(t => t.trim()) as RecordType[];
   const tags = url.searchParams.get('tags')?.split(',').filter(t => t.trim());
 
-  console.log(`🧪 Test API called - endpoint: ${endpoint}, recordType: ${recordType}, tags: ${tags?.join(', ') || 'none'}`);
+  console.log(`🧪 Test API called - endpoint: ${endpoint}, recordTypes: ${recordTypes.join(', ')}, tags: ${tags?.join(', ') || 'none'}`);
 
   if (endpoint === 'histogram') {
     // Mock histogram response
@@ -38,12 +39,12 @@ export const GET: RequestHandler = async ({ url }) => {
           { timeSlice: mockTimeSlices[0], count: tags ? 25 : 150 },
           { timeSlice: mockTimeSlices[1], count: tags ? 35 : 200 }
         ],
-        recordType,
-        tags,
         maxCount: tags ? 35 : 200,
         timeRange: { start: '1900-01-01', end: '2000-12-31' },
         totalFeatures: tags ? 60 : 350
       },
+      recordTypes,
+      tags,
       success: true,
       processingTime: 42
     };
@@ -58,9 +59,14 @@ export const GET: RequestHandler = async ({ url }) => {
 
   if (endpoint === 'heatmaps') {
     // Mock heatmap timeline response
-    const mockHeatmapTimeline = {
-      '1900_1950': {
-        [recordType]: {
+    const mockHeatmapTimeline: any = {};
+    
+    // Generate mock data for each time period
+    ['1900_1950', '1950_2000'].forEach(timeKey => {
+      mockHeatmapTimeline[timeKey] = {};
+      
+      recordTypes.forEach(recordType => {
+        mockHeatmapTimeline[timeKey][recordType] = {
           base: {
             countarray: Array(64).fill(0).map(() => Math.floor(Math.random() * 10)),
             densityarray: Array(64).fill(0).map(() => Math.random())
@@ -71,27 +77,13 @@ export const GET: RequestHandler = async ({ url }) => {
               densityarray: Array(64).fill(0).map(() => Math.random() * 0.5)
             }
           } : {}
-        }
-      },
-      '1950_2000': {
-        [recordType]: {
-          base: {
-            countarray: Array(64).fill(0).map(() => Math.floor(Math.random() * 15)),
-            densityarray: Array(64).fill(0).map(() => Math.random())
-          },
-          tags: tags ? {
-            [tags[0]]: {
-              countarray: Array(64).fill(0).map(() => Math.floor(Math.random() * 8)),
-              densityarray: Array(64).fill(0).map(() => Math.random() * 0.7)
-            }
-          } : {}
-        }
-      }
-    };
+        };
+      });
+    });
 
     const mockResponse: HeatmapTimelineApiResponse = {
       heatmapTimeline: mockHeatmapTimeline,
-      recordType,
+      recordTypes,
       tags,
       resolution: '8x8',
       success: true,
