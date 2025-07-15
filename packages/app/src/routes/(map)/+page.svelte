@@ -8,7 +8,6 @@
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
-	import ToggleGroupSimple from '$components/ToggleGroupSimple.svelte';
 	import CellView from '$components/CellView.svelte';
 	import ErrorHandler from '$lib/components/ErrorHandler.svelte';
 	
@@ -21,7 +20,8 @@
 	let recordTypes = $derived(data?.metadata?.recordTypes);
 	let heatmapTimeline = $derived(data?.heatmapTimeline?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
-//	let timePeriods = $derived(data?.metadata?.timePeriods);
+	let currentRecordTypes = $derived(data?.currentRecordTypes);
+	let tags = $derived(data?.tags);
 	let histogram = $derived(data?.histogram?.histogram);
 
 	// Centralized state management
@@ -42,13 +42,13 @@
 	
 	// Merge timeline once when data changes (for smooth navigation)
 	let mergedTimeline = $derived.by(() => {
-		if (heatmapTimeline && data.currentRecordTypes && data.currentRecordTypes.length > 0) {
-			const needsMerging = data.currentRecordTypes.length > 1 || (data.tags && data.tags.length > 0);
+		if (heatmapTimeline && currentRecordTypes && currentRecordTypes.length > 0) {
+			const needsMerging = currentRecordTypes.length > 1 || (tags && tags.length > 0);
 			
 			if (needsMerging) {
 				// Merge entire timeline for smooth navigation
-				const selectedTag = data.tags && data.tags.length > 0 ? data.tags[0] : undefined;
-				return mergeHeatmapTimeline(heatmapTimeline, data.currentRecordTypes, selectedTag, heatmapBlueprint);
+				const selectedTag = tags && tags.length > 0 ? tags[0] : undefined;
+				return mergeHeatmapTimeline(heatmapTimeline, currentRecordTypes, selectedTag, heatmapBlueprint);
 			} else {
 				// Single recordType, no tags - use original timeline
 				return heatmapTimeline;
@@ -65,21 +65,19 @@
 		if (mergedTimeline && currentPeriod) {
 			const timeSliceData = mergedTimeline[currentPeriod];
 			if (timeSliceData) {
-				if (data.currentRecordTypes.length > 1 || (data.tags && data.tags.length > 0)) {
+				if (currentRecordTypes.length > 1 || (tags && tags.length > 0)) {
 					// Merged data: use combined recordType key
-					const combinedKey = data.currentRecordTypes.sort().join('+');
+					const combinedKey = currentRecordTypes.sort().join('+');
 					return timeSliceData[combinedKey]?.base || null;
 				} else {
 					// Single recordType: use original structure
-					const recordType = data.currentRecordTypes[0];
+					const recordType = currentRecordTypes[0];
 					return timeSliceData[recordType]?.base || null;
 				}
 			}
 		}
 		return null;
 	});
-	
-		$inspect(currentHeatmap);
 
 	// Debounced period changes to avoid too many API calls
 	const debouncedPeriodChange = debounce((period: string) => {
@@ -138,7 +136,7 @@
 
 <div class="relative flex flex-col w-screen h-screen">
 	<div class="relative flex-1">
-		<ToggleGroup items={["A", "B,", "C"]} class="absolute z-50"/>
+		<ToggleGroup items={recordTypes} selectedItems="image" class="absolute z-50 top-5 left-5"/>
 		{#if currentHeatmap && heatmapBlueprint && dimensions}
 			<Map
 				heatmap={currentHeatmap}

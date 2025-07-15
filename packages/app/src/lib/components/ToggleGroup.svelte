@@ -20,6 +20,7 @@
 		states: { value }
 	} = createToggleGroup({
 		type: 'multiple',
+		defaultValue: selectedItems,
 		onValueChanged: ({curr, next}) => {
 			if(onItemsSelected) {
 				onItemSelected(next);
@@ -59,7 +60,6 @@
     outline: none;
 
     height: theme('height.9');
-    width: theme('width.9');
 
     &:hover {
       background-color: theme('colors.blue.100');
