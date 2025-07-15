@@ -231,8 +231,8 @@ export function generateHeatmap(
   }
   
   return {
-    countarray,
-    densityarray
+    countArray: countarray,
+    densityArray: densityarray
   };
 }
 

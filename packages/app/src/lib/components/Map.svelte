@@ -63,20 +63,20 @@
 
 
 	let activeCells = $derived.by(() => {
-		if (!isMapLoaded || !map || !heatmap || !heatmap.countarray || !cellIdMap.size) {
+		if (!isMapLoaded || !map || !heatmap || !heatmap.countArray || !cellIdMap.size) {
 			return new Map<string, { value: number; count: number }>();
 		}
 
-		const { densityarray, countarray } = heatmap;
+		const { densityArray, countArray } = heatmap;
 		const result = new Map<string, { value: number; count: number }>();
 
-		for (let i = 0; i < countarray.length; i++) {
-			const count = countarray[i];
+		for (let i = 0; i < countArray.length; i++) {
+			const count = countArray[i];
 			if (count > 0) {
 				const cellId = cellIdMap.get(i);
 				if (cellId) {
 					result.set(cellId, {
-						value: densityarray[i] || 0,
+						value: densityArray[i] || 0,
 						count
 					});
 				}

@@ -253,7 +253,7 @@ export function generateVisualizationStats(
     // Count features from heatmaps (spatial aggregation)
     for (const [timeSliceKey, timeSliceData] of Object.entries(heatmapTimeline)) {
       for (const [recordType, recordTypeData] of Object.entries(timeSliceData)) {
-        const counts = Array.from(recordTypeData.base.countarray || []);
+        const counts = Array.from(recordTypeData.base.countArray || []);
         const recordTypeTotal = counts.reduce((sum, count) => sum + count, 0);
         
         featuresPerRecordType[recordType as RecordType] += recordTypeTotal;

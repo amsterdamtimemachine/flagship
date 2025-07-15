@@ -107,7 +107,7 @@ async function fetchChunkFeatures(
       end_year: timeRange?.end || '2024-12-31',
       limit: batchSize,
       offset: offset,
-      ...(recordType && { recordType }), // Add recordType filter if provided
+      ...(recordType && { recordtype: recordType }), // Add recordType filter if provided
       ...config.defaultParams
     };
     

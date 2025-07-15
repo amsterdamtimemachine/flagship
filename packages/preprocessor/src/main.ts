@@ -44,13 +44,13 @@ async function main() {
 
     // Define time periods
     const timeSlices: TimeSlice[] = createTimeSlices([
-      { start: 1600, end: 1700 }, // 17th century
-      { start: 1700, end: 1800 }, // 18th century  
-      { start: 1800, end: 1850 }, // Early 19th century
-      { start: 1850, end: 1900 }, // Late 19th century
-      { start: 1900, end: 1950 }, // Early 20th century
-      { start: 1950, end: 2000 }, // Late 20th century
-      { start: 2000, end: 2050 }  // 21st century
+      { start: 1600, end: 1700 }, 
+      { start: 1700, end: 1800 }, 
+      { start: 1800, end: 1850 }, 
+      { start: 1850, end: 1900 }, 
+      { start: 1900, end: 1950 }, 
+      { start: 1950, end: 2000 }, 
+      { start: 2000, end: 2025 }  
     ]);
 
     console.log(`Time periods: ${timeSlices.length} (${timeSlices[0].label} to ${timeSlices[timeSlices.length-1].label})`);
@@ -61,18 +61,10 @@ async function main() {
 
     // Define resolutions to generate
     const resolutions: HeatmapResolutionConfig[] = [
-      { cols: config.resolutionCanonical.colsAmount, rows: config.resolutionCanonical.rowsAmount }
+      { cols: config.resolutionCanonical.colsAmount, rows: config.resolutionCanonical.rowsAmount },
+      { cols: 8, rows: 8 },   
+      { cols: 16, rows: 16 }, 
     ];
-
-    // Add test resolutions if requested
-    if (INCLUDE_TEST_RESOLUTIONS) {
-      resolutions.push(
-        { cols: 8, rows: 8 },     // Low resolution for quick testing
-        { cols: 16, rows: 16 },   // Medium resolution
-        { cols: 32, rows: 32 }    // Higher resolution
-      );
-    }
-
     console.log(`Resolutions: ${resolutions.map(r => `${r.cols}x${r.rows}`).join(', ')}`);
 
     // Calculate bounds with padding
@@ -232,8 +224,6 @@ function parseArgs() {
     } else if (arg === '--output' && i + 1 < args.length) {
       process.env.OUTPUT_PATH = args[i + 1];
       i++;
-    } else if (arg === '--test-resolutions') {
-      process.env.INCLUDE_TEST_RESOLUTIONS = 'true';
     } else if (arg === '--help') {
       console.log(`
 Amsterdam Time Machine Binary Generator
@@ -249,11 +239,10 @@ Options:
 Environment Variables:
   PRESET               Same as --preset
   OUTPUT_PATH          Same as --output
-  INCLUDE_TEST_RESOLUTIONS  Same as --test-resolutions
 
 Examples:
   bun run src/main.ts --preset DEVELOPMENT --output ./test.bin
-  bun run src/main.ts --preset PRODUCTION --test-resolutions
+  bun run src/main.ts --preset PRODUCTION 
   PRESET=HIGH_RESOLUTION bun run src/main.ts
       `);
       process.exit(0);

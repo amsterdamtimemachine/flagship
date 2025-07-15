@@ -16,7 +16,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
   const errors: AppError[] = [];
   let metadata: VisualizationMetadata | null = null;
   let histogram: HistogramApiResponse | null = null;
-  let heatmaps: HeatmapTimelineApiResponse | null = null;
+  let heatmapTimeline: HeatmapTimelineApiResponse | null = null;
   
   // Parse URL parameters
   const recordTypesParam = url.searchParams.get('recordTypes');
@@ -210,7 +210,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
             { recordTypes: currentRecordTypes, tags, response: heatmapData }
           ));
         } else {
-          heatmaps = heatmapData;  
+          heatmapTimeline = heatmapData;  
         }
       }
       
@@ -235,12 +235,12 @@ export const load: PageLoad = async ({ fetch, url }) => {
   
   loadingState.stopLoading();
 
-  console.log(heatmaps);
+  console.log(heatmapTimeline);
   
   return {
     metadata,
     histogram,
-    heatmaps,
+    heatmapTimeline,
     currentRecordTypes,
     tags,
     errorData: createPageErrorData(errors)

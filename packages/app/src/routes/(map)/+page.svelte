@@ -4,6 +4,7 @@
 	import debounce from 'lodash.debounce';	
 	import { createMapController } from '$state/MapController.svelte';
 	import { createPageErrorData } from '$utils/error';
+	import { mergeHeatmapTimeline } from '$utils/heatmap';
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
@@ -18,7 +19,7 @@
 	// Derived data from server
 	let dimensions = $derived(data?.metadata?.heatmapDimensions);
 	let recordTypes = $derived(data?.metadata?.recordTypes);
-	let heatmaps = $derived(data?.heatmaps?.heatmapTimeline);
+	let heatmapTimeline = $derived(data?.heatmapTimeline?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
 //	let timePeriods = $derived(data?.metadata?.timePeriods);
 	let histogram = $derived(data?.histogram?.histogram);
@@ -39,23 +40,46 @@
 		return createPageErrorData([...serverErrors, ...controllerErrors]);
 	});
 	
-	let currentHeatmap = $derived.by(() => {
-		if (heatmaps && currentPeriod && data.currentRecordTypes && data.currentRecordTypes.length > 0) {
-			const timeSliceData = heatmaps[currentPeriod];
-			if (timeSliceData) {
-				// Merge heatmaps from all selected recordTypes
-				const mergedHeatmap = [];
-				for (const recordType of data.currentRecordTypes) {
-					const recordTypeData = timeSliceData[recordType];
-					if (recordTypeData?.base) {
-						mergedHeatmap.push(...recordTypeData.base);
-					}
-				}
-				return mergedHeatmap.length > 0 ? mergedHeatmap : null;
+	// Merge timeline once when data changes (for smooth navigation)
+	let mergedTimeline = $derived.by(() => {
+		if (heatmapTimeline && data.currentRecordTypes && data.currentRecordTypes.length > 0) {
+			const needsMerging = data.currentRecordTypes.length > 1 || (data.tags && data.tags.length > 0);
+			
+			if (needsMerging) {
+				// Merge entire timeline for smooth navigation
+				const selectedTag = data.tags && data.tags.length > 0 ? data.tags[0] : undefined;
+				return mergeHeatmapTimeline(heatmapTimeline, data.currentRecordTypes, selectedTag, heatmapBlueprint);
+			} else {
+				// Single recordType, no tags - use original timeline
+				return heatmapTimeline;
 			}
 		}
 		return null;
 	});
+
+	// Use histogram directly since backend handles merging
+	let mergedHistogram = $derived(histogram);
+
+	// Get current heatmap from merged timeline
+	let currentHeatmap = $derived.by(() => {
+		if (mergedTimeline && currentPeriod) {
+			const timeSliceData = mergedTimeline[currentPeriod];
+			if (timeSliceData) {
+				if (data.currentRecordTypes.length > 1 || (data.tags && data.tags.length > 0)) {
+					// Merged data: use combined recordType key
+					const combinedKey = data.currentRecordTypes.sort().join('+');
+					return timeSliceData[combinedKey]?.base || null;
+				} else {
+					// Single recordType: use original structure
+					const recordType = data.currentRecordTypes[0];
+					return timeSliceData[recordType]?.base || null;
+				}
+			}
+		}
+		return null;
+	});
+	
+		$inspect(currentHeatmap);
 
 	// Debounced period changes to avoid too many API calls
 	const debouncedPeriodChange = debounce((period: string) => {
@@ -66,11 +90,11 @@
 		// Initialize controller with period from URL or first available time period
 		const urlParams = new URLSearchParams(window.location.search);
 		const periodFromUrl = urlParams.get('period');
-		const firstPeriod = histogram?.bins?.[0]?.timeSlice?.key;
+		const firstPeriod = mergedHistogram?.bins?.[0]?.timeSlice?.key;
 		
 		// Use period from URL if valid, otherwise fall back to first period
 		let initialPeriod = firstPeriod || '';
-		if (periodFromUrl && histogram?.bins?.some(bin => bin.timeSlice.key === periodFromUrl)) {
+		if (periodFromUrl && mergedHistogram?.bins?.some(bin => bin.timeSlice.key === periodFromUrl)) {
 			initialPeriod = periodFromUrl;
 		}
 		
@@ -132,10 +156,10 @@
 		{/if}
 	</div>
 
-	{#if histogram}
+	{#if mergedHistogram}
 		<TimePeriodSelector 
 			period={currentPeriod} 
-			{histogram} 
+			histogram={mergedHistogram} 
 			onPeriodChange={handlePeriodChange} 
 		/>
 	{/if}

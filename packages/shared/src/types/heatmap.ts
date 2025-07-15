@@ -1,8 +1,8 @@
 import type { RecordType } from './feature';
 
 export interface Heatmap {
-  densityarray: number[];
-  countarray: number[];
+  densityArray: number[];
+  countArray: number[];
 }
 
 export interface HeatmapTimeline {

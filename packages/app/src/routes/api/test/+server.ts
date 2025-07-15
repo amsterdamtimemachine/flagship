@@ -68,13 +68,13 @@ export const GET: RequestHandler = async ({ url }) => {
       recordTypes.forEach(recordType => {
         mockHeatmapTimeline[timeKey][recordType] = {
           base: {
-            countarray: Array(64).fill(0).map(() => Math.floor(Math.random() * 10)),
-            densityarray: Array(64).fill(0).map(() => Math.random())
+            countArray: Array(64).fill(0).map(() => Math.floor(Math.random() * 10)),
+            densityArray: Array(64).fill(0).map(() => Math.random())
           },
           tags: tags ? {
             [tags[0]]: {
-              countarray: Array(64).fill(0).map(() => Math.floor(Math.random() * 5)),
-              densityarray: Array(64).fill(0).map(() => Math.random() * 0.5)
+              countArray: Array(64).fill(0).map(() => Math.floor(Math.random() * 5)),
+              densityArray: Array(64).fill(0).map(() => Math.random() * 0.5)
             }
           } : {}
         };

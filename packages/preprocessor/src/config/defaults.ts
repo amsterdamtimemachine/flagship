@@ -50,7 +50,7 @@ export const PRESETS = {
   // For testing and development (small grid, single chunk)
   DEVELOPMENT: {
     database: AMSTERDAM_DATABASE_CONFIG,
-    resolutionCanonical: { colsAmount: 5, rowsAmount: 5, padding: 0.05 },
+    resolutionCanonical: { colsAmount: 20, rowsAmount: 20, padding: 0.05 },
     chunking: HIGH_PERFORMANCE_CHUNKING
   },
   

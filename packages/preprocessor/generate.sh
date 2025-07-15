@@ -26,7 +26,7 @@ case $COMMAND in
     echo -e "${YELLOW}📊 Generating development binary...${NC}"
     echo "This will create a small test binary for development"
     echo ""
-    bun run src/main.ts --preset DEVELOPMENT --output ./visualization-dev.bin --test-resolutions
+    bun run src/main.ts --preset DEVELOPMENT --output ./visualization-dev.bin 
     if [ $? -eq 0 ]; then
       echo ""
       echo -e "${GREEN}✅ Development binary created: visualization-dev.bin${NC}"
@@ -62,7 +62,7 @@ case $COMMAND in
     echo -e "${YELLOW}🧪 Generating test binary...${NC}"
     echo "This will create a minimal binary for automated testing"
     echo ""
-    bun run src/main.ts --preset DEVELOPMENT --output ./test-data.bin --test-resolutions
+    bun run src/main.ts --preset DEVELOPMENT --output ./test-data.bin 
     if [ $? -eq 0 ]; then
       echo ""
       echo -e "${GREEN}✅ Test binary created: test-data.bin${NC}"

@@ -9,6 +9,7 @@ import type {
   HeatmapResolutions
 } from "@atm/shared/types";
 import { VisualizationBinaryHandler } from "./binaryHandler";
+import { mergeHistograms } from "../utils/histogram";
 
 export class VisualizationApiService {
   private binaryHandler: VisualizationBinaryHandler;
@@ -26,49 +27,6 @@ export class VisualizationApiService {
     }
   }
 
-  /**
-   * Merge multiple histograms into a single histogram
-   */
-  private mergeHistograms(histograms: Histogram[]): Histogram {
-    if (histograms.length === 0) {
-      throw new Error('No histograms to merge');
-    }
-    
-    if (histograms.length === 1) {
-      return histograms[0];
-    }
-
-    const merged: Histogram = {
-      bins: [],
-      maxCount: 0,
-      timeRange: histograms[0].timeRange,
-      totalFeatures: 0
-    };
-
-    // Merge bins by period
-    const binMap = new Map<string, number>();
-    
-    for (const histogram of histograms) {
-      merged.totalFeatures += histogram.totalFeatures;
-      merged.maxCount = Math.max(merged.maxCount, histogram.maxCount);
-      
-      for (const bin of histogram.bins) {
-        const existing = binMap.get(bin.period) || 0;
-        binMap.set(bin.period, existing + bin.count);
-      }
-    }
-
-    // Convert map back to bins array
-    merged.bins = Array.from(binMap.entries()).map(([period, count]) => ({
-      period,
-      count
-    }));
-
-    // Update maxCount after merging
-    merged.maxCount = Math.max(...merged.bins.map(bin => bin.count));
-
-    return merged;
-  }
 
   /**
    * Merge heatmap timelines across multiple recordTypes
@@ -131,26 +89,53 @@ export class VisualizationApiService {
 
       let histogram: Histogram;
 
-      if (!tags || tags.length === 0) {
-        // Merge base histograms for all recordTypes
-        histogram = this.mergeHistograms(recordTypes.map(type => histograms[type].base));
-        console.log(`📈 Returning merged base histogram: ${histogram.totalFeatures} total features`);
-      } else if (tags.length === 1) {
-        // Single tag - merge specific tag histograms if available
-        const tag = tags[0];
-        const tagHistograms = recordTypes.map(type => {
-          const typeTagHistograms = histograms[type].tags;
-          if (!typeTagHistograms[tag]) {
-            throw new Error(`Tag "${tag}" not found for recordType "${type}"`);
-          }
-          return typeTagHistograms[tag];
-        });
+      if (recordTypes.length === 1) {
+        // Single recordType - return directly without merging
+        const recordType = recordTypes[0];
         
-        histogram = this.mergeHistograms(tagHistograms);
-        console.log(`📈 Returning merged tag histogram for "${tag}": ${histogram.totalFeatures} total features`);
+        if (!tags || tags.length === 0) {
+          // Return base histogram
+          histogram = histograms[recordType].base;
+          console.log(`📈 Returning base histogram for "${recordType}": ${histogram.totalFeatures} total features`);
+        } else if (tags.length === 1) {
+          // Single tag - return specific tag histogram
+          const tag = tags[0];
+          const tagHistograms = histograms[recordType].tags;
+          
+          if (!tagHistograms[tag]) {
+            throw new Error(`Tag "${tag}" not found for recordType "${recordType}"`);
+          }
+          
+          histogram = tagHistograms[tag];
+          console.log(`📈 Returning tag histogram for "${recordType}" with tag "${tag}": ${histogram.totalFeatures} total features`);
+        } else {
+          // Multiple tags - not implemented yet
+          throw new Error("Multiple tags filtering not yet implemented");
+        }
       } else {
-        // Multiple tags - for now, return error as we don't have intersection logic
-        throw new Error("Multiple tags filtering not yet implemented");
+        // Multiple recordTypes - merge histograms
+        if (!tags || tags.length === 0) {
+          // Merge base histograms for all recordTypes
+          const baseHistograms = recordTypes.map(type => histograms[type].base);
+          histogram = mergeHistograms(baseHistograms);
+          console.log(`📈 Returning merged base histogram: ${histogram.totalFeatures} total features`);
+        } else if (tags.length === 1) {
+          // Single tag - merge specific tag histograms if available
+          const tag = tags[0];
+          const tagHistograms = recordTypes.map(type => {
+            const typeTagHistograms = histograms[type].tags;
+            if (!typeTagHistograms[tag]) {
+              throw new Error(`Tag "${tag}" not found for recordType "${type}"`);
+            }
+            return typeTagHistograms[tag];
+          });
+          
+          histogram = mergeHistograms(tagHistograms);
+          console.log(`📈 Returning merged tag histogram for "${tag}": ${histogram.totalFeatures} total features`);
+        } else {
+          // Multiple tags - for now, return error as we don't have intersection logic
+          throw new Error("Multiple tags filtering not yet implemented");
+        }
       }
 
       const processingTime = Date.now() - startTime;
