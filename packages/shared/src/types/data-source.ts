@@ -18,14 +18,18 @@ export interface ApiQueryParams {
   start_year: string;
   end_year: string;
   recordtypes?: RecordType[];
-  limit?: number;
-  offset?: number;
+  page?: number;
+  page_size?: number;
 }
 
 // response from the DB
 export interface ApiResponse {
   data: RawFeature[];
   total: number;
+  page: number;
+  page_size: number;
+  returned: number;
+  total_pages: number;
 }
 
 // responses from sveltekit server to the frontend

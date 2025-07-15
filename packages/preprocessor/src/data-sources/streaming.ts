@@ -89,8 +89,8 @@ async function fetchChunkFeatures(
   });
   
   const features: AnyProcessedFeature[] = [];
-  let offset = 0;
-  const batchSize = config.batchSize || 500; // Smaller batches for chunks
+  let currentPage = 1;
+  const pageSize = config.batchSize || 500; // Smaller batches for chunks
   let hasMore = true;
   let requestCount = 0;
   let stats = { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 };
@@ -105,8 +105,8 @@ async function fetchChunkFeatures(
       max_lon: bounds.maxLon,
       start_year: timeRange?.start || '1800-01-01',
       end_year: timeRange?.end || '2024-12-31',
-      limit: batchSize,
-      offset: offset,
+      page: currentPage,
+      page_size: pageSize,
       ...(recordType && { recordtype: recordType }), // Add recordType filter if provided
       ...config.defaultParams
     };
@@ -133,8 +133,8 @@ async function fetchChunkFeatures(
         }
       }
       
-      hasMore = response.data && response.data.length === batchSize;
-      offset += batchSize;
+      hasMore = response.page < response.total_pages;
+      currentPage++;
       
       // Safety check per chunk to prevent runaway chunks
       if (features.length > 50000) {

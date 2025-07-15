@@ -59,6 +59,11 @@ export function createMapController() {
 		}
 	}
 
+	function setRecordType(newRecordTypes: string[]) {
+		const recordTypesParam = newRecordTypes.length > 0 ? newRecordTypes.join(',') : null;
+		updateUrlParams({ recordTypes: recordTypesParam });
+	}
+
 	/**
 	 * Selects a cell and loads its data. Updates URL to reflect selection.
 	 * Pass null to deselect the current cell.
@@ -189,6 +194,7 @@ export function createMapController() {
 		// Control methods
 		initialize,
 		setPeriod,
+		setRecordType,
 		selectCell,
 		clearErrors
 	};

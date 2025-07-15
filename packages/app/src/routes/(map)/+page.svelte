@@ -5,6 +5,7 @@
 	import { createMapController } from '$state/MapController.svelte';
 	import { createPageErrorData } from '$utils/error';
 	import { mergeHeatmapTimeline } from '$utils/heatmap';
+	import { mergeHistograms } from '$utils/histogram';
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
@@ -24,10 +25,7 @@
 	let tags = $derived(data?.tags);
 	let histogram = $derived(data?.histogram?.histogram);
 
-	// Centralized state management
-	const controller = createMapController();
-	
-	// Derived state from controller
+	const controller = createMapController();	
 	let currentPeriod = $derived(controller.currentPeriod);
 	let selectedCellId = $derived(controller.selectedCellId);
 	let cellData = $derived(controller.cellData);
@@ -40,8 +38,7 @@
 		return createPageErrorData([...serverErrors, ...controllerErrors]);
 	});
 	
-	// Merge timeline once when data changes (for smooth navigation)
-	let mergedTimeline = $derived.by(() => {
+	let mergedHeatmapTimeline = $derived.by(() => {
 		if (heatmapTimeline && currentRecordTypes && currentRecordTypes.length > 0) {
 			const needsMerging = currentRecordTypes.length > 1 || (tags && tags.length > 0);
 			
@@ -57,13 +54,30 @@
 		return null;
 	});
 
-	// Use histogram directly since backend handles merging
-	let mergedHistogram = $derived(histogram);
+	// Merge histograms when multiple recordTypes are selected
+	let mergedHistogram = $derived.by(() => {
+		if (histogram && currentRecordTypes && currentRecordTypes.length > 0) {
+			const needsMerging = currentRecordTypes.length > 1;
+			
+			if (needsMerging && data?.histograms) {
+				// Multiple recordTypes: merge histograms from individual recordType data
+				const histogramsToMerge = currentRecordTypes
+					.map(recordType => data.histograms[recordType]?.histogram)
+					.filter(hist => hist); // Remove null/undefined histograms
+				
+				if (histogramsToMerge.length > 0) {
+					return mergeHistograms(histogramsToMerge);
+				}
+			}	
+			return histogram;
+		}
+		return null;
+	});
 
 	// Get current heatmap from merged timeline
 	let currentHeatmap = $derived.by(() => {
-		if (mergedTimeline && currentPeriod) {
-			const timeSliceData = mergedTimeline[currentPeriod];
+		if (mergedHeatmapTimeline && currentPeriod) {
+			const timeSliceData = mergedHeatmapTimeline[currentPeriod];
 			if (timeSliceData) {
 				if (currentRecordTypes.length > 1 || (tags && tags.length > 0)) {
 					// Merged data: use combined recordType key
@@ -104,6 +118,10 @@
 		debouncedPeriodChange(period);
 	}
 
+	function handleRecordTypeChange(recordTypes: string[]) {
+		controller.setRecordType(recordTypes);
+	}
+
 	// Handle cell selection from map
 	function handleCellClick(cellId: string | null) {
 		if (cellId && heatmapBlueprint) {
@@ -136,7 +154,7 @@
 
 <div class="relative flex flex-col w-screen h-screen">
 	<div class="relative flex-1">
-		<ToggleGroup items={recordTypes} selectedItems="image" class="absolute z-50 top-5 left-5"/>
+		<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} class="absolute z-50 top-5 left-5"/>
 		{#if currentHeatmap && heatmapBlueprint && dimensions}
 			<Map
 				heatmap={currentHeatmap}

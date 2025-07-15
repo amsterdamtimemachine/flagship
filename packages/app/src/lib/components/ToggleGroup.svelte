@@ -21,8 +21,9 @@
 	} = createToggleGroup({
 		type: 'multiple',
 		defaultValue: selectedItems,
-		onValueChanged: ({curr, next}) => {
-			if(onItemsSelected) {
+		onValueChange: ({curr, next}) => {
+			if(onItemSelected) {
+				console.log("change");
 				onItemSelected(next);
 			}
 			return next; 

@@ -38,7 +38,11 @@ export async function fetchBatch(
     if (data && Array.isArray(data.data) && typeof data.total === 'number') {
       return {
         data: data.data,
-        total: data.total
+        total: data.total,
+        page: data.page || 1,
+        page_size: data.page_size || data.data.length,
+        returned: data.returned || data.data.length,
+        total_pages: data.total_pages || Math.ceil(data.total / (data.page_size || data.data.length))
       };
     } else {
       throw new Error(`Unexpected API response format: ${JSON.stringify(data)}`);
