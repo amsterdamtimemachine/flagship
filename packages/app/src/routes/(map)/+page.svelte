@@ -1,6 +1,6 @@
 <!-- (map)/+page.svelte -->
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import debounce from 'lodash.debounce';	
 	import { createMapController } from '$state/MapController.svelte';
 	import { createPageErrorData } from '$utils/error';
@@ -111,6 +111,11 @@
 		}
 		
 		controller.initialize(initialPeriod);
+		
+		// Sync URL parameters after router is ready
+		tick().then(() => {
+			controller.syncUrlParameters(initialPeriod);
+		});
 	});
 
 	// Handle period change from slider

@@ -25,24 +25,14 @@ export function createMapController() {
 	let currentPeriod = $state<string>('');
 	let selectedCellId = $state<string | null>(null);
 	let cellData = $state<CellData | null>(null);
-	let isRouterReady = $state(false);
 	let errors = $state<AppError[]>([]);
 
 	/**
-	 * Initializes the controller with server data and syncs with URL parameters.
+	 * Initializes the controller with server data.
 	 * Should be called once in onMount with data from the load function.
 	 */
 	function initialize(serverPeriod: string) {
 		currentPeriod = serverPeriod;
-		isRouterReady = true;
-		
-		if (browser) {
-			// Check if cell should be opened from URL parameters
-			const cellParam = page.url.searchParams.get('cell');
-			if (cellParam) {
-				selectCell(cellParam);
-			}
-		}
 	}
 
 	/**
@@ -62,6 +52,26 @@ export function createMapController() {
 	function setRecordType(newRecordTypes: string[]) {
 		const recordTypesParam = newRecordTypes.length > 0 ? newRecordTypes.join(',') : null;
 		updateUrlParams({ recordTypes: recordTypesParam });
+	}
+
+	/**
+	 * Syncs URL parameters with current state after navigation is complete.
+	 * Should be called from afterNavigate hook in page component.
+	 */
+	function syncUrlParameters(serverPeriod: string) {
+		if (!browser) return;
+		
+		// Set period to URL if not already present
+		const urlPeriod = page.url.searchParams.get('period');
+		if (!urlPeriod) {
+			updateUrlParams({ period: serverPeriod });
+		}
+		
+		// Check if cell should be opened from URL parameters
+		const cellParam = page.url.searchParams.get('cell');
+		if (cellParam) {
+			selectCell(cellParam);
+		}
 	}
 
 	/**
@@ -162,7 +172,7 @@ export function createMapController() {
 	 * Guards against calling before router is initialized.
 	 */
 	function updateUrlParams(params: Record<string, string | null>) {
-		if (!browser || !isRouterReady) return;
+		if (!browser) return;
 		
 		try {
 			const url = new URL(window.location.href);
@@ -195,6 +205,7 @@ export function createMapController() {
 		initialize,
 		setPeriod,
 		setRecordType,
+		syncUrlParameters,
 		selectCell,
 		clearErrors
 	};
