@@ -140,19 +140,18 @@ export async function accumulateHistogramForPeriod(
  * Generate final histogram from accumulator data
  */
 export function generateHistogram(accumulator: HistogramAccumulator): Histogram {
-  // Convert bins map to sorted array based on TimeSlice chronological order
-  const timeSlices = Array.from(accumulator.bins.values())
-    .map(bin => bin.timeSlice)
-    .sort((a, b) => a.startYear - b.startYear);
+  // Use ALL time periods from request, not just those with data
+  // This ensures consistent timeline alignment across all histograms
+  const bins = accumulator.request.timeSlices
+    .sort((a, b) => a.startYear - b.startYear)
+    .map(timeSlice => 
+      accumulator.bins.get(timeSlice.key) || createEmptyHistogramBin(timeSlice)
+    );
   
-  const bins = timeSlices
-    .map(timeSlice => accumulator.bins.get(timeSlice.key))
-    .filter((bin): bin is HistogramBin => bin !== undefined);
-  
-  // Calculate overall time range
-  const timeRange = timeSlices.length > 0 ? {
-    start: timeSlices[0].timeRange.start,
-    end: timeSlices[timeSlices.length - 1].timeRange.end
+  // Calculate overall time range using the ordered bins
+  const timeRange = bins.length > 0 ? {
+    start: bins[0].timeSlice.timeRange.start,
+    end: bins[bins.length - 1].timeSlice.timeRange.end
   } : { start: '', end: '' };
   
   // Calculate total features
@@ -251,10 +250,9 @@ export function generateHistogramFromHeatmapTimeline(
   // Process each time slice from the heatmap timeline
   for (const timeSlice of request.timeSlices) {
     const timeSliceData = heatmapTimeline[timeSlice.key];
+    const bin = createEmptyHistogramBin(timeSlice);
     
     if (timeSliceData) {
-      const bin = createEmptyHistogramBin(timeSlice);
-      
       // If filtering by record type, only look at that type
       const recordTypesToProcess = request.recordType 
         ? [request.recordType]
@@ -270,25 +268,25 @@ export function generateHistogramFromHeatmapTimeline(
             // For now, handle single tag case
             const tag = request.tags[0];
             if (recordTypeData.tags[tag]) {
-              const tagCount = recordTypeData.tags[tag].countarray.reduce(
+              const tagCount = recordTypeData.tags[tag].countArray.reduce(
                 (sum: number, count: number) => sum + count, 0
               );
               bin.count += tagCount;
             }
           } else {
             // No tag filter, use base heatmap
-            const recordTypeCount = recordTypeData.base.countarray.reduce(
+            const recordTypeCount = recordTypeData.base.countArray.reduce(
               (sum: number, count: number) => sum + count, 0
             );
             bin.count += recordTypeCount;
           }
         }
       }
-      
-      // Update max count
-      accumulator.maxCount = Math.max(accumulator.maxCount, bin.count);
-      accumulator.bins.set(timeSlice.key, bin);
     }
+    
+    // Always add the bin (even if count is 0) to ensure consistent timeline
+    accumulator.maxCount = Math.max(accumulator.maxCount, bin.count);
+    accumulator.bins.set(timeSlice.key, bin);
   }
   
   console.log(`✅ Generated filtered histogram from HeatmapTimeline: ${accumulator.bins.size} periods`);

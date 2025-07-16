@@ -115,8 +115,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
         ));
       }
     } else {
-      // Use first available recordType as default when no recordTypes specified
-      currentRecordTypes = [metadata.recordTypes[0] || 'text'];
+      // Use ALL available recordTypes as default when no recordTypes specified
+      currentRecordTypes = metadata.recordTypes;
     }
   }
   

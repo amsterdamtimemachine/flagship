@@ -2,7 +2,7 @@
 
 import { browser } from '$app/environment';
 import { page } from '$app/state';
-import { replaceState } from '$app/navigation';
+import { replaceState, goto } from '$app/navigation';
 import { loadingState } from '$state/loadingState.svelte';
 import { fetchGeodataFromDatabase } from '$api';
 import { createCellNotFoundError, createCellLoadError, createEmptyCellError } from '$utils/error';
@@ -50,8 +50,21 @@ export function createMapController() {
 	}
 
 	function setRecordType(newRecordTypes: string[]) {
-		const recordTypesParam = newRecordTypes.length > 0 ? newRecordTypes.join(',') : null;
-		updateUrlParams({ recordTypes: recordTypesParam });
+		if (!browser) return;
+		
+		const url = new URL(window.location.href)
+		console.log("URL: ", url);
+		console.log("PAGE url: ", page.url.pathname);
+		
+		// Update recordTypes parameter
+		if (newRecordTypes.length > 0) {
+			url.searchParams.set('recordTypes', newRecordTypes.join(','));
+		} else {
+			url.searchParams.delete('recordTypes');
+		}
+	
+		// Navigate to new URL to trigger data refetch
+		goto(url.pathname + url.search);
 	}
 
 	/**

@@ -1,11 +1,13 @@
 <!-- (map)/+page.svelte -->
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { onNavigate, afterNavigate } from '$app/navigation';
 	import debounce from 'lodash.debounce';	
 	import { createMapController } from '$state/MapController.svelte';
 	import { createPageErrorData } from '$utils/error';
 	import { mergeHeatmapTimeline } from '$utils/heatmap';
 	import { mergeHistograms } from '$utils/histogram';
+	import { loadingState } from '$lib/state/loadingState.svelte';
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
@@ -31,6 +33,7 @@
 	let cellData = $derived(controller.cellData);
 	let showCellModal = $derived(controller.showCellModal);
 	
+	
 	// Combine server errors with controller errors for ErrorHandler
 	let allErrors = $derived.by(() => {
 		const serverErrors = data.errorData?.errors || [];
@@ -39,13 +42,18 @@
 	});
 	
 	let mergedHeatmapTimeline = $derived.by(() => {
-		if (heatmapTimeline && currentRecordTypes && currentRecordTypes.length > 0) {
-			const needsMerging = currentRecordTypes.length > 1 || (tags && tags.length > 0);
+		if (heatmapTimeline && currentRecordTypes && recordTypes) {
+			// Empty selection = show all recordTypes (default behavior)
+			const effectiveRecordTypes = currentRecordTypes.length > 0 
+				? currentRecordTypes 
+				: recordTypes;
+			
+			const needsMerging = effectiveRecordTypes.length > 1 || (tags && tags.length > 0);
 			
 			if (needsMerging) {
 				// Merge entire timeline for smooth navigation
 				const selectedTag = tags && tags.length > 0 ? tags[0] : undefined;
-				return mergeHeatmapTimeline(heatmapTimeline, currentRecordTypes, selectedTag, heatmapBlueprint);
+				return mergeHeatmapTimeline(heatmapTimeline, effectiveRecordTypes, selectedTag, heatmapBlueprint);
 			} else {
 				// Single recordType, no tags - use original timeline
 				return heatmapTimeline;
@@ -54,38 +62,27 @@
 		return null;
 	});
 
-	// Merge histograms when multiple recordTypes are selected
-	let mergedHistogram = $derived.by(() => {
-		if (histogram && currentRecordTypes && currentRecordTypes.length > 0) {
-			const needsMerging = currentRecordTypes.length > 1;
-			
-			if (needsMerging && data?.histograms) {
-				// Multiple recordTypes: merge histograms from individual recordType data
-				const histogramsToMerge = currentRecordTypes
-					.map(recordType => data.histograms[recordType]?.histogram)
-					.filter(hist => hist); // Remove null/undefined histograms
-				
-				if (histogramsToMerge.length > 0) {
-					return mergeHistograms(histogramsToMerge);
-				}
-			}	
-			return histogram;
-		}
-		return null;
-	});
+	// Use histogram directly since backend handles merging
+	// Note: Server-side histogram fetching already handles empty recordTypes as "all types"
+	let mergedHistogram = $derived(histogram);
 
 	// Get current heatmap from merged timeline
 	let currentHeatmap = $derived.by(() => {
-		if (mergedHeatmapTimeline && currentPeriod) {
+		if (mergedHeatmapTimeline && currentPeriod && recordTypes) {
+			// Empty selection = show all recordTypes (default behavior)
+			const effectiveRecordTypes = currentRecordTypes.length > 0 
+				? currentRecordTypes 
+				: recordTypes;
+			
 			const timeSliceData = mergedHeatmapTimeline[currentPeriod];
 			if (timeSliceData) {
-				if (currentRecordTypes.length > 1 || (tags && tags.length > 0)) {
+				if (effectiveRecordTypes.length > 1 || (tags && tags.length > 0)) {
 					// Merged data: use combined recordType key
-					const combinedKey = currentRecordTypes.sort().join('+');
+					const combinedKey = effectiveRecordTypes.sort().join('+');
 					return timeSliceData[combinedKey]?.base || null;
 				} else {
 					// Single recordType: use original structure
-					const recordType = currentRecordTypes[0];
+					const recordType = effectiveRecordTypes[0];
 					return timeSliceData[recordType]?.base || null;
 				}
 			}
@@ -116,6 +113,14 @@
 		tick().then(() => {
 			controller.syncUrlParameters(initialPeriod);
 		});
+	});
+
+	onNavigate(() => {
+		loadingState.startLoading();
+	});
+
+	afterNavigate(() => {
+		loadingState.stopLoading();
 	});
 
 	// Handle period change from slider
@@ -149,7 +154,6 @@
 
 	// Handle cell modal close
 	function handleCellClose() {
-		// Clear any cell-related errors when closing
 		controller.clearErrors();
 		controller.selectCell(null);
 	}
