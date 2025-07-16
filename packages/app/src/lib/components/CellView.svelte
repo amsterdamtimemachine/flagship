@@ -1,61 +1,109 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import GridFeatures from '$components/GridFeatures.svelte';
 	import { fetchGeodataFromDatabase } from '$api';
 	import { formatDate } from '$utils/utils';
+	import { loadingState } from '$lib/state/loadingState.svelte';
 	
 	interface Props {
-		data: { 
-			geodata: any; // Database API response
-			cellId: string;
-			period: string;
-			bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number };
-		};
+		cellId: string;
+		period: string;
+		bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number };
+		recordTypes: string[];
 		onClose?: () => void; // Optional close handler
 	}
 	
-	let { data, onClose }: Props = $props();
+	let { cellId, period, bounds, recordTypes, onClose }: Props = $props();
 	
-	// Extract features from geodata response
-	let allFeatures = $state(data.geodata?.data || []);
-	let currentPage = $state(data.geodata?.page || 1);
-	let totalPages = $state(data.geodata?.total_pages || 1);
-	let totalCount = $state(data.geodata?.total || 0);
+	// Cell data state
+	let allFeatures = $state<any[]>([]);
+	let currentPage = $state(1);
+	let totalPages = $state(1);
+	let totalCount = $state(0);
 	let hasMorePages = $derived(currentPage < totalPages);
 	let loading = $state(false);
+	let loadingMore = $state(false);
+	let initialLoading = $state(true);
+	let error = $state<string | null>(null);
 	
-	async function loadMore() {
-		if (loading || !hasMorePages) return;
-		loading = true;
+	async function loadCellData(page: number = 1, triggerGlobalLoading: boolean = true) {
+		// Only trigger global loading state when explicitly requested
+		if (triggerGlobalLoading) {
+			loadingState.startLoading();
+		}
+		
 		try {
 			// Parse period to get start and end years
-			const [startYear, endYear] = data.period.split('_').map(y => parseInt(y));
+			const [startYear, endYear] = period.split('_').map(y => parseInt(y));
 			
-			// Build params for next page
+			// Build params for API call
 			const params = {
-				min_lat: data.bounds?.minlat ?? 1,
-				min_lon: data.bounds?.minlon ?? 1,
-				max_lat: data.bounds?.maxlat ?? 85,
-				max_lon: data.bounds?.maxlon ?? 55,
+				min_lat: bounds?.minlat ?? 1,
+				min_lon: bounds?.minlon ?? 1,
+				max_lat: bounds?.maxlat ?? 85,
+				max_lon: bounds?.maxlon ?? 85,
 				start_year: `${startYear}-01-01`,
 				end_year: `${endYear}-01-01`,
-				page: currentPage + 1
+				page,
+				recordTypes: recordTypes
 			};
 			
 			const response = await fetchGeodataFromDatabase(params);
 			
-			// Append new features to existing ones
-			allFeatures = [...allFeatures, ...(response.data || [])];
-			currentPage = response.page || currentPage + 1;
-			totalPages = response.total_pages || totalPages;
-			totalCount = response.total || totalCount;
+			if (page === 1) {
+				// Initial load - replace all features
+				allFeatures = response.data || [];
+				currentPage = response.page || 1;
+				totalPages = response.total_pages || 1;
+				totalCount = response.total || 0;
+			} else {
+				// Load more - append to existing features
+				allFeatures = [...allFeatures, ...(response.data || [])];
+				currentPage = response.page || currentPage + 1;
+				totalPages = response.total_pages || totalPages;
+				totalCount = response.total || totalCount;
+			}
 			
-		} catch (error) {
-			console.error('Error loading more features:', error);
+			error = null;
+			
+		} catch (err) {
+			console.error('Error loading cell data:', err);
+			error = err instanceof Error ? err.message : 'Failed to load cell data';
 		} finally {
-			loading = false;
+			// Stop global loading state when explicitly requested
+			if (triggerGlobalLoading) {
+				loadingState.stopLoading();
+			}
 		}
 	}
+	
+	async function loadMore() {
+		if (loadingMore || !hasMorePages) return;
+		loadingMore = true;
+		
+		try {
+			await loadCellData(currentPage + 1, true); // true = trigger global loading
+		} finally {
+			loadingMore = false;
+		}
+	}
+	
+	// Watch for prop changes and reload data when cellId or period changes
+	$effect(() => {
+		// Reset state when cellId or period changes
+		allFeatures = [];
+		currentPage = 1;
+		totalPages = 1;
+		totalCount = 0;
+		error = null;
+		initialLoading = true;
+		
+		// Load new data
+		loadCellData(1).finally(() => {
+			initialLoading = false;
+		});
+	});
 	
 	function closeModal() {
 		if (onClose) {
@@ -63,27 +111,77 @@
 			onClose();
 		} else {
 			// Fallback: navigate back to period page
-			goto(`/?period=${data.period}${window.location.search.includes('&') ? '&' + window.location.search.split('&').slice(1).join('&') : ''}`);
+			goto(`/?period=${period}${window.location.search.includes('&') ? '&' + window.location.search.split('&').slice(1).join('&') : ''}`);
 		}
 	}
 </script>
 
-{#if data.geodata}
+{#if initialLoading}
 	<div class="w-full flex justify-between">
 		<div>
 			<h2>
 				<span>
 					<span class="font-bold">Cell</span>
-					{data.cellId}
+					{cellId}
 				</span>
 				<span class="block">
 					<span class="font-bold">Period</span>
-					{formatDate(data.period)}
+					{formatDate(period)}
 				</span>
-				{#if data.bounds}
+				{#if bounds}
 					<span class="block text-sm text-gray-600">
-						Lat: {data.bounds.minlat.toFixed(4)} - {data.bounds.maxlat.toFixed(4)}<br/>
-						Lon: {data.bounds.minlon.toFixed(4)} - {data.bounds.maxlon.toFixed(4)}
+						Lat: {bounds.minlat.toFixed(4)} - {bounds.maxlat.toFixed(4)}<br/>
+						Lon: {bounds.minlon.toFixed(4)} - {bounds.maxlon.toFixed(4)}
+					</span>
+				{/if}
+			</h2>
+		</div>
+		<button
+			onclick={closeModal}
+			class="px-2 py-1 text-sm text-black border border-solid border-black"
+		>
+			close
+		</button>
+	</div>
+	<div class="text-gray-500">Loading cell data...</div>
+{:else if error}
+	<div class="w-full flex justify-between">
+		<div>
+			<h2>
+				<span>
+					<span class="font-bold">Cell</span>
+					{cellId}
+				</span>
+				<span class="block">
+					<span class="font-bold">Period</span>
+					{formatDate(period)}
+				</span>
+			</h2>
+		</div>
+		<button
+			onclick={closeModal}
+			class="px-2 py-1 text-sm text-black border border-solid border-black"
+		>
+			close
+		</button>
+	</div>
+	<div class="text-red-500">Error: {error}</div>
+{:else}
+	<div class="w-full flex justify-between">
+		<div>
+			<h2>
+				<span>
+					<span class="font-bold">Cell</span>
+					{cellId}
+				</span>
+				<span class="block">
+					<span class="font-bold">Period</span>
+					{formatDate(period)}
+				</span>
+				{#if bounds}
+					<span class="block text-sm text-gray-600">
+						Lat: {bounds.minlat.toFixed(4)} - {bounds.maxlat.toFixed(4)}<br/>
+						Lon: {bounds.minlon.toFixed(4)} - {bounds.maxlon.toFixed(4)}
 					</span>
 				{/if}
 			</h2>
@@ -112,13 +210,11 @@
 		{#if hasMorePages}
 			<button
 				onclick={loadMore}
-				disabled={loading}
+				disabled={loadingMore}
 				class="px-2 py-1 text-sm text-black border border-solid border-black"
 			>
-				{loading ? 'Loading...' : 'Load More'}
+				{loadingMore ? 'Loading...' : 'Load More'}
 			</button>
 		{/if}
 	{/if}
-{:else}
-	<div class="text-gray-500">No data available</div>
 {/if}

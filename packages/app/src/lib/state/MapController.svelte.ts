@@ -3,15 +3,10 @@
 import { browser } from '$app/environment';
 import { page } from '$app/state';
 import { replaceState, goto } from '$app/navigation';
-import { loadingState } from '$state/loadingState.svelte';
-import { fetchGeodataFromDatabase } from '$api';
-import { createCellNotFoundError, createCellLoadError, createEmptyCellError } from '$utils/error';
 import type { AppError } from '$types/error';
 
-interface CellData {
-	geodata: any; // Database API response
+interface CellSelection {
 	cellId: string;
-	period: string;
 	bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number };
 }
 
@@ -24,8 +19,11 @@ export function createMapController() {
 	// Core reactive state
 	let currentPeriod = $state<string>('');
 	let selectedCellId = $state<string | null>(null);
-	let cellData = $state<CellData | null>(null);
+	let selectedCellBounds = $state<{ minlat: number; maxlat: number; minlon: number; maxlon: number } | null>(null);
 	let errors = $state<AppError[]>([]);
+	
+	// Callback for cell selection
+	let onCellSelected = $state<((cellId: string | null, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) => void) | null>(null);
 
 	/**
 	 * Initializes the controller with server data.
@@ -88,89 +86,25 @@ export function createMapController() {
 	}
 
 	/**
-	 * Selects a cell and loads its data. Updates URL to reflect selection.
+	 * Selects a cell and updates URL. Calls onCellSelected callback.
 	 * Pass null to deselect the current cell.
 	 */
-	async function selectCell(cellId: string | null, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) {
+	function selectCell(cellId: string | null, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) {
+		selectedCellId = cellId;
+		selectedCellBounds = bounds || null;
+		
 		if (cellId) {
-			selectedCellId = cellId;
 			updateUrlParams({ cell: cellId });
-			await loadCellData(cellId, currentPeriod, bounds);
-			
-			// Only deselect if loading completely failed (no cellData at all)
-			if (!cellData) {
-				selectedCellId = null;
-				updateUrlParams({ cell: null });
-			}
 		} else {
-			selectedCellId = null;
 			updateUrlParams({ cell: null });
-			cellData = null;
+		}
+		
+		// Call callback if provided
+		if (onCellSelected) {
+			onCellSelected(cellId, bounds);
 		}
 	}
 
-	/**
-	 * Loads cell data from the database API for the given cell and period.
-	 * Fetches geodata directly from the external API using cell bounds.
-	 * Handles errors gracefully without breaking the app.
-	 */
-	async function loadCellData(cellId: string, period: string, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) {
-		if (!browser) return;
-		
-		loadingState.startLoading();
-		cellData = null; // Clear existing data while loading
-		
-		try {
-			// Parse period to get start and end years
-			const [startYear, endYear] = period.split('_').map(y => parseInt(y));
-			
-			// Use cell bounds if provided, otherwise fall back to broad bounds
-			const params = {
-				min_lat: bounds?.minlat ?? 1,
-				min_lon: bounds?.minlon ?? 1,
-				max_lat: bounds?.maxlat ?? 85,
-				max_lon: bounds?.maxlon ?? 55,
-				start_year: `${startYear}-01-01`,
-				end_year: `${endYear}-01-01`,
-				page: 1
-			};
-			
-			console.log('Loading geodata for cell:', cellId, 'period:', period, 'params:', params);
-			
-			const geodata = await fetchGeodataFromDatabase(params);
-			
-			// Always set cellData - whether cell has content or not
-			cellData = { 
-				geodata,
-				cellId,
-				period,
-				bounds
-			};
-			console.log('Geodata loaded successfully:', $state.snapshot(cellData));
-			
-		} catch (error: any) {
-			console.error('Error loading geodata:', error);
-			cellData = null; // No modal for non-existent cells
-			
-			// Create appropriate error based on response
-			let cellError: AppError;
-			if (error?.message?.includes('404')) {
-				console.log('Creating 404 error for cell:', cellId);
-				cellError = createCellNotFoundError(cellId, period);
-			} else {
-				const reason = error?.message || 'Network error';
-				console.log('Creating general error for cell:', cellId, 'reason:', reason);
-				cellError = createCellLoadError(cellId, period, reason);
-			}
-			
-			// Add error to the errors array for ErrorHandler
-			console.log('Adding error to errors array:', cellError);
-			errors = [...errors, cellError];
-			
-		} finally {
-			loadingState.stopLoading();
-		}
-	}
 
 	/**
 	 * Clears all current errors. Useful when navigating or retrying operations.
@@ -210,8 +144,8 @@ export function createMapController() {
 		// State getters (reactive)
 		get currentPeriod() { return currentPeriod; },
 		get selectedCellId() { return selectedCellId; },
-		get cellData() { return cellData; },
-		get showCellModal() { return !!cellData; },
+		get selectedCellBounds() { return selectedCellBounds; },
+		get showCellModal() { return !!selectedCellId; },
 		get errors() { return errors; },
 
 		// Control methods
@@ -220,6 +154,11 @@ export function createMapController() {
 		setRecordType,
 		syncUrlParameters,
 		selectCell,
-		clearErrors
+		clearErrors,
+		
+		// Callback setters
+		set onCellSelected(callback: ((cellId: string | null, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) => void) | null) {
+			onCellSelected = callback;
+		}
 	};
 }

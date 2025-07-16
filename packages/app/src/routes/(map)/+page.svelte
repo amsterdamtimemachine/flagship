@@ -30,7 +30,7 @@
 	const controller = createMapController();	
 	let currentPeriod = $derived(controller.currentPeriod);
 	let selectedCellId = $derived(controller.selectedCellId);
-	let cellData = $derived(controller.cellData);
+	let selectedCellBounds = $derived(controller.selectedCellBounds);
 	let showCellModal = $derived(controller.showCellModal);
 	
 	
@@ -109,6 +109,12 @@
 		
 		controller.initialize(initialPeriod);
 		
+		// Set up cell selection callback
+		controller.onCellSelected = (cellId: string | null, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) => {
+			// No additional logic needed - controller handles URL updates
+			// CellView will handle data fetching when rendered
+		};
+		
 		// Sync URL parameters after router is ready
 		tick().then(() => {
 			controller.syncUrlParameters(initialPeriod);
@@ -174,9 +180,15 @@
 			/>
 		{/if}
 
-		{#if showCellModal}
+		{#if showCellModal && selectedCellId}
 			<div class="z-50 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
-				<CellView data={cellData} onClose={handleCellClose} />
+				<CellView 
+					cellId={selectedCellId} 
+					period={currentPeriod} 
+					bounds={selectedCellBounds}
+					recordTypes={currentRecordTypes}
+					onClose={handleCellClose} 
+				/>
 			</div>
 		{/if}
 	</div>
