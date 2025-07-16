@@ -130,8 +130,8 @@ export async function fetchGeodataFromDatabase(
 	Object.entries(params).forEach(([key, value]) => {
 		if (value !== undefined) {
 			if (key === 'recordTypes' && Array.isArray(value)) {
-				// Join array values with comma
-				url.searchParams.set(key, value.join(','));
+				// Join array values with comma and use correct parameter name
+				url.searchParams.set('recordtype', value.join(','));
 			} else {
 				url.searchParams.set(key, value.toString());
 			}
