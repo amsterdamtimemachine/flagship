@@ -23,6 +23,8 @@ public/*
 /build
 .svelte-kit/
 .turbo/*
+vocabulary.json
+
 # OS
 .DS_Store
 Thumbs.db
