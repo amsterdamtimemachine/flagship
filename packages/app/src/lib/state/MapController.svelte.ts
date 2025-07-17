@@ -41,10 +41,8 @@ export function createMapController() {
 		currentPeriod = newPeriod;
 		updateUrlParams({ period: newPeriod });
 		
-		// If a cell is currently selected, reload its data for the new period
-		if (cellData) {
-			loadCellData(cellData.cellId, newPeriod, cellData.bounds);
-		}
+		// Note: Cell data reloading is now handled by CellView component
+		// when it detects period prop changes via $effect()
 	}
 
 	function setRecordType(newRecordTypes: string[]) {

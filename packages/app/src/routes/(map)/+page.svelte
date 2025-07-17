@@ -10,6 +10,7 @@
 	import { loadingState } from '$lib/state/loadingState.svelte';
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
+	import TimePeriodSelector2 from '$components/TimePeriodSelector2.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
 	import CellView from '$components/CellView.svelte';
 	import ErrorHandler from '$lib/components/ErrorHandler.svelte';
@@ -194,7 +195,7 @@
 	</div>
 
 	{#if mergedHistogram}
-		<TimePeriodSelector 
+		<TimePeriodSelector2
 			period={currentPeriod} 
 			histogram={mergedHistogram} 
 			onPeriodChange={handlePeriodChange} 
