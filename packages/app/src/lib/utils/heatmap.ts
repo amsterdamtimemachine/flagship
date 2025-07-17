@@ -70,16 +70,18 @@ export function mergeHeatmaps(heatmaps: Heatmap[], blueprint?: HeatmapBlueprint)
     mergedCounts[cellIndex] = totalCount;
   }
 
-  // Recalculate density based on merged counts
-  // Note: This assumes density is proportional to count
-  // If density calculation is more complex, this logic may need adjustment
+  // Recalculate density based on merged counts using logarithmic transformation
+  // This matches the preprocessor's density calculation method
   const maxCount = Math.max(...mergedCounts);
   
-  for (let cellIndex = 0; cellIndex < gridSize; cellIndex++) {
-    if (maxCount > 0) {
-      // Simple density calculation: normalized count (0-1 range)
-      mergedDensity[cellIndex] = mergedCounts[cellIndex] / maxCount;
-    } else {
+  if (maxCount > 0) {
+    const maxTransformed = Math.log(maxCount + 1);
+    for (let cellIndex = 0; cellIndex < gridSize; cellIndex++) {
+      mergedDensity[cellIndex] = mergedCounts[cellIndex] > 0 ? 
+        Math.log(mergedCounts[cellIndex] + 1) / maxTransformed : 0;
+    }
+  } else {
+    for (let cellIndex = 0; cellIndex < gridSize; cellIndex++) {
       mergedDensity[cellIndex] = 0;
     }
   }
