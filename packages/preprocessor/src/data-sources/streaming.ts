@@ -36,7 +36,7 @@ export async function* streamFeaturesByChunks(
     
     try {
       // Fetch features for this chunk
-      const result = await fetchChunkFeatures(config, chunk.bounds, options?.timeRange, options?.recordType);
+      const result = await fetchChunkFeatures(config, chunk.bounds, options?.timeRange, options?.recordtypes);
       
       // Update total stats
       totalStats.totalRaw += result.stats.totalRaw;
@@ -80,12 +80,12 @@ async function fetchChunkFeatures(
   config: DatabaseConfig,
   bounds: HeatmapCellBounds,
   timeRange?: { start: string; end: string },
-  recordType?: RecordType
+  recordTypes?: RecordType[]
 ): Promise<{ features: AnyProcessedFeature[]; stats: ChunkResult['stats'] }> {
   console.log(`📍 Fetching chunk data for bounds:`, {
     lat: [bounds.minLat.toFixed(3), bounds.maxLat.toFixed(3)],
     lon: [bounds.minLon.toFixed(3), bounds.maxLon.toFixed(3)],
-    recordType: recordType || 'all'
+    recordTypes: recordTypes || ['all']
   });
   
   const features: AnyProcessedFeature[] = [];
@@ -107,7 +107,7 @@ async function fetchChunkFeatures(
       end_year: timeRange?.end || '2024-12-31',
       page: currentPage,
       page_size: pageSize,
-      ...(recordType && { recordtype: recordType }), // Add recordType filter if provided
+      ...(recordTypes && recordTypes.length > 0 && { recordtype: recordTypes.join(',') }), // Add recordTypes filter if provided
       ...config.defaultParams
     };
     
@@ -120,9 +120,9 @@ async function fetchChunkFeatures(
         // Convert API features to ProcessedFeatures
         for (const apiFeature of response.data) {
           try {
-            // Use the queried recordType or default to 'text'
-            const featurerecordType = recordType || 'text';
-            const processedFeature = convertRawFeature(apiFeature, featurerecordType);
+            // Determine recordType from feature data or use first requested type as fallback
+            const featureRecordType = apiFeature.recordType || (recordTypes && recordTypes.length > 0 ? recordTypes[0] : 'text');
+            const processedFeature = convertRawFeature(apiFeature, featureRecordType);
             
             features.push(processedFeature);
             stats.validProcessed++;

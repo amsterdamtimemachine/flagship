@@ -109,26 +109,25 @@ export async function accumulateHistogramForPeriod(
   let totalFeatureCount = 0;
   let matchingFeatureCount = 0;
   
-  // If we have a recordType filter, stream only that type
+  // Determine recordTypes to stream - use all available types if no specific filter
   const recordTypesToStream = accumulator.request.recordType 
     ? [accumulator.request.recordType]
-    : ['text'] as RecordType[]; // Default to text since images/events don't exist yet
+    : ['text', 'image', 'event'] as RecordType[];
   
-  for (const recordType of recordTypesToStream) {
-    for await (const result of streamFeaturesByChunks(config, bounds, chunkConfig, {
-      recordType,
-      timeRange: timeSlice.timeRange
-    })) {
-      console.log(`📈 Processing ${result.features.length} ${recordType} features from chunk ${result.chunk.id}`);
+  // Stream all recordTypes in single API call
+  for await (const result of streamFeaturesByChunks(config, bounds, chunkConfig, {
+    recordtypes: recordTypesToStream,
+    timeRange: timeSlice.timeRange
+  })) {
+    console.log(`📈 Processing ${result.features.length} mixed features from chunk ${result.chunk.id}`);
+    
+    // Process each feature, but only count if it matches filters
+    for (const feature of result.features) {
+      totalFeatureCount++;
       
-      // Process each feature, but only count if it matches filters
-      for (const feature of result.features) {
-        totalFeatureCount++;
-        
-        if (featureMatchesFilters(feature, accumulator.request)) {
-          processFeatureIntoHistogramBin(feature, accumulator, timeSlice);
-          matchingFeatureCount++;
-        }
+      if (featureMatchesFilters(feature, accumulator.request)) {
+        processFeatureIntoHistogramBin(feature, accumulator, timeSlice);
+        matchingFeatureCount++;
       }
     }
   }
