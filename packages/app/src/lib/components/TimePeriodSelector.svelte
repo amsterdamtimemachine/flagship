@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { Histogram } from '@atm/shared/types';
-	import TimePeriodSelectorChart from './TimePeriodSelectorChart.svelte';
-	import TimePeriodSelectorLabels from './TimePeriodSelectorLabels.svelte';
-	import TimePeriodSelectorThumb from './TimePeriodSelectorThumb.svelte';
-	import TimePeriodSelectorTrack from './TimePeriodSelectorTrack.svelte';
+	import TimePeriodSelectorChart from '$components/TimePeriodSelectorChart.svelte';
+	import TimePeriodSelectorLabels from '$components/TimePeriodSelectorLabels.svelte';
+	import TimePeriodSelectorThumb from '$components/TimePeriodSelectorThumb.svelte';
+	import TimePeriodSelectorTrack from '$components/TimePeriodSelectorTrack.svelte';
 
 	interface Props {
 		histogram: Histogram;
