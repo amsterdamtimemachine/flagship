@@ -13,7 +13,7 @@ import type {
   HistogramRequest,
   HistogramApiResponse
 } from '@atm/shared/types';
-import { streamFeaturesByChunks } from '../data-sources/streaming';
+import { streamFeaturesByChunks } from '../data-sources/streaming_old';
 
 /**
  * Create histogram accumulator for specific filter criteria

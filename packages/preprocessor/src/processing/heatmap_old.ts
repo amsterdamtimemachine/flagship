@@ -17,7 +17,7 @@ import type {
   HeatmapAccumulator,
   TimeSlice
 } from '@atm/shared/types';
-import { streamFeaturesByChunks } from '../data-sources/streaming';
+import { streamFeaturesByChunks } from '../data-sources/streaming_old';
 
 /**
  * Extract coordinates from feature geometry for cell positioning
