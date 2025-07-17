@@ -195,7 +195,7 @@
 	</div>
 
 	{#if mergedHistogram}
-		<TimePeriodSelector2
+		<TimePeriodSelector
 			period={currentPeriod} 
 			histogram={mergedHistogram} 
 			onPeriodChange={handlePeriodChange} 
