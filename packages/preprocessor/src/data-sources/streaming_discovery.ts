@@ -148,6 +148,7 @@ async function fetchChunkFeaturesWithDiscovery(
     requestCount++;
     
     // Don't filter by recordType - discover all types
+    console.log(`🔍 DEBUG: config.defaultParams =`, config.defaultParams);
     const params = {
       min_lat: bounds.minLat,
       min_lon: bounds.minLon,
@@ -160,6 +161,7 @@ async function fetchChunkFeaturesWithDiscovery(
       ...config.defaultParams
       // Explicitly no recordtype filter for discovery
     };
+    console.log(`🔍 DEBUG: Discovery params =`, params);
     
     try {
       const response = await fetchBatch(config.baseUrl, params);
@@ -170,34 +172,18 @@ async function fetchChunkFeaturesWithDiscovery(
         // Convert API features to ProcessedFeatures and discover vocabulary
         for (const apiFeature of response.data) {
           try {
-            // Try to extract recordType from feature data, or infer from content
-            let featureRecordType: RecordType = 'text'; // default fallback
-            
-            if (apiFeature.recordType) {
-              featureRecordType = apiFeature.recordType as RecordType;
-            } else if (apiFeature.type) {
-              // Map common type fields to our RecordType enum
-              switch (apiFeature.type.toLowerCase()) {
-                case 'image':
-                case 'photo':
-                case 'picture':
-                  featureRecordType = 'image';
-                  break;
-                case 'text':
-                case 'document':
-                case 'article':
-                  featureRecordType = 'text';
-                  break;
-                case 'event':
-                case 'happening':
-                  featureRecordType = 'event';
-                  break;
-                default:
-                  featureRecordType = 'text';
-              }
-            } else if (apiFeature.url && (apiFeature.url.includes('.jpg') || apiFeature.url.includes('.png') || apiFeature.url.includes('.jpeg'))) {
-              featureRecordType = 'image';
+            // DEBUG: Log first few features to understand structure
+            if (stats.validProcessed < 3) {
+              console.log(`🔍 DEBUG: Raw feature structure:`, JSON.stringify(apiFeature, null, 2));
             }
+            
+            // Only use recordType field, skip features without it
+            if (!apiFeature.recordType) {
+              stats.invalidSkipped++;
+              continue; // Skip features without recordType field
+            }
+            
+            const featureRecordType = apiFeature.recordType as RecordType;
             
             const processedFeature = convertRawFeature(apiFeature, featureRecordType);
             
