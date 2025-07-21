@@ -136,7 +136,7 @@ export async function accumulateCountsWithDiscovery(
   };
   
   // Stream data with discovery - don't filter by recordType
-  for await (const result: DiscoveryChunkResult of streamFeaturesWithDiscovery(config, streamBounds, chunkConfig, {
+  for await (const result of streamFeaturesWithDiscovery(config, streamBounds, chunkConfig, {
     timeRange: timeSlice.timeRange
     // No recordtypes filter - discover all types
   })) {

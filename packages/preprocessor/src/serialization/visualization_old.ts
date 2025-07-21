@@ -267,7 +267,7 @@ export function generateVisualizationStats(
     // Get grid cell count from first heatmap
     const firstTimeSlice = Object.values(heatmapTimeline)[0];
     const firstRecordType = Object.values(firstTimeSlice)[0];
-    const gridCellCount = firstRecordType.base.countarray?.length || 0;
+    const gridCellCount = firstRecordType.base.countArray?.length || 0;
     
     return {
       totalFeatures,
@@ -403,7 +403,7 @@ export async function generateVisualizationBinaryFromResolutions(
   // Extract dimensions from first heatmap
   const firstTimeSlice = Object.values(firstResolution)[0];
   const firstRecordType = Object.values(firstTimeSlice)[0];
-  const gridCellCount = firstRecordType.base.countarray?.length || 0;
+  const gridCellCount = firstRecordType.base.countArray?.length || 0;
   
   // Calculate dimensions from grid cell count and first resolution
   const firstResConfig = resolutions[0];
@@ -437,7 +437,12 @@ export async function generateVisualizationBinaryFromResolutions(
     recordTypes,
     resolutions,
     tags,
-    stats
+    {
+      minLon: heatmapDimensions.minLon,
+      maxLon: heatmapDimensions.maxLon,
+      minLat: heatmapDimensions.minLat,
+      maxLat: heatmapDimensions.maxLat
+    }
   );
   
   console.log(`✅ Generated visualization binary with ${resolutions.length} resolutions and ${histograms.length} histograms`);
@@ -470,7 +475,7 @@ export async function generateDefaultHistograms(
     
     // Generate base histogram (all features for this recordType)
     const baseResponse = await generateFilteredHistogram(config, bounds, chunkConfig, {
-      recordType,
+      recordTypes: [recordType],
       timeSlices
     });
     
@@ -485,7 +490,7 @@ export async function generateDefaultHistograms(
       console.log(`📈 Generating histogram for ${recordType} + tag: ${tag}`);
       
       const tagResponse = await generateFilteredHistogram(config, bounds, chunkConfig, {
-        recordType,
+        recordTypes: [recordType],
         tags: [tag],
         timeSlices
       });

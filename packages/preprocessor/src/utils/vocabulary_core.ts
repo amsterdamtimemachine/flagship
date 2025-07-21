@@ -1,5 +1,3 @@
-// src/utils/vocabulary_core.ts - Core vocabulary utilities only
-
 import type { VocabularyTracker } from '@atm/shared/types';
 
 /**

@@ -70,7 +70,7 @@ export function calculateCellBounds(
   const minlat = heatmapDimensions.minLat + (row * cellHeight);
   const maxlat = minlat + cellHeight;
 
-  return { minlon, maxlon, minlat, maxlat };
+  return { minLon: minlon, maxLon: maxlon, minLat: minlat, maxLat: maxlat };
 }
 
 /**
@@ -176,7 +176,7 @@ export async function accumulateCountsForMultipleResolutions(
   
   // Stream data once, process into ALL resolutions simultaneously
   for await (const result of streamFeaturesByChunks(config, streamBounds, chunkConfig, {
-    recordtypes: recordTypes,
+    recordTypes: recordTypes,
     timeRange: timeSlice.timeRange
   })) {
     console.log(`📊 Processing ${result.features.length} mixed features from chunk ${result.chunk.id} for period ${timeSlice.label}`);
@@ -194,7 +194,8 @@ export async function accumulateCountsForMultipleResolutions(
     const totalCells = Array.from(accumulator.cellCounts.base.values()).reduce((sum, recordTypeCounts) => sum + recordTypeCounts.size, 0);
     console.log(`   - ${resolutionKey}: ${totalCells} cells with data across all recordTypes`);
   }
-  console.log(`   - Unique tags found: ${accumulators.values().next().value.collectedTags.size}`);
+  const firstAccumulator = accumulators.values().next().value;
+  console.log(`   - Unique tags found: ${firstAccumulator?.collectedTags.size || 0}`);
   
   return accumulators;
 }
@@ -402,6 +403,9 @@ export async function generateHeatmapTimelineForRecordType(
   const accumulator = accumulators.values().next().value;
   
   // Generate timeline from accumulated counts
+  if (!accumulator) {
+    throw new Error(`No accumulator found for time slice: ${timeSlice.label}`);
+  }
   return generateHeatmapTimelineFromAccumulator(accumulator, timeSlice);
 }
 

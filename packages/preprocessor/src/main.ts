@@ -14,8 +14,7 @@ import {
 import { 
   AMSTERDAM_DATABASE_CONFIG, 
   AMSTERDAM_BOUNDS,
-  PRESETS,
-  getPreset
+  PRODUCTION_PRESET
 } from './config/defaults';
 import type { 
   HeatmapDimensions, 
@@ -25,20 +24,19 @@ import type {
 } from '@atm/shared/types';
 
 // Configuration
-const PRESET = process.env.PRESET || 'DEVELOPMENT'; // Can be DEVELOPMENT, PRODUCTION, MEMORY_EFFICIENT, HIGH_RESOLUTION
 const OUTPUT_PATH = process.env.OUTPUT_PATH || './visualization.bin';
 const INCLUDE_TEST_RESOLUTIONS = process.env.INCLUDE_TEST_RESOLUTIONS === 'true';
 
 async function main() {
   console.log('Starting Amsterdam Time Machine Binary Generation');
-  console.log(`Using preset: ${PRESET}`);
+  console.log(`Using preset: PRODUCTION`);
   console.log(`Output path: ${OUTPUT_PATH}`);
   
   const startTime = Date.now();
   
   try {
-    // Get configuration from preset
-    const config = getPreset(PRESET as keyof typeof PRESETS);
+    // Use production preset configuration
+    const config = PRODUCTION_PRESET;
     console.log(`Canonical resolution: ${config.resolutionCanonical.colsAmount}x${config.resolutionCanonical.rowsAmount}`);
     console.log(`Chunking: ${config.chunking.chunkRows}x${config.chunking.chunkCols} chunks`);
 
@@ -147,11 +145,11 @@ async function main() {
     const stats = generateVisualizationStats(heatmapResolutions, histograms, timeSlices);
     
     console.log(` Statistics generated:`);
-    console.log(`   - Total features: ${stats.totalFeatures}`);
-    console.log(`   - Features per type: ${Object.entries(stats.featuresPerRecordType).map(([type, count]) => `${type}: ${count}`).join(', ')}`);
-    console.log(`   - Time slices: ${stats.timeSliceCount}`);
-    console.log(`   - Grid cells: ${stats.gridCellCount}`);
-    console.log(`   - Resolutions: ${stats.resolutionCount}`);
+    console.log(`   - Total features: ${stats?.totalFeatures || 0}`);
+    console.log(`   - Features per type: ${stats ? Object.entries(stats.featuresPerRecordType).map(([type, count]) => `${type}: ${count}`).join(', ') : 'none'}`);
+    console.log(`   - Time slices: ${stats?.timeSliceCount || 0}`);
+    console.log(`   - Grid cells: ${stats?.gridCellCount || 0}`);
+    console.log(`   - Resolutions: ${stats?.resolutionCount || 0}`);
 
     // Step 6: Create visualization binary
     console.log('\n=� Step 6: Creating visualization binary...');
@@ -218,10 +216,7 @@ function parseArgs() {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     
-    if (arg === '--preset' && i + 1 < args.length) {
-      process.env.PRESET = args[i + 1];
-      i++;
-    } else if (arg === '--output' && i + 1 < args.length) {
+    if (arg === '--output' && i + 1 < args.length) {
       process.env.OUTPUT_PATH = args[i + 1];
       i++;
     } else if (arg === '--help') {
@@ -231,24 +226,24 @@ Amsterdam Time Machine Binary Generator
 Usage: bun run src/main.ts [options]
 
 Options:
-  --preset <name>       Configuration preset (DEVELOPMENT, PRODUCTION, MEMORY_EFFICIENT, HIGH_RESOLUTION)
   --output <path>       Output path for binary file (default: ./visualization.bin)
   --test-resolutions    Include additional test resolutions (8x8, 16x16, 32x32)
   --help               Show this help message
 
 Environment Variables:
-  PRESET               Same as --preset
   OUTPUT_PATH          Same as --output
 
 Examples:
-  bun run src/main.ts --preset DEVELOPMENT --output ./test.bin
-  bun run src/main.ts --preset PRODUCTION 
-  PRESET=HIGH_RESOLUTION bun run src/main.ts
+  bun run src/main.ts --output ./test.bin
+  OUTPUT_PATH=./production.bin bun run src/main.ts
       `);
       process.exit(0);
     }
   }
 }
+
+// Export main for programmatic usage
+export default main;
 
 // Main execution
 if (import.meta.main) {

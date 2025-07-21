@@ -36,7 +36,7 @@ export async function* streamFeaturesByChunks(
     
     try {
       // Fetch features for this chunk
-      const result = await fetchChunkFeatures(config, chunk.bounds, options?.timeRange, options?.recordtypes);
+      const result = await fetchChunkFeatures(config, chunk.bounds, options?.timeRange, options?.recordTypes);
       
       // Update total stats
       totalStats.totalRaw += result.stats.totalRaw;

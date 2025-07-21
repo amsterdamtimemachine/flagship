@@ -40,11 +40,10 @@ async function main() {
   const startTime = Date.now();
   
   try {
-    // Production configuration
     const config = {
       database: AMSTERDAM_DATABASE_CONFIG,
       resolutionCanonical: { colsAmount: 64, rowsAmount: 64, padding: 0.1 },
-      chunking: { chunkRows: 4, chunkCols: 4, delayMs: 100 }
+      chunking: { chunkRows: 4, chunkCols: 4, delayMs: 75 }
     };
 
     console.log(`Resolution: ${config.resolutionCanonical.colsAmount}x${config.resolutionCanonical.rowsAmount}`);
@@ -144,11 +143,11 @@ async function main() {
     const stats = generateVisualizationStats(heatmapResolutions, histograms, timeSlices);
     
     console.log(`Statistics generated:`);
-    console.log(`   - Total features: ${stats.totalFeatures}`);
-    console.log(`   - Features per type: ${Object.entries(stats.featuresPerRecordType).map(([type, count]) => `${type}: ${count}`).join(', ')}`);
-    console.log(`   - Time slices: ${stats.timeSliceCount}`);
-    console.log(`   - Grid cells: ${stats.gridCellCount}`);
-    console.log(`   - Resolutions: ${stats.resolutionCount}`);
+    console.log(`   - Total features: ${stats?.totalFeatures || 0}`);
+    console.log(`   - Features per type: ${stats ? Object.entries(stats.featuresPerRecordType).map(([type, count]) => `${type}: ${count}`).join(', ') : 'none'}`);
+    console.log(`   - Time slices: ${stats?.timeSliceCount || 0}`);
+    console.log(`   - Grid cells: ${stats?.gridCellCount || 0}`);
+    console.log(`   - Resolutions: ${stats?.resolutionCount || 0}`);
 
     // Create visualization binary
     console.log('\nCreating visualization binary...');

@@ -69,4 +69,10 @@ export interface HeatmapAccumulator {
   collectedTags: Set<string>;
 }
 
+export interface HeatmapConfig {
+  colsAmount: number;
+  rowsAmount: number;
+  padding: number;
+}
+
 
