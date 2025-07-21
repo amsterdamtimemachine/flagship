@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data:rw
+    environment:
+      - NODE_ENV=production
+      - PRIVATE_VISUALIZATION_BINARY_PATH=/app/data/visualization.bin
+    depends_on:
+      - preprocessor
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/metadata"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  preprocessor:
+    build:
+      context: .
+      dockerfile: Dockerfile.preprocessor
+    volumes:
+      - ./data:/app/data:rw
+    environment:
+      - OUTPUT_PATH=/app/data/visualization.bin
+      - VOCABULARY_PATH=/app/data/vocabulary.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "test", "-f", "/app/data/visualization.bin"]
+      interval: 300s
+      timeout: 60s
+      retries: 2

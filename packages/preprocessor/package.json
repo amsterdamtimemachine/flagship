@@ -7,16 +7,10 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "dev": "bun run src/main.ts",
-    "generate": "bun run src/main.ts",
-    "preprocess": "bun run src/main.ts",
+    "generate": "OUTPUT_PATH=../../data/visualization.bin VOCABULARY_PATH=../../data/vocabulary.json bun run src/main_discovery.ts",
     "clean": "rm -rf dist data *.bin",
     "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
-    "test": "bun test",
-    "test:binary": "bun test src/tests/heatmap-histogram-binary.test.ts",
-    "test:db": "bun test src/tests/database.test.ts",
-    "test:streaming": "bun test src/tests/streaming.test.ts"
+    "lint:fix": "eslint src/**/*.ts --fix"
   },
   "dependencies": {
     "@atm/shared": "workspace:*",
