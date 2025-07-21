@@ -31,6 +31,7 @@
 	style="left: {thumbPosition()}%; width: {thumbWidth()}%; height: {timelineHeight}px; top: 0;"
 	onmousedown={onDragStart}
 	role="button"
+	tabindex="0"
 	aria-label="Drag to change time period"
 	title="Current period: {currentBin?.timeSlice?.label || ''}"
-/>
+></div>

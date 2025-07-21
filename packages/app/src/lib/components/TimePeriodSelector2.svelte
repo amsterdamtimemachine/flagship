@@ -229,7 +229,7 @@
 						}}
 						aria-label="Select period {bin.timeSlice.label}"
 						title="Period: {bin.timeSlice.label}, Count: {bin.count}"
-					/>
+					></button>
 				{/each}
 
 				<!-- Thumb -->
@@ -239,9 +239,10 @@
 					style="left: {thumbPosition()}%; width: {thumbWidth()}%; height: {timelineHeight}px; top: 0;"
 					onmousedown={handleMouseDown}
 					role="button"
+					tabindex="0"
 					aria-label="Drag to change time period"
 					title="Current period: {histogram.bins[currentIndex]?.timeSlice?.label || ''}"
-				/>
+				></div>
 			</div>
 		</div>
 	</div>

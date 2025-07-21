@@ -51,6 +51,6 @@
 			}}
 			aria-label="Select period {bin.timeSlice.label}"
 			title="Period: {bin.timeSlice.label}, Count: {bin.count}"
-		/>
+		></button>
 	{/each}
 </div>
