@@ -6,6 +6,7 @@ aux/cell_map/output/*
 data/*
 dist/
 public/*
+**/build/**
 .bin
 *.bin
 .csv
