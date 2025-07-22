@@ -32,4 +32,4 @@ RUN chmod 0644 /etc/cron.d/preprocessor-cron
 RUN touch /var/log/preprocessor.log
 
 # For now, just run the preprocessor once and then keep container alive
-CMD ["sh", "-c", "echo 'Running initial preprocessing...' && cd packages/preprocessor && bun run src/main_discovery.ts && echo 'Preprocessing complete. Container will remain running...' && tail -f /dev/null"]
+# CMD ["sh", "-c", "echo 'Running initial preprocessing...' && cd packages/preprocessor && bun run src/main_discovery.ts && echo 'Preprocessing complete. Container will remain running...' && tail -f /dev/null"]

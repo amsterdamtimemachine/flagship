@@ -1,6 +1,7 @@
 # Node modules
 **/node_modules
-**/bun.lockb
+# Note: Keep root bun.lockb for Docker builds
+packages/**/bun.lockb
 package-lock.json
 
 # Build outputs
