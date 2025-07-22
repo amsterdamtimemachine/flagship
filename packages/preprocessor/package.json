@@ -7,8 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "generate": "OUTPUT_PATH=../../data/visualization.bin VOCABULARY_PATH=../../data/vocabulary.json bun run src/main_discovery.ts",
-    "clean": "rm -rf dist data *.bin",
+    "generate": "../../scripts/sync-env.sh && bun --env-file .env run src/main_discovery.ts",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix"
   },

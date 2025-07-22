@@ -9,24 +9,21 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev",
+    "sync:env": "scripts/sync-env.sh",
+    "dev": "turbo run dev --filter=@atm/app",
     "build": "turbo run build",
-    "preprocess": "turbo run preprocess",
-    "test": "turbo run test",
+    "generate": "turbo run generate --filter=@atm/preprocessor",
     "lint": "turbo run lint",
-    "dev:app": "turbo run dev --filter=@atm/app",
-    "dev:preprocessor": "turbo run dev --filter=@atm/preprocessor",
     "build:shared": "turbo run build --filter=@atm/shared",
     "clean": "turbo run clean",
     "docker:build": "docker build -f docker/Dockerfile.app -t atm-app . && docker build -f docker/Dockerfile.preprocessor -t atm-preprocessor .",
     "docker:network": "docker network create atm-network || true",
-    "docker:up": "npm run docker:network && docker run -d --name atm-preprocessor --network atm-network -v $(pwd)/data:/app/data:rw -e OUTPUT_PATH=/app/data/visualization.bin -e VOCABULARY_PATH=/app/data/vocabulary.json atm-preprocessor && docker run -d --name atm-app --network atm-network -p 3000:3000 -v $(pwd)/data:/app/data:rw -e PRIVATE_VISUALIZATION_BINARY_PATH=/app/data/visualization.bin -e NODE_ENV=production atm-app",
+    "docker:up": "npm run docker:network && docker run -d --name atm-preprocessor --network atm-network --env-file .env -v $(pwd)/data:/app/data:rw atm-preprocessor && docker run -d --name atm-app --network atm-network --env-file .env -p 3000:3000 -v $(pwd)/data:/app/data:rw atm-app",
     "docker:down": "docker stop atm-app atm-preprocessor || true && docker rm atm-app atm-preprocessor || true",
     "docker:logs": "docker logs -f atm-app & docker logs -f atm-preprocessor",
     "docker:logs:app": "docker logs -f atm-app",
     "docker:logs:preprocessor": "docker logs -f atm-preprocessor",
-    "docker:restart": "npm run docker:down && npm run docker:up",
-    "preprocess:discovery": "cd packages/preprocessor && bun run src/main_discovery.ts"
+    "docker:restart": "npm run docker:down && npm run docker:up"
   },
   "devDependencies": {
     "turbo": "^2.5.3"

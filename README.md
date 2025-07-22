@@ -10,20 +10,36 @@
 ### Setup
 ```bash
 bun install
+cp .env.example .env
 ```
+
+**Required**: Edit `.env` and set:
+- `PUBLIC_MAPTILER_API_KEY` - Get a free API key from [MapTiler](https://www.maptiler.com/)
+
+**Optional**: Configure preprocessor settings in `.env` (uncomment and modify any variables you want to change from defaults)
 
 ### Development Server
 ```bash
 bun run dev
 ```
 
-The app will be available at `http://localhost:3000`
+The app will be available at `http://localhost:5175`
 
 ## Production (Docker)
 
 ### Prerequisites
 - [Docker](https://docker.com)
 - [Bun](https://bun.sh) (for running build scripts)
+
+### Setup
+```bash
+cp .env.example .env
+```
+
+**Required**: Edit `.env` and set:
+- `PUBLIC_MAPTILER_API_KEY` - Get a free API key from [MapTiler](https://www.maptiler.com/)
+
+**Optional**: Configure preprocessor settings in `.env` (uncomment and modify any variables you want to change from defaults)
 
 ### Build Images
 ```bash

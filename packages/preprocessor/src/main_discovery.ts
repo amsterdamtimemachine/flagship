@@ -13,7 +13,9 @@ import {
 } from './serialization/visualization';
 import { 
   AMSTERDAM_DATABASE_CONFIG, 
-  AMSTERDAM_BOUNDS
+  AMSTERDAM_BOUNDS,
+  DEFAULT_GRID_CONFIG,
+  DEFAULT_CHUNKING,
 } from './config/defaults';
 import { 
   generateHeatmapResolutionsWithDiscovery 
@@ -25,7 +27,6 @@ import type {
   HeatmapDimensions, 
   HeatmapResolutionConfig, 
   TimeSlice,
-  VocabularyTracker
 } from '@atm/shared/types';
 
 // Configuration
@@ -42,8 +43,8 @@ async function main() {
   try {
     const config = {
       database: AMSTERDAM_DATABASE_CONFIG,
-      resolutionCanonical: { colsAmount: 64, rowsAmount: 64, padding: 0.1 },
-      chunking: { chunkRows: 4, chunkCols: 4, delayMs: 75 }
+      resolutionCanonical: DEFAULT_GRID_CONFIG,
+      chunking: DEFAULT_CHUNKING
     };
 
     console.log(`Resolution: ${config.resolutionCanonical.colsAmount}x${config.resolutionCanonical.rowsAmount}`);
