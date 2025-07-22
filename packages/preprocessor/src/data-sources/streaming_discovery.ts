@@ -9,7 +9,6 @@ import type {
   ChunkingConfig,
   ChunkResult,
   StreamingOptions,
-  ChunkResult
 } from '@atm/shared/types';
 import { fetchBatch, convertRawFeature } from './database';
 import { createSpatialChunks } from './streaming';
@@ -26,7 +25,7 @@ export async function* streamFeaturesWithDiscovery(
 ): AsyncGenerator<ChunkResult> {
   
   const chunks = createSpatialChunks(bounds, chunkConfig);
-  console.log(`🔍 Discovery streaming ${chunks.length} spatial chunks...`);
+  console.log(`🔍 Streaming ${chunks.length} spatial chunks...`);
   
   let processedChunks = 0;
   const totalChunks = chunks.length;
@@ -34,7 +33,7 @@ export async function* streamFeaturesWithDiscovery(
   
   for (const chunk of chunks) {
     processedChunks++;
-    console.log(`📦 Discovery processing chunk ${chunk.id} (${processedChunks}/${totalChunks})...`);
+    console.log(`📦 Processing chunk ${chunk.id} (${processedChunks}/${totalChunks})...`);
     
     try {
       // Fetch features for this chunk without recordType filtering to discover all types
@@ -53,9 +52,7 @@ export async function* streamFeaturesWithDiscovery(
         stats: result.stats
       };
       
-      // Optional: Add delay to prevent API overload
       if (chunkConfig.delayMs && processedChunks < totalChunks) {
-        console.log(`⏱️ Waiting ${chunkConfig.delayMs}ms before next chunk...`);
         await new Promise(resolve => setTimeout(resolve, chunkConfig.delayMs));
       }
       
@@ -100,7 +97,6 @@ async function fetchChunkFeaturesWithDiscovery(
     requestCount++;
     
     // Don't filter by recordType - discover all types
-    console.log(`🔍 DEBUG: config.defaultParams =`, config.defaultParams);
     const params = {
       min_lat: bounds.minLat,
       min_lon: bounds.minLon,
@@ -113,7 +109,6 @@ async function fetchChunkFeaturesWithDiscovery(
       ...config.defaultParams
       // Explicitly no recordtype filter for discovery
     };
-    console.log(`🔍 DEBUG: Discovery params =`, params);
     
     try {
       const response = await fetchBatch(config.baseUrl, params);
@@ -124,11 +119,7 @@ async function fetchChunkFeaturesWithDiscovery(
         // Convert API features to ProcessedFeatures
         for (const apiFeature of response.data) {
           try {
-            // DEBUG: Log first few features to understand structure
-            if (stats.validProcessed < 3) {
-              console.log(`🔍 DEBUG: Raw feature structure:`, JSON.stringify(apiFeature, null, 2));
-            }
-            
+          
             // Only use recordType field, skip features without it
             if (!apiFeature.recordType) {
               stats.invalidSkipped++;
