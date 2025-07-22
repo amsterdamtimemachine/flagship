@@ -13,14 +13,16 @@ COPY packages/app/package.json ./packages/app/
 # Install dependencies
 RUN bun install
 
-# Copy source code
+# Copy source code, scripts and env template
 COPY packages/ ./packages/
+COPY scripts/ ./scripts/
+COPY .env.example .env
 
 # Build shared package first
 RUN bun run build --filter=@atm/shared
 
-# Build app
-RUN bun run build --filter=@atm/app
+# Build app (use docker build script to avoid env sync)
+RUN cd packages/app && bun run build:docker
 
 # Create data directory
 RUN mkdir -p /app/data

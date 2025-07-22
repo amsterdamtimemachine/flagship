@@ -13,8 +13,9 @@ COPY packages/preprocessor/package.json ./packages/preprocessor/
 # Install dependencies
 RUN bun install
 
-# Copy source code
+# Copy source code and scripts
 COPY packages/ ./packages/
+COPY scripts/ ./scripts/
 
 # Build shared package
 RUN bun run build --filter=@atm/shared
@@ -32,4 +33,4 @@ RUN chmod 0644 /etc/cron.d/preprocessor-cron
 RUN touch /var/log/preprocessor.log
 
 # Run preprocessor and exit (for on-demand data generation)
-CMD ["sh", "-c", "cd packages/preprocessor && bun run generate"]
+CMD ["sh", "-c", "cd packages/preprocessor && bun run generate:docker"]

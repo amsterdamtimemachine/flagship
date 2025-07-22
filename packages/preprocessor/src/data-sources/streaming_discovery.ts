@@ -9,62 +9,21 @@ import type {
   ChunkingConfig,
   ChunkResult,
   StreamingOptions,
-  VocabularyTracker,
-  DiscoveryChunkResult
+  ChunkResult
 } from '@atm/shared/types';
 import { fetchBatch, convertRawFeature } from './database';
 import { createSpatialChunks } from './streaming';
 
-/**
- * Create empty vocabulary tracker
- */
-export function createVocabularyTracker(): VocabularyTracker {
-  return {
-    recordTypes: new Set<RecordType>(),
-    tags: new Set<string>()
-  };
-}
 
 /**
- * Update vocabulary tracker with a feature
- */
-export function updateVocabulary(
-  vocabulary: VocabularyTracker, 
-  feature: AnyProcessedFeature
-): void {
-  vocabulary.recordTypes.add(feature.recordType);
-  
-  const tags = feature.tags || [];
-  for (const tag of tags) {
-    vocabulary.tags.add(tag);
-  }
-}
-
-/**
- * Merge two vocabulary trackers
- */
-export function mergeVocabularies(
-  target: VocabularyTracker, 
-  source: VocabularyTracker
-): void {
-  for (const recordType of source.recordTypes) {
-    target.recordTypes.add(recordType);
-  }
-  
-  for (const tag of source.tags) {
-    target.tags.add(tag);
-  }
-}
-
-/**
- * Discovery streaming function - discovers vocabulary while streaming features
+ * Discovery streaming function - streams features without vocabulary tracking
  */
 export async function* streamFeaturesWithDiscovery(
   config: DatabaseConfig,
   bounds: HeatmapCellBounds,
   chunkConfig: ChunkingConfig,
   options?: StreamingOptions
-): AsyncGenerator<DiscoveryChunkResult> {
+): AsyncGenerator<ChunkResult> {
   
   const chunks = createSpatialChunks(bounds, chunkConfig);
   console.log(`🔍 Discovery streaming ${chunks.length} spatial chunks...`);
@@ -72,7 +31,6 @@ export async function* streamFeaturesWithDiscovery(
   let processedChunks = 0;
   const totalChunks = chunks.length;
   let totalStats = { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 };
-  let globalVocabulary = createVocabularyTracker();
   
   for (const chunk of chunks) {
     processedChunks++;
@@ -87,16 +45,12 @@ export async function* streamFeaturesWithDiscovery(
       totalStats.validProcessed += result.stats.validProcessed;
       totalStats.invalidSkipped += result.stats.invalidSkipped;
       
-      // Merge vocabulary from this chunk
-      mergeVocabularies(globalVocabulary, result.vocabulary);
-      
       console.log(`✅ Chunk ${chunk.id}: ${result.features.length} valid features`);
       
       yield {
         chunk,
         features: result.features,
-        stats: result.stats,
-        vocabulary: result.vocabulary
+        stats: result.stats
       };
       
       // Optional: Add delay to prevent API overload
@@ -112,8 +66,7 @@ export async function* streamFeaturesWithDiscovery(
       yield {
         chunk,
         features: [],
-        stats: { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 },
-        vocabulary: createVocabularyTracker()
+        stats: { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 }
       };
     }
   }
@@ -123,13 +76,13 @@ export async function* streamFeaturesWithDiscovery(
 }
 
 /**
- * Fetch features for a specific spatial chunk with vocabulary discovery
+ * Fetch features for a specific spatial chunk
  */
 async function fetchChunkFeaturesWithDiscovery(
   config: DatabaseConfig,
   bounds: HeatmapCellBounds,
   timeRange?: { start: string; end: string }
-): Promise<{ features: AnyProcessedFeature[]; stats: ChunkResult['stats']; vocabulary: VocabularyTracker }> {
+): Promise<{ features: AnyProcessedFeature[]; stats: ChunkResult['stats'] }> {
   console.log(`🔍 Discovery fetching chunk data for bounds:`, {
     lat: [bounds.minLat.toFixed(3), bounds.maxLat.toFixed(3)],
     lon: [bounds.minLon.toFixed(3), bounds.maxLon.toFixed(3)],
@@ -142,7 +95,6 @@ async function fetchChunkFeaturesWithDiscovery(
   let hasMore = true;
   let requestCount = 0;
   let stats = { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 };
-  let vocabulary = createVocabularyTracker();
   
   while (hasMore) {
     requestCount++;
@@ -169,7 +121,7 @@ async function fetchChunkFeaturesWithDiscovery(
       if (response.data && response.data.length > 0) {
         stats.totalRaw += response.data.length;
         
-        // Convert API features to ProcessedFeatures and discover vocabulary
+        // Convert API features to ProcessedFeatures
         for (const apiFeature of response.data) {
           try {
             // DEBUG: Log first few features to understand structure
@@ -186,9 +138,6 @@ async function fetchChunkFeaturesWithDiscovery(
             const featureRecordType = apiFeature.recordType as RecordType;
             
             const processedFeature = convertRawFeature(apiFeature, featureRecordType);
-            
-            // Update vocabulary with discovered feature
-            updateVocabulary(vocabulary, processedFeature);
             
             features.push(processedFeature);
             stats.validProcessed++;
@@ -216,6 +165,6 @@ async function fetchChunkFeaturesWithDiscovery(
   
   console.log(`🔍 Discovery chunk complete: ${features.length} valid features in ${requestCount} requests`);
   
-  return { features, stats, vocabulary };
+  return { features, stats };
 }
 

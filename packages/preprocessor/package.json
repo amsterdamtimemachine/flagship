@@ -8,6 +8,7 @@
   "scripts": {
     "build": "tsc",
     "generate": "../../scripts/sync-env.sh && bun --env-file=.env src/main_discovery.ts",
+    "generate:docker": "bun src/main_discovery.ts",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix"
   },
