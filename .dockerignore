@@ -35,5 +35,6 @@ data/
 
 # Preprocessor outputs
 packages/preprocessor/*.bin
-packages/preprocessor/*.json
+packages/preprocessor/vocabulary.json
+packages/preprocessor/visualization*.bin
 packages/app/data/

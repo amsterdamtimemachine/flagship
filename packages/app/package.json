@@ -40,6 +40,7 @@
 	"dependencies": {
 		"@atm/shared": "workspace:*",
 		"@melt-ui/svelte": "^0.86.6",
+		"@msgpack/msgpack": "^3.1.2",
 		"clsx": "^2.1.1",
 		"lodash.debounce": "^4.0.8",
 		"maplibre-gl": "^4.5.1",
