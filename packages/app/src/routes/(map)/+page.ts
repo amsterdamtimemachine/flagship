@@ -22,9 +22,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
   const recordTypesParam = url.searchParams.get('recordTypes');
   const tagsParam = url.searchParams.get('tags');
   
-  try {
-    console.log('🔄 Loading metadata from API...');
-    
+  try { 
     const response = await fetch('/api/metadata'); 
 
     if (!response.ok) {
@@ -131,9 +129,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
   
   // Histogram promise
   const histogramPromise = (async () => {
-    try {
-      console.log(`📊 Loading histogram for recordTypes: ${currentRecordTypes.join(', ')}, tags: ${tags?.join(', ') || 'none'}`);
-      
+    try {  
       const histogramUrl = `/api/histogram?recordTypes=${currentRecordTypes.join(',')}${tags ? `&tags=${tags.join(',')}` : ''}`;
       const histogramResponse = await fetch(histogramUrl);
       
@@ -156,15 +152,6 @@ export const load: PageLoad = async ({ fetch, url }) => {
           ));
         } else {
           histogram = histogramData;
-          
-          console.log('✅ Histogram loaded successfully:', {
-            recordTypes: currentRecordTypes,
-            tags: tags,
-            totalFeatures: histogram.histogram.totalFeatures,
-            timePeriods: histogram.histogram.bins.length,
-            maxCount: histogram.histogram.maxCount,
-            timeRange: histogram.histogram.timeRange
-          });
         }
       }
       
@@ -187,8 +174,6 @@ export const load: PageLoad = async ({ fetch, url }) => {
   // Heatmap timeline promise
   const heatmapPromise = (async () => {
     try {
-      console.log(`🔥 Loading heatmap timeline for recordTypes: ${currentRecordTypes.join(', ')}, tags: ${tags?.join(', ') || 'none'}`);
-      
       const heatmapUrl = `/api/heatmaps?recordTypes=${currentRecordTypes.join(',')}${tags ? `&tags=${tags.join(',')}` : ''}`;
       const heatmapResponse = await fetch(heatmapUrl);
       
@@ -233,10 +218,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
   // Wait for both data requests to complete
   await Promise.all([histogramPromise, heatmapPromise]);
   
-  loadingState.stopLoading();
-
-  console.log(heatmapTimeline);
-  
+  loadingState.stopLoading(); 
   return {
     metadata,
     histogram,
