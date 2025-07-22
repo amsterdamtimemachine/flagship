@@ -3,9 +3,12 @@
 # Sync environment variables from root .env to packages
 # Only copies variables that each package needs
 
-ROOT_ENV=".env"
-APP_ENV="packages/app/.env"
-PREPROCESSOR_ENV="packages/preprocessor/.env"
+# Get the project root directory (where this script is located)
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+ROOT_ENV="$PROJECT_ROOT/.env"
+APP_ENV="$PROJECT_ROOT/packages/app/.env"
+PREPROCESSOR_ENV="$PROJECT_ROOT/packages/preprocessor/.env"
 
 # Check if root .env exists
 if [ ! -f "$ROOT_ENV" ]; then

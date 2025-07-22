@@ -4,6 +4,8 @@ aux/cell_map/output/*
 
 # Assets
 data/*
+!data/docker/
+data/docker/*
 dist/
 public/*
 build/**

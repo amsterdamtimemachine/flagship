@@ -60,6 +60,20 @@ bun run docker:down
 
 The production app will be available at `http://localhost:3000`
 
+**Note**: On first run, Docker will automatically generate visualization data which takes ~20 minutes. Subsequent runs will be much faster as the data is cached in `data/docker/`.
+
+### Manual Data Generation
+```bash
+# Generate Docker visualization data separately
+bun run docker:generate
+```
+
+### Data Isolation
+- **Local development**: Uses `data/visualization.bin`
+- **Docker**: Uses `data/docker/visualization.bin` 
+
+Each environment maintains separate data to avoid conflicts during development.
+
 ## State
 
 Currently the app is in a prototypical state, with documentation missing. Hence the private visibility. 

@@ -6,4 +6,3 @@ export * from './serialization';
 export * from './streaming';
 export * from './spatial';
 export * from './temporal';
-export * from './discovery';
