@@ -43,19 +43,19 @@ cp .env.example .env
 
 ### Quick Start
 
-**With Bun (convenient):**
+**With Bun:**
 ```bash
 bun run docker:up:build
 ```
 
-**Without Bun (direct Docker Compose):**
+**Without Bun:**
 ```bash
 docker compose up --build
 ```
 
 The app will be available at `http://localhost:3000`
 
-**Note**: On first run, the system will automatically generate visualization data (~4-8 minutes). Subsequent runs will be much faster as the data is cached in `data/docker/`.
+**Note**: On first run, the system will automatically generate visualization data (~3 minutes). Subsequent runs will be much faster as the data is cached in `data/docker/`.
 
 ### Docker Commands
 
@@ -75,7 +75,7 @@ docker compose down          # Stop everything
 #### Data Management
 ```bash
 # With Bun
-bun run docker:regenerate     # Delete data + rebuild + start
+bun run docker:regenerate     # Regenerate visualization data + rebuild + start
 
 # Direct Docker Compose
 rm -f data/docker/visualization.bin && docker compose up --build
@@ -83,14 +83,14 @@ rm -f data/docker/visualization.bin && docker compose up --build
 
 #### Monitoring & Debugging
 ```bash
-# With Bun
+# Bun
 bun run docker:logs           # View all logs
 bun run docker:logs:app       # View app logs only
 bun run docker:logs:init      # View data generation logs
 bun run docker:restart        # Restart all services
 bun run docker:restart:app    # Restart just app
 
-# Direct Docker Compose
+# Docker 
 docker compose logs -f        # View all logs
 docker compose logs -f app    # View app logs only
 docker compose logs -f data-init  # View data generation logs
@@ -118,6 +118,4 @@ The Docker setup uses **Docker Compose** with two services:
 
 Each environment maintains separate data to avoid conflicts during development.
 
-## State
 
-Currently the app is in a prototypical state, with documentation missing. Hence the private visibility. 
