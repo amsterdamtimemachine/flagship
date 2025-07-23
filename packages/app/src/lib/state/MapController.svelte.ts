@@ -48,10 +48,7 @@ export function createMapController() {
 	function setRecordType(newRecordTypes: string[]) {
 		if (!browser) return;
 		
-		const url = new URL(window.location.href)
-		console.log("URL: ", url);
-		console.log("PAGE url: ", page.url.pathname);
-		
+		const url = new URL(window.location.href)		
 		// Update recordTypes parameter
 		if (newRecordTypes.length > 0) {
 			url.searchParams.set('recordTypes', newRecordTypes.join(','));

@@ -23,8 +23,7 @@
 		defaultValue: selectedItems,
 		onValueChange: ({curr, next}) => {
 			if(onItemSelected) {
-				console.log("change");
-				onItemSelected(next);
+			      onItemSelected(next);
 			}
 			return next; 
 		},
@@ -76,42 +75,48 @@
   }
 
   .toggle-item[data-orientation='horizontal'] {
-    @apply border-x border-l-transparent border-r-blue-200;
+    @apply border border-blue-500;
+    @apply mx-1;
+    @apply p-2;
 
     &:first-child {
-      @apply rounded-l-md;
+      @apply mx-0;
     }
 
     &:last-child {
-      @apply rounded-r-md border-r-transparent;
+      @apply mx-0;
     }
   }
 
   .toggle-item[data-orientation='horizontal']:dir(rtl) {
-    @apply border-x border-l-blue-200 border-r-transparent;
+    @apply border border-blue-500;
+    @apply mx-1;
+    @apply p-2;
 
     &:first-child {
-      @apply rounded-r-md;
+      @apply mx-0;
     }
 
     &:last-child {
-      @apply rounded-l-md border-l-transparent;
+      @apply mx-0;
     }
   }
 
   .toggle-item[data-orientation='vertical'] {
-    @apply border-y border-b-blue-200 border-t-transparent;
+    @apply border border-blue-500;
+    @apply mx-1;
+    @apply p-2;
 
     &:first-child {
-      @apply rounded-t-md;
+      @apply mx-0;
     }
 
     &:last-child {
-      @apply rounded-b-md border-b-transparent;
+      @apply mx-0;
     }
   }
 
   .toggle-item[data-state='on'] {
-    @apply bg-blue-200 text-blue-900;
+    @apply bg-blue-700 text-white;
   }
 </style>

@@ -27,9 +27,6 @@
 		// Default to text for everything else
 		return 'text';
 	}
-
-	console.log('GridFeatures rendering', features.length, 'features');
-	console.log('Sample feature:', features[0]);
 </script>
 
 <div class="w-100">

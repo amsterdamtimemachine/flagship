@@ -48,29 +48,22 @@
 				page,
 				recordTypes: recordTypes
 			};
-			
-			console.log('🔍 CellView API call:', {
-				cellId,
-				period,
-				recordTypes,
-				params
-			});
-			
+						
 			const response = await fetchGeodataFromDatabase(params);
 			
-			console.log('📊 CellView API response:', {
-				cellId,
-				recordTypes,
-				page,
-				totalReturned: response.data?.length || 0,
-				totalCount: response.total || 0,
-				responseMetadata: {
-					page: response.page,
-					pageSize: response.page_size,
-					totalPages: response.total_pages,
-					returned: response.returned
-				}
-			});
+		//	console.log('📊 CellView API response:', {
+		//		cellId,
+		//		recordTypes,
+		//		page,
+		//		totalReturned: response.data?.length || 0,
+		//		totalCount: response.total || 0,
+		//		responseMetadata: {
+		//			page: response.page,
+		//			pageSize: response.page_size,
+		//			totalPages: response.total_pages,
+		//			returned: response.returned
+		//		}
+		//	});
 			
 			if (page === 1) {
 				// Initial load - replace all features

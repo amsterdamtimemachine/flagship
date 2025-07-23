@@ -65,10 +65,6 @@
 		return null;
 	});
 
-
-	$inspect(mergedHeatmapTimeline);
-
-
 	// Use histogram directly since backend handles merging
 	// Note: Server-side histogram fetching already handles empty recordTypes as "all types"
 	let mergedHistogram = $derived(histogram);
@@ -96,9 +92,6 @@
 		
 		return null;
 	});
-
-	$inspect("curr ", currentHeatmap);
-	console.log(" bp ", heatmapBlueprint);
 
 	// Debounced period changes to avoid too many API calls
 	const debouncedPeriodChange = debounce((period: string) => {
