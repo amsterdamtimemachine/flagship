@@ -12,13 +12,11 @@
 	
 	onMount(() => {
 		handlePageErrors(errorData);
-		// Track processed error IDs to avoid duplicates
 		errorData.errors.forEach(error => {
 			processedErrorIds.add(error.id);
 		});
 	});
 	
-	// Reactively process new errors when errorData changes
 	$effect(() => {
 		if (!errorData.hasErrors) return;
 		
@@ -34,7 +32,6 @@
 						type: error.type
 					}
 				});
-				// Track this error as processed
 				processedErrorIds.add(error.id);
 			});
 		}

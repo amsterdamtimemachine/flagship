@@ -17,15 +17,19 @@ export interface ApiQueryParams {
   max_lon: number;
   start_year: string;
   end_year: string;
-  recordtype?: RecordType;
-  limit?: number;
-  offset?: number;
+  recordtypes?: RecordType[];
+  page?: number;
+  page_size?: number;
 }
 
 // response from the DB
 export interface ApiResponse {
   data: RawFeature[];
   total: number;
+  page: number;
+  page_size: number;
+  returned: number;
+  total_pages: number;
 }
 
 // responses from sveltekit server to the frontend
@@ -54,7 +58,7 @@ export interface HeatmapResponse {
 
 export interface HeatmapTimelineApiResponse {
   heatmapTimeline: HeatmapTimeline;
-  recordType: RecordType;
+  recordTypes: RecordType[];
   tags?: string[];
   resolution: string;
   success: boolean;
@@ -64,6 +68,8 @@ export interface HeatmapTimelineApiResponse {
 
 export interface HistogramResponse {
     histogram: Histogram;
+    recordTypes: RecordType[];
+    tags?: string[];
     timeRange: TimeRange;
     availablePeriods: string[];
 }

@@ -1,5 +1,5 @@
 {
-  "name": "atm-flagship-prototype",
+  "name": "@atm/flagship",
   "private": true,
   "engines": {
     "bun": "latest"
@@ -9,15 +9,22 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev",
+    "sync:env": "scripts/sync-env.sh",
+    "dev": "turbo run dev --filter=@atm/app",
     "build": "turbo run build",
-    "preprocess": "turbo run preprocess",
-    "test": "turbo run test",
+    "generate": "turbo run generate --filter=@atm/preprocessor",
     "lint": "turbo run lint",
-    "dev:app": "turbo run dev --filter=@atm/app",
-    "dev:preprocessor": "turbo run dev --filter=@atm/preprocessor",
     "build:shared": "turbo run build --filter=@atm/shared",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "docker:up": "docker compose up",
+    "docker:up:build": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "docker:regenerate": "rm -f data/docker/visualization.bin && docker compose up --build",
+    "docker:logs": "docker compose logs -f",
+    "docker:logs:app": "docker compose logs -f app",
+    "docker:logs:init": "docker compose logs -f data-init",
+    "docker:restart": "docker compose restart",
+    "docker:restart:app": "docker compose restart app"
   },
   "devDependencies": {
     "turbo": "^2.5.3"

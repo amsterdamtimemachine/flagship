@@ -36,7 +36,7 @@ export async function* streamFeaturesByChunks(
     
     try {
       // Fetch features for this chunk
-      const result = await fetchChunkFeatures(config, chunk.bounds, options?.timeRange, options?.recordType);
+      const result = await fetchChunkFeatures(config, chunk.bounds, options?.timeRange, options?.recordTypes);
       
       // Update total stats
       totalStats.totalRaw += result.stats.totalRaw;
@@ -80,17 +80,17 @@ async function fetchChunkFeatures(
   config: DatabaseConfig,
   bounds: HeatmapCellBounds,
   timeRange?: { start: string; end: string },
-  recordType?: RecordType
+  recordTypes?: RecordType[]
 ): Promise<{ features: AnyProcessedFeature[]; stats: ChunkResult['stats'] }> {
   console.log(`📍 Fetching chunk data for bounds:`, {
     lat: [bounds.minLat.toFixed(3), bounds.maxLat.toFixed(3)],
     lon: [bounds.minLon.toFixed(3), bounds.maxLon.toFixed(3)],
-    recordType: recordType || 'all'
+    recordTypes: recordTypes || ['all']
   });
   
   const features: AnyProcessedFeature[] = [];
-  let offset = 0;
-  const batchSize = config.batchSize || 500; // Smaller batches for chunks
+  let currentPage = 1;
+  const pageSize = config.batchSize || 500; // Smaller batches for chunks
   let hasMore = true;
   let requestCount = 0;
   let stats = { totalRaw: 0, validProcessed: 0, invalidSkipped: 0 };
@@ -105,9 +105,9 @@ async function fetchChunkFeatures(
       max_lon: bounds.maxLon,
       start_year: timeRange?.start || '1800-01-01',
       end_year: timeRange?.end || '2024-12-31',
-      limit: batchSize,
-      offset: offset,
-      ...(recordType && { recordType }), // Add recordType filter if provided
+      page: currentPage,
+      page_size: pageSize,
+      ...(recordTypes && recordTypes.length > 0 && { recordtype: recordTypes.join(',') }), // Add recordTypes filter if provided
       ...config.defaultParams
     };
     
@@ -120,9 +120,9 @@ async function fetchChunkFeatures(
         // Convert API features to ProcessedFeatures
         for (const apiFeature of response.data) {
           try {
-            // Use the queried recordType or default to 'text'
-            const featurerecordType = recordType || 'text';
-            const processedFeature = convertRawFeature(apiFeature, featurerecordType);
+            // Determine recordType from feature data or use first requested type as fallback
+            const featureRecordType = apiFeature.recordType || (recordTypes && recordTypes.length > 0 ? recordTypes[0] : 'text');
+            const processedFeature = convertRawFeature(apiFeature, featureRecordType);
             
             features.push(processedFeature);
             stats.validProcessed++;
@@ -133,8 +133,8 @@ async function fetchChunkFeatures(
         }
       }
       
-      hasMore = response.data && response.data.length === batchSize;
-      offset += batchSize;
+      hasMore = response.page < response.total_pages;
+      currentPage++;
       
       // Safety check per chunk to prevent runaway chunks
       if (features.length > 50000) {

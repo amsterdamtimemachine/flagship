@@ -1,8 +1,8 @@
 import type { RecordType } from './feature';
 
 export interface Heatmap {
-  densityarray: number[];
-  countarray: number[];
+  densityArray: number[];
+  countArray: number[];
 }
 
 export interface HeatmapTimeline {
@@ -67,6 +67,12 @@ export interface HeatmapAccumulator {
   cellCounts: HeatmapCellCounts;
   heatmapDimensions: HeatmapDimensions;
   collectedTags: Set<string>;
+}
+
+export interface HeatmapConfig {
+  colsAmount: number;
+  rowsAmount: number;
+  padding: number;
 }
 
 

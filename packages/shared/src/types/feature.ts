@@ -25,7 +25,9 @@ export interface RawFeature {
     per: [number, number]; // Time period [start_year, end_year]
     tit: string;          // Title
     url: string;          // Source URL
-    recordtype?: RecordType;
+    recordType?: RecordType;
+    recordtype?: RecordType;  // Legacy support
+    type?: string;        // Alternative type field
     tags?: string[];
 }
 
@@ -33,7 +35,7 @@ export interface ProcessedFeature<R extends RecordType = RecordType> {
     title: string;        // From 'tit' field
     dataset: string;      // From 'ds' field
     url: string;
-    recordtype: R;        // Now required and typed
+    recordType: R;        // Now required and typed
     tags: string[];
     
     // Temporal data

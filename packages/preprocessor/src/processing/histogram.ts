@@ -44,7 +44,7 @@ export function featureMatchesFilters(
   request: HistogramRequest
 ): boolean {
   // Check record type filter
-  if (request.recordType && feature.recordType !== request.recordType) {
+  if (request.recordTypes && !request.recordTypes.includes(feature.recordType)) {
     return false;
   }
   
@@ -104,31 +104,30 @@ export async function accumulateHistogramForPeriod(
 ): Promise<void> {
   
   console.log(`📊 Accumulating histogram for period: ${timeSlice.label}`);
-  console.log(`   Filters: recordType=${accumulator.request.recordType || 'all'}, tags=[${(accumulator.request.tags || []).join(', ')}]`);
+  console.log(`   Filters: recordTypes=[${(accumulator.request.recordTypes || []).join(', ') || 'all'}], tags=[${(accumulator.request.tags || []).join(', ')}]`);
   
   let totalFeatureCount = 0;
   let matchingFeatureCount = 0;
   
-  // If we have a recordType filter, stream only that type
-  const recordTypesToStream = accumulator.request.recordType 
-    ? [accumulator.request.recordType]
-    : ['text'] as RecordType[]; // Default to text since images/events don't exist yet
+  // Determine recordTypes to stream - use all available types if no specific filter
+  const recordTypesToStream = accumulator.request.recordTypes 
+    ? accumulator.request.recordTypes
+    : ['text', 'image', 'event'] as RecordType[];
   
-  for (const recordType of recordTypesToStream) {
-    for await (const result of streamFeaturesByChunks(config, bounds, chunkConfig, {
-      recordType,
-      timeRange: timeSlice.timeRange
-    })) {
-      console.log(`📈 Processing ${result.features.length} ${recordType} features from chunk ${result.chunk.id}`);
+  // Stream all recordTypes in single API call
+  for await (const result of streamFeaturesByChunks(config, bounds, chunkConfig, {
+    recordTypes: recordTypesToStream,
+    timeRange: timeSlice.timeRange
+  })) {
+    console.log(`📈 Processing ${result.features.length} mixed features from chunk ${result.chunk.id}`);
+    
+    // Process each feature, but only count if it matches filters
+    for (const feature of result.features) {
+      totalFeatureCount++;
       
-      // Process each feature, but only count if it matches filters
-      for (const feature of result.features) {
-        totalFeatureCount++;
-        
-        if (featureMatchesFilters(feature, accumulator.request)) {
-          processFeatureIntoHistogramBin(feature, accumulator, timeSlice);
-          matchingFeatureCount++;
-        }
+      if (featureMatchesFilters(feature, accumulator.request)) {
+        processFeatureIntoHistogramBin(feature, accumulator, timeSlice);
+        matchingFeatureCount++;
       }
     }
   }
@@ -140,19 +139,18 @@ export async function accumulateHistogramForPeriod(
  * Generate final histogram from accumulator data
  */
 export function generateHistogram(accumulator: HistogramAccumulator): Histogram {
-  // Convert bins map to sorted array based on TimeSlice chronological order
-  const timeSlices = Array.from(accumulator.bins.values())
-    .map(bin => bin.timeSlice)
-    .sort((a, b) => a.startYear - b.startYear);
+  // Use ALL time periods from request, not just those with data
+  // This ensures consistent timeline alignment across all histograms
+  const bins = accumulator.request.timeSlices
+    .sort((a, b) => a.startYear - b.startYear)
+    .map(timeSlice => 
+      accumulator.bins.get(timeSlice.key) || createEmptyHistogramBin(timeSlice)
+    );
   
-  const bins = timeSlices
-    .map(timeSlice => accumulator.bins.get(timeSlice.key))
-    .filter((bin): bin is HistogramBin => bin !== undefined);
-  
-  // Calculate overall time range
-  const timeRange = timeSlices.length > 0 ? {
-    start: timeSlices[0].timeRange.start,
-    end: timeSlices[timeSlices.length - 1].timeRange.end
+  // Calculate overall time range using the ordered bins
+  const timeRange = bins.length > 0 ? {
+    start: bins[0].timeSlice.timeRange.start,
+    end: bins[bins.length - 1].timeSlice.timeRange.end
   } : { start: '', end: '' };
   
   // Calculate total features
@@ -160,7 +158,7 @@ export function generateHistogram(accumulator: HistogramAccumulator): Histogram 
   
   return {
     bins,
-    recordType: accumulator.request.recordType,
+    recordTypes: accumulator.request.recordTypes,
     tags: accumulator.request.tags,
     bounds: accumulator.request.bounds,
     maxCount: accumulator.maxCount,
@@ -185,7 +183,7 @@ export async function generateFilteredHistogram(
     const accumulator = createHistogramAccumulator(request);
     
     console.log(`📊 Generating filtered histogram:`);
-    console.log(`   Record type: ${request.recordType || 'all'}`);
+    console.log(`   Record types: [${(request.recordTypes || []).join(', ') || 'all'}]`);
     console.log(`   Tags: [${(request.tags || []).join(', ')}]`);
     console.log(`   Time periods: ${request.timeSlices.length}`);
     
@@ -222,7 +220,7 @@ export async function generateFilteredHistogram(
     return {
       histogram: {
         bins: [],
-        recordType: request.recordType,
+        recordTypes: request.recordTypes,
         tags: request.tags,
         bounds: request.bounds,
         maxCount: 0,
@@ -251,13 +249,12 @@ export function generateHistogramFromHeatmapTimeline(
   // Process each time slice from the heatmap timeline
   for (const timeSlice of request.timeSlices) {
     const timeSliceData = heatmapTimeline[timeSlice.key];
+    const bin = createEmptyHistogramBin(timeSlice);
     
     if (timeSliceData) {
-      const bin = createEmptyHistogramBin(timeSlice);
-      
       // If filtering by record type, only look at that type
-      const recordTypesToProcess = request.recordType 
-        ? [request.recordType]
+      const recordTypesToProcess = request.recordTypes 
+        ? request.recordTypes
         : ['text', 'image', 'event'] as RecordType[];
       
       for (const recordType of recordTypesToProcess) {
@@ -270,25 +267,25 @@ export function generateHistogramFromHeatmapTimeline(
             // For now, handle single tag case
             const tag = request.tags[0];
             if (recordTypeData.tags[tag]) {
-              const tagCount = recordTypeData.tags[tag].countarray.reduce(
+              const tagCount = recordTypeData.tags[tag].countArray.reduce(
                 (sum: number, count: number) => sum + count, 0
               );
               bin.count += tagCount;
             }
           } else {
             // No tag filter, use base heatmap
-            const recordTypeCount = recordTypeData.base.countarray.reduce(
+            const recordTypeCount = recordTypeData.base.countArray.reduce(
               (sum: number, count: number) => sum + count, 0
             );
             bin.count += recordTypeCount;
           }
         }
       }
-      
-      // Update max count
-      accumulator.maxCount = Math.max(accumulator.maxCount, bin.count);
-      accumulator.bins.set(timeSlice.key, bin);
     }
+    
+    // Always add the bin (even if count is 0) to ensure consistent timeline
+    accumulator.maxCount = Math.max(accumulator.maxCount, bin.count);
+    accumulator.bins.set(timeSlice.key, bin);
   }
   
   console.log(`✅ Generated filtered histogram from HeatmapTimeline: ${accumulator.bins.size} periods`);
@@ -309,7 +306,7 @@ export async function getHistogramByRecordType(
   timeSlices: TimeSlice[]
 ): Promise<HistogramApiResponse> {
   return generateFilteredHistogram(config, bounds, chunkConfig, {
-    recordType,
+    recordTypes: [recordType],
     timeSlices
   });
 }
@@ -324,7 +321,7 @@ export async function getHistogramByRecordTypeAndTags(
   timeSlices: TimeSlice[]
 ): Promise<HistogramApiResponse> {
   return generateFilteredHistogram(config, bounds, chunkConfig, {
-    recordType,
+    recordTypes: [recordType],
     tags,
     timeSlices
   });

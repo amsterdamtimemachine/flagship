@@ -1,82 +1,38 @@
-// src/config/defaults.ts - Simple, configurable defaults
+// src/config/defaults.ts - Environment-configurable defaults
 
 import type { DatabaseConfig, ChunkingConfig, HeatmapConfig } from '@atm/shared/types';
 
 export const AMSTERDAM_DATABASE_CONFIG: DatabaseConfig = {
-  baseUrl: 'https://atmbackend.create.humanities.uva.nl',
-  batchSize: 200, // Good balance between speed and memory
-  timeout: 30000, // 30 second timeout
-  defaultParams: {
-    // Don't set recordtype by default - let it fetch all types
-  }
+  baseUrl: process.env.DATABASE_BASE_URL || 'https://atmbackend.create.humanities.uva.nl',
+  batchSize: parseInt(process.env.DATABASE_BATCH_SIZE || '') || 2000,
+  timeout: parseInt(process.env.DATABASE_TIMEOUT || '') || 30000,
+  defaultParams: {}
 };
 
 export const AMSTERDAM_BOUNDS = {
-  minLon: 4.85,  // Focused on central Amsterdam where we know data exists
-  maxLon: 4.95,  // Based on test data coordinates
-  minLat: 52.35, // Area that returned 20+ features in tests
-  maxLat: 52.4   // More focused than the original wide bounds
+  minLon: parseFloat(process.env.BOUNDS_MIN_LON || '') || 4.85,
+  maxLon: parseFloat(process.env.BOUNDS_MAX_LON || '') || 4.95,
+  minLat: parseFloat(process.env.BOUNDS_MIN_LAT || '') || 52.35,
+  maxLat: parseFloat(process.env.BOUNDS_MAX_LAT || '') || 52.4
 };
 
 export const DEFAULT_GRID_CONFIG: HeatmapConfig = {
-  colsAmount: 100,
-  rowsAmount: 100,
-  padding: 0.05 // 5% padding around Amsterdam
+  colsAmount: parseInt(process.env.GRID_COLS || '') || 20,
+  rowsAmount: parseInt(process.env.GRID_ROWS || '') || 20,
+  padding: parseFloat(process.env.GRID_PADDING || '') || 0.05 // 5% padding around Amsterdam
 };
 
-// Simple, proven chunking configurations
+// Production chunking configuration
 export const DEFAULT_CHUNKING: ChunkingConfig = {
-  chunkRows: 2,
-  chunkCols: 2,
-  overlap: 0.001, // Small overlap for boundary features
-  delayMs: 200    // Don't overwhelm the API
+  chunkRows: parseInt(process.env.CHUNK_ROWS || '') || 4,
+  chunkCols: parseInt(process.env.CHUNK_COLS || '') || 4,
+  overlap: parseFloat(process.env.CHUNK_OVERLAP || '') || 0.001, // Small overlap for boundary features
+  delayMs: parseInt(process.env.CHUNK_DELAY_MS || '') || 50 // Don't overwhelm the API
 };
 
-export const MEMORY_EFFICIENT_CHUNKING: ChunkingConfig = {
-  chunkRows: 4,
-  chunkCols: 4,
-  overlap: 0.001,
-  delayMs: 300
+// Production configuration
+export const PRODUCTION_PRESET = {
+  database: AMSTERDAM_DATABASE_CONFIG,
+  resolutionCanonical: DEFAULT_GRID_CONFIG,
+  chunking: DEFAULT_CHUNKING
 };
-
-export const HIGH_PERFORMANCE_CHUNKING: ChunkingConfig = {
-  chunkRows: 1,
-  chunkCols: 1,
-  delayMs: 100 // Single chunk, faster processing
-};
-
-// Preset configurations for different scenarios
-export const PRESETS = {
-  // For testing and development (small grid, single chunk)
-  DEVELOPMENT: {
-    database: AMSTERDAM_DATABASE_CONFIG,
-    resolutionCanonical: { colsAmount: 5, rowsAmount: 5, padding: 0.05 },
-    chunking: HIGH_PERFORMANCE_CHUNKING
-  },
-  
-  // For production (balanced memory and performance)
-  PRODUCTION: {
-    database: AMSTERDAM_DATABASE_CONFIG,
-    resolutionCanonical: DEFAULT_GRID_CONFIG,
-    chunking: DEFAULT_CHUNKING
-  },
-  
-  // For memory-constrained servers
-  MEMORY_EFFICIENT: {
-    database: { ...AMSTERDAM_DATABASE_CONFIG, batchSize: 100 },
-    resolutionCanonical: DEFAULT_GRID_CONFIG,
-    chunking: MEMORY_EFFICIENT_CHUNKING
-  },
-  
-  // For high-resolution processing
-  HIGH_RESOLUTION: {
-    database: AMSTERDAM_DATABASE_CONFIG,
-    resolutionCanonical: { colsAmount: 200, rowsAmount: 200, padding: 0.05 },
-    chunking: MEMORY_EFFICIENT_CHUNKING // Use more chunks for high-res
-  }
-};
-
-// Helper function to get preset
-export function getPreset(presetName: keyof typeof PRESETS) {
-  return PRESETS[presetName];
-}

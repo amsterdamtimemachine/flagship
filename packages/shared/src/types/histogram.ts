@@ -15,11 +15,11 @@ export interface HistogramBin {
 
 /**
  * Histogram for a specific filter combination - FLATTENED STRUCTURE
- * Each histogram is filtered for specific recordType/tags
+ * Each histogram is filtered for specific recordTypes/tags
  */
 export interface Histogram {
   bins: HistogramBin[];                              
-  recordType?: RecordType;                           
+  recordTypes?: RecordType[];                        
   tags?: string[];                                  
   bounds?: Bounds
   maxCount: number;                                  // Highest count across all bins
@@ -31,7 +31,7 @@ export interface Histogram {
  * Request parameters for histogram generation
  */
 export interface HistogramRequest {
-  recordType?: RecordType;                           // Filter by record type
+  recordTypes?: RecordType[];                        // Filter by record types
   tags?: string[];                                   // Filter by tags (AND logic)
   timeSlices: TimeSlice[];                           // Time periods to include
   bounds?: {                                         // Geographic bounds

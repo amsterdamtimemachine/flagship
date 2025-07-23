@@ -7,18 +7,15 @@ import { getApiService } from '$lib/server/apiServiceSingleton';
 export const GET: RequestHandler = async ({ url }) => {
   try {
     // Parse query parameters
-    const recordType = url.searchParams.get('recordType') as RecordType;
+    const recordTypesParam = url.searchParams.get('recordTypes');
     const tagsParam = url.searchParams.get('tags');
     
-    // Validate recordType
-    if (!recordType) {
-      return error(400, { message: 'recordType parameter is required' });
+    // Parse recordTypes (no validation - accept discovered recordTypes from data)
+    if (!recordTypesParam) {
+      return error(400, { message: 'recordTypes parameter is required' });
     }
     
-    const validRecordTypes: RecordType[] = ['text', 'image', 'event'];
-    if (!validRecordTypes.includes(recordType)) {
-      return error(400, { message: `Invalid recordType. Must be one of: ${validRecordTypes.join(', ')}` });
-    }
+    const recordTypes = recordTypesParam.split(',').map(t => t.trim()) as RecordType[];
 
     // Parse tags if provided
     let tags: string[] | undefined;
@@ -26,11 +23,11 @@ export const GET: RequestHandler = async ({ url }) => {
       tags = tagsParam.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
     }
 
-    console.log(`🔥 Heatmaps API request - recordType: ${recordType}, tags: ${tags?.join(', ') || 'none'}`);
+    console.log(`🔥 Heatmaps API request - recordTypes: ${recordTypes.join(', ')}, tags: ${tags?.join(', ') || 'none'}`);
 
     // Get heatmap timeline from service
     const apiService = await getApiService();
-    const response = await apiService.getHeatmapTimeline(recordType, tags);
+    const response = await apiService.getHeatmapTimeline(recordTypes, tags);
 
     // Set appropriate cache headers
     const headers = {
@@ -52,7 +49,7 @@ export const GET: RequestHandler = async ({ url }) => {
     
     return json<HeatmapTimelineApiResponse>({
       heatmapTimeline: {},
-      recordType: recordType || 'text',
+      recordTypes: recordTypes || ['text'],
       resolution: '',
       success: false,
       message: err instanceof Error ? err.message : 'Internal server error'

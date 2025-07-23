@@ -70,7 +70,7 @@ export function calculateCellBounds(
   const minlat = heatmapDimensions.minLat + (row * cellHeight);
   const maxlat = minlat + cellHeight;
 
-  return { minlon, maxlon, minlat, maxlat };
+  return { minLon: minlon, maxLon: maxlon, minLat: minlat, maxLat: maxlat };
 }
 
 /**
@@ -140,7 +140,7 @@ export async function accumulateCountsForMultipleResolutions(
   config: DatabaseConfig,
   bounds: HeatmapCellBounds,
   chunkConfig: ChunkingConfig,
-  recordType: RecordType,
+  recordTypes: RecordType[],
   resolutionConfigs: HeatmapResolutionConfig[],
   timeSlice: TimeSlice
 ): Promise<Map<string, HeatmapAccumulator>> {
@@ -164,7 +164,7 @@ export async function accumulateCountsForMultipleResolutions(
     accumulators.set(resolutionKey, createHeatmapAccumulator(heatmapDimensions));
   }
   
-  console.log(`🔥 Accumulating counts for recordType: ${recordType} in period: ${timeSlice.label} across ${resolutionConfigs.length} resolutions`);
+  console.log(`🔥 Accumulating counts for recordTypes: ${recordTypes.join(', ')} in period: ${timeSlice.label} across ${resolutionConfigs.length} resolutions`);
   
   // Convert bounds for streaming (legacy format)
   const streamBounds = {
@@ -176,10 +176,10 @@ export async function accumulateCountsForMultipleResolutions(
   
   // Stream data once, process into ALL resolutions simultaneously
   for await (const result of streamFeaturesByChunks(config, streamBounds, chunkConfig, {
-    recordType,
+    recordTypes: recordTypes,
     timeRange: timeSlice.timeRange
   })) {
-    console.log(`📊 Processing ${result.features.length} ${recordType} features from chunk ${result.chunk.id} for period ${timeSlice.label}`);
+    console.log(`📊 Processing ${result.features.length} mixed features from chunk ${result.chunk.id} for period ${timeSlice.label}`);
     
     // Process each feature into ALL accumulators
     for (const feature of result.features) {
@@ -189,12 +189,13 @@ export async function accumulateCountsForMultipleResolutions(
     }
   }
   
-  console.log(`✅ Completed accumulation for ${recordType} in ${timeSlice.label}:`);
+  console.log(`✅ Completed accumulation for recordTypes: ${recordTypes.join(', ')} in ${timeSlice.label}:`);
   for (const [resolutionKey, accumulator] of accumulators) {
-    const cellsWithData = accumulator.cellCounts.base.get(recordType)?.size || 0;
-    console.log(`   - ${resolutionKey}: ${cellsWithData} cells with data`);
+    const totalCells = Array.from(accumulator.cellCounts.base.values()).reduce((sum, recordTypeCounts) => sum + recordTypeCounts.size, 0);
+    console.log(`   - ${resolutionKey}: ${totalCells} cells with data across all recordTypes`);
   }
-  console.log(`   - Unique tags found: ${accumulators.values().next().value.collectedTags.size}`);
+  const firstAccumulator = accumulators.values().next().value;
+  console.log(`   - Unique tags found: ${firstAccumulator?.collectedTags.size || 0}`);
   
   return accumulators;
 }
@@ -231,8 +232,8 @@ export function generateHeatmap(
   }
   
   return {
-    countarray,
-    densityarray
+    countArray: countarray,
+    densityArray: densityarray
   };
 }
 
@@ -324,26 +325,25 @@ export async function generateHeatmapResolutions(
   for (const timeSlice of timeSlices) {
     console.log(`📅 Processing time slice: ${timeSlice.label} (${timeSlice.timeRange.start} to ${timeSlice.timeRange.end})`);
     
-    for (const recordType of recordTypes) {
-      console.log(`📊 Processing recordType: ${recordType} for time slice ${timeSlice.label}`);
+    // Accumulate counts for ALL resolutions simultaneously (stream data once for all recordTypes)
+    const accumulators = await accumulateCountsForMultipleResolutions(
+      config,
+      bounds,
+      chunkConfig,
+      recordTypes,
+      resolutionConfigs,
+      timeSlice
+    );
+    
+    // Generate heatmaps for each resolution from its accumulator
+    for (const [resolutionKey, accumulator] of accumulators) {
+      // Initialize time slice if not exists
+      if (!result[resolutionKey][timeSlice.key]) {
+        result[resolutionKey][timeSlice.key] = {} as any;
+      }
       
-      // Accumulate counts for ALL resolutions simultaneously (stream data once)
-      const accumulators = await accumulateCountsForMultipleResolutions(
-        config,
-        bounds,
-        chunkConfig,
-        recordType,
-        resolutionConfigs,
-        timeSlice
-      );
-      
-      // Generate heatmaps for each resolution from its accumulator
-      for (const [resolutionKey, accumulator] of accumulators) {
-        // Initialize time slice if not exists
-        if (!result[resolutionKey][timeSlice.key]) {
-          result[resolutionKey][timeSlice.key] = {} as any;
-        }
-        
+      // Generate heatmaps for each recordType from the single accumulator
+      for (const recordType of recordTypes) {
         // Initialize recordType structure
         result[resolutionKey][timeSlice.key][recordType] = {
           base: generateHeatmap(new Map(), accumulator.heatmapDimensions), // Default empty
@@ -394,7 +394,7 @@ export async function generateHeatmapTimelineForRecordType(
     config,
     bounds,
     chunkConfig,
-    recordType,
+    [recordType],
     resolutionConfigs,
     timeSlice
   );
@@ -403,6 +403,9 @@ export async function generateHeatmapTimelineForRecordType(
   const accumulator = accumulators.values().next().value;
   
   // Generate timeline from accumulated counts
+  if (!accumulator) {
+    throw new Error(`No accumulator found for time slice: ${timeSlice.label}`);
+  }
   return generateHeatmapTimelineFromAccumulator(accumulator, timeSlice);
 }
 

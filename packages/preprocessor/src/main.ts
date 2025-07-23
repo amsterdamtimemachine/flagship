@@ -14,8 +14,7 @@ import {
 import { 
   AMSTERDAM_DATABASE_CONFIG, 
   AMSTERDAM_BOUNDS,
-  PRESETS,
-  getPreset
+  PRODUCTION_PRESET
 } from './config/defaults';
 import type { 
   HeatmapDimensions, 
@@ -25,32 +24,31 @@ import type {
 } from '@atm/shared/types';
 
 // Configuration
-const PRESET = process.env.PRESET || 'DEVELOPMENT'; // Can be DEVELOPMENT, PRODUCTION, MEMORY_EFFICIENT, HIGH_RESOLUTION
 const OUTPUT_PATH = process.env.OUTPUT_PATH || './visualization.bin';
 const INCLUDE_TEST_RESOLUTIONS = process.env.INCLUDE_TEST_RESOLUTIONS === 'true';
 
 async function main() {
   console.log('Starting Amsterdam Time Machine Binary Generation');
-  console.log(`Using preset: ${PRESET}`);
+  console.log(`Using preset: PRODUCTION`);
   console.log(`Output path: ${OUTPUT_PATH}`);
   
   const startTime = Date.now();
   
   try {
-    // Get configuration from preset
-    const config = getPreset(PRESET as keyof typeof PRESETS);
+    // Use production preset configuration
+    const config = PRODUCTION_PRESET;
     console.log(`Canonical resolution: ${config.resolutionCanonical.colsAmount}x${config.resolutionCanonical.rowsAmount}`);
     console.log(`Chunking: ${config.chunking.chunkRows}x${config.chunking.chunkCols} chunks`);
 
     // Define time periods
     const timeSlices: TimeSlice[] = createTimeSlices([
-      { start: 1600, end: 1700 }, // 17th century
-      { start: 1700, end: 1800 }, // 18th century  
-      { start: 1800, end: 1850 }, // Early 19th century
-      { start: 1850, end: 1900 }, // Late 19th century
-      { start: 1900, end: 1950 }, // Early 20th century
-      { start: 1950, end: 2000 }, // Late 20th century
-      { start: 2000, end: 2050 }  // 21st century
+      { start: 1600, end: 1700 }, 
+      { start: 1700, end: 1800 }, 
+      { start: 1800, end: 1850 }, 
+      { start: 1850, end: 1900 }, 
+      { start: 1900, end: 1950 }, 
+      { start: 1950, end: 2000 }, 
+      { start: 2000, end: 2025 }  
     ]);
 
     console.log(`Time periods: ${timeSlices.length} (${timeSlices[0].label} to ${timeSlices[timeSlices.length-1].label})`);
@@ -61,18 +59,10 @@ async function main() {
 
     // Define resolutions to generate
     const resolutions: HeatmapResolutionConfig[] = [
-      { cols: config.resolutionCanonical.colsAmount, rows: config.resolutionCanonical.rowsAmount }
+      { cols: config.resolutionCanonical.colsAmount, rows: config.resolutionCanonical.rowsAmount },
+      { cols: 8, rows: 8 },   
+      { cols: 16, rows: 16 }, 
     ];
-
-    // Add test resolutions if requested
-    if (INCLUDE_TEST_RESOLUTIONS) {
-      resolutions.push(
-        { cols: 8, rows: 8 },     // Low resolution for quick testing
-        { cols: 16, rows: 16 },   // Medium resolution
-        { cols: 32, rows: 32 }    // Higher resolution
-      );
-    }
-
     console.log(`Resolutions: ${resolutions.map(r => `${r.cols}x${r.rows}`).join(', ')}`);
 
     // Calculate bounds with padding
@@ -155,11 +145,11 @@ async function main() {
     const stats = generateVisualizationStats(heatmapResolutions, histograms, timeSlices);
     
     console.log(` Statistics generated:`);
-    console.log(`   - Total features: ${stats.totalFeatures}`);
-    console.log(`   - Features per type: ${Object.entries(stats.featuresPerRecordType).map(([type, count]) => `${type}: ${count}`).join(', ')}`);
-    console.log(`   - Time slices: ${stats.timeSliceCount}`);
-    console.log(`   - Grid cells: ${stats.gridCellCount}`);
-    console.log(`   - Resolutions: ${stats.resolutionCount}`);
+    console.log(`   - Total features: ${stats?.totalFeatures || 0}`);
+    console.log(`   - Features per type: ${stats ? Object.entries(stats.featuresPerRecordType).map(([type, count]) => `${type}: ${count}`).join(', ') : 'none'}`);
+    console.log(`   - Time slices: ${stats?.timeSliceCount || 0}`);
+    console.log(`   - Grid cells: ${stats?.gridCellCount || 0}`);
+    console.log(`   - Resolutions: ${stats?.resolutionCount || 0}`);
 
     // Step 6: Create visualization binary
     console.log('\n=� Step 6: Creating visualization binary...');
@@ -226,14 +216,9 @@ function parseArgs() {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     
-    if (arg === '--preset' && i + 1 < args.length) {
-      process.env.PRESET = args[i + 1];
-      i++;
-    } else if (arg === '--output' && i + 1 < args.length) {
+    if (arg === '--output' && i + 1 < args.length) {
       process.env.OUTPUT_PATH = args[i + 1];
       i++;
-    } else if (arg === '--test-resolutions') {
-      process.env.INCLUDE_TEST_RESOLUTIONS = 'true';
     } else if (arg === '--help') {
       console.log(`
 Amsterdam Time Machine Binary Generator
@@ -241,25 +226,24 @@ Amsterdam Time Machine Binary Generator
 Usage: bun run src/main.ts [options]
 
 Options:
-  --preset <name>       Configuration preset (DEVELOPMENT, PRODUCTION, MEMORY_EFFICIENT, HIGH_RESOLUTION)
   --output <path>       Output path for binary file (default: ./visualization.bin)
   --test-resolutions    Include additional test resolutions (8x8, 16x16, 32x32)
   --help               Show this help message
 
 Environment Variables:
-  PRESET               Same as --preset
   OUTPUT_PATH          Same as --output
-  INCLUDE_TEST_RESOLUTIONS  Same as --test-resolutions
 
 Examples:
-  bun run src/main.ts --preset DEVELOPMENT --output ./test.bin
-  bun run src/main.ts --preset PRODUCTION --test-resolutions
-  PRESET=HIGH_RESOLUTION bun run src/main.ts
+  bun run src/main.ts --output ./test.bin
+  OUTPUT_PATH=./production.bin bun run src/main.ts
       `);
       process.exit(0);
     }
   }
 }
+
+// Export main for programmatic usage
+export default main;
 
 // Main execution
 if (import.meta.main) {

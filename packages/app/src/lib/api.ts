@@ -53,19 +53,19 @@ import type {
 	HistogramApiResponse, 
 	VisualizationMetadata 
 } from '@atm/shared/types';
-import type { HeatmapTimelineApiResponse } from '$lib/server/api-service';
+import type { HeatmapTimelineApiResponse } from '@atm/shared/types';
 
 /**
- * Fetch histogram data for a specific recordType and optional tags
+ * Fetch histogram data for specific recordTypes and optional tags
  */
 export async function fetchHistogram(
-	recordType: RecordType,
+	recordTypes: RecordType[],
 	tags?: string[],
 	fetchFn: FetchFunction = fetch
 ): Promise<HistogramApiResponse> {
 	// Build the URL with parameters
 	const url = new URL('/api/histogram', window.location.origin);
-	url.searchParams.set('recordType', recordType);
+	url.searchParams.set('recordTypes', recordTypes.join(','));
 	
 	if (tags && tags.length > 0) {
 		url.searchParams.set('tags', tags.join(','));
@@ -76,17 +76,17 @@ export async function fetchHistogram(
 }
 
 /**
- * Fetch heatmap timeline for a specific recordType and optional tags
+ * Fetch heatmap timeline for specific recordTypes and optional tags
  * Returns all time periods at single resolution
  */
 export async function fetchHeatmapTimeline(
-	recordType: RecordType,
+	recordTypes: RecordType[],
 	tags?: string[],
 	fetchFn: FetchFunction = fetch
 ): Promise<HeatmapTimelineApiResponse> {
 	// Build the URL with parameters
 	const url = new URL('/api/heatmaps', window.location.origin);
-	url.searchParams.set('recordType', recordType);
+	url.searchParams.set('recordTypes', recordTypes.join(','));
 	
 	if (tags && tags.length > 0) {
 		url.searchParams.set('tags', tags.join(','));
@@ -118,7 +118,7 @@ export async function fetchGeodataFromDatabase(
 		start_year: string;
 		end_year: string;
 		page?: number;
-		recordType?: string;
+		recordTypes?: string[];
 		limit?: number;
 	},
 	fetchFn: FetchFunction = fetch
@@ -129,7 +129,12 @@ export async function fetchGeodataFromDatabase(
 	// Add all parameters to the URL
 	Object.entries(params).forEach(([key, value]) => {
 		if (value !== undefined) {
-			url.searchParams.set(key, value.toString());
+			if (key === 'recordTypes' && Array.isArray(value)) {
+				// Join array values with comma and use correct parameter name
+				url.searchParams.set('recordtype', value.join(','));
+			} else {
+				url.searchParams.set(key, value.toString());
+			}
 		}
 	});
 

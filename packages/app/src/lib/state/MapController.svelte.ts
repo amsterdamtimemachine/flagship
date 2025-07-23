@@ -2,17 +2,12 @@
 
 import { browser } from '$app/environment';
 import { page } from '$app/state';
-import { replaceState } from '$app/navigation';
-import { loadingState } from '$state/loadingState.svelte';
-import { fetchGeodataFromDatabase } from '$api';
-import { createCellNotFoundError, createCellLoadError, createEmptyCellError } from '$utils/error';
+import { replaceState, goto } from '$app/navigation';
 import type { AppError } from '$types/error';
 
-interface CellData {
-	geodata: any; // Database API response
+interface CellSelection {
 	cellId: string;
-	period: string;
-	bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number };
+	bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number };
 }
 
 /**
@@ -24,25 +19,18 @@ export function createMapController() {
 	// Core reactive state
 	let currentPeriod = $state<string>('');
 	let selectedCellId = $state<string | null>(null);
-	let cellData = $state<CellData | null>(null);
-	let isRouterReady = $state(false);
+	let selectedCellBounds = $state<{ minLat: number; maxLat: number; minLon: number; maxLon: number } | null>(null);
 	let errors = $state<AppError[]>([]);
+	
+	// Callback for cell selection
+	let onCellSelected = $state<((cellId: string | null, bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number }) => void) | null>(null);
 
 	/**
-	 * Initializes the controller with server data and syncs with URL parameters.
+	 * Initializes the controller with server data.
 	 * Should be called once in onMount with data from the load function.
 	 */
 	function initialize(serverPeriod: string) {
 		currentPeriod = serverPeriod;
-		isRouterReady = true;
-		
-		if (browser) {
-			// Check if cell should be opened from URL parameters
-			const cellParam = page.url.searchParams.get('cell');
-			if (cellParam) {
-				selectCell(cellParam);
-			}
-		}
 	}
 
 	/**
@@ -53,96 +41,65 @@ export function createMapController() {
 		currentPeriod = newPeriod;
 		updateUrlParams({ period: newPeriod });
 		
-		// If a cell is currently selected, reload its data for the new period
-		if (cellData) {
-			loadCellData(cellData.cellId, newPeriod, cellData.bounds);
-		}
+		// Note: Cell data reloading is now handled by CellView component
+		// when it detects period prop changes via $effect()
 	}
 
-	/**
-	 * Selects a cell and loads its data. Updates URL to reflect selection.
-	 * Pass null to deselect the current cell.
-	 */
-	async function selectCell(cellId: string | null, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) {
-		if (cellId) {
-			selectedCellId = cellId;
-			updateUrlParams({ cell: cellId });
-			await loadCellData(cellId, currentPeriod, bounds);
-			
-			// Only deselect if loading completely failed (no cellData at all)
-			if (!cellData) {
-				selectedCellId = null;
-				updateUrlParams({ cell: null });
-			}
-		} else {
-			selectedCellId = null;
-			updateUrlParams({ cell: null });
-			cellData = null;
-		}
-	}
-
-	/**
-	 * Loads cell data from the database API for the given cell and period.
-	 * Fetches geodata directly from the external API using cell bounds.
-	 * Handles errors gracefully without breaking the app.
-	 */
-	async function loadCellData(cellId: string, period: string, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) {
+	function setRecordType(newRecordTypes: string[]) {
 		if (!browser) return;
 		
-		loadingState.startLoading();
-		cellData = null; // Clear existing data while loading
+		const url = new URL(window.location.href)		
+		// Update recordTypes parameter
+		if (newRecordTypes.length > 0) {
+			url.searchParams.set('recordTypes', newRecordTypes.join(','));
+		} else {
+			url.searchParams.delete('recordTypes');
+		}
+	
+		// Navigate to new URL to trigger data refetch
+		goto(url.pathname + url.search);
+	}
+
+	/**
+	 * Syncs URL parameters with current state after navigation is complete.
+	 * Should be called from afterNavigate hook in page component.
+	 */
+	function syncUrlParameters(serverPeriod: string) {
+		if (!browser) return;
 		
-		try {
-			// Parse period to get start and end years
-			const [startYear, endYear] = period.split('_').map(y => parseInt(y));
-			
-			// Use cell bounds if provided, otherwise fall back to broad bounds
-			const params = {
-				min_lat: bounds?.minlat ?? 1,
-				min_lon: bounds?.minlon ?? 1,
-				max_lat: bounds?.maxlat ?? 85,
-				max_lon: bounds?.maxlon ?? 55,
-				start_year: `${startYear}-01-01`,
-				end_year: `${endYear}-01-01`,
-				page: 1
-			};
-			
-			console.log('Loading geodata for cell:', cellId, 'period:', period, 'params:', params);
-			
-			const geodata = await fetchGeodataFromDatabase(params);
-			
-			// Always set cellData - whether cell has content or not
-			cellData = { 
-				geodata,
-				cellId,
-				period,
-				bounds
-			};
-			console.log('Geodata loaded successfully:', $state.snapshot(cellData));
-			
-		} catch (error: any) {
-			console.error('Error loading geodata:', error);
-			cellData = null; // No modal for non-existent cells
-			
-			// Create appropriate error based on response
-			let cellError: AppError;
-			if (error?.message?.includes('404')) {
-				console.log('Creating 404 error for cell:', cellId);
-				cellError = createCellNotFoundError(cellId, period);
-			} else {
-				const reason = error?.message || 'Network error';
-				console.log('Creating general error for cell:', cellId, 'reason:', reason);
-				cellError = createCellLoadError(cellId, period, reason);
-			}
-			
-			// Add error to the errors array for ErrorHandler
-			console.log('Adding error to errors array:', cellError);
-			errors = [...errors, cellError];
-			
-		} finally {
-			loadingState.stopLoading();
+		// Set period to URL if not already present
+		const urlPeriod = page.url.searchParams.get('period');
+		if (!urlPeriod) {
+			updateUrlParams({ period: serverPeriod });
+		}
+		
+		// Check if cell should be opened from URL parameters
+		const cellParam = page.url.searchParams.get('cell');
+		if (cellParam) {
+			selectCell(cellParam);
 		}
 	}
+
+	/**
+	 * Selects a cell and updates URL. Calls onCellSelected callback.
+	 * Pass null to deselect the current cell.
+	 */
+	function selectCell(cellId: string | null, bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number }) {
+		selectedCellId = cellId;
+		selectedCellBounds = bounds || null;
+		
+		if (cellId) {
+			updateUrlParams({ cell: cellId });
+		} else {
+			updateUrlParams({ cell: null });
+		}
+		
+		// Call callback if provided
+		if (onCellSelected) {
+			onCellSelected(cellId, bounds);
+		}
+	}
+
 
 	/**
 	 * Clears all current errors. Useful when navigating or retrying operations.
@@ -157,7 +114,7 @@ export function createMapController() {
 	 * Guards against calling before router is initialized.
 	 */
 	function updateUrlParams(params: Record<string, string | null>) {
-		if (!browser || !isRouterReady) return;
+		if (!browser) return;
 		
 		try {
 			const url = new URL(window.location.href);
@@ -182,14 +139,21 @@ export function createMapController() {
 		// State getters (reactive)
 		get currentPeriod() { return currentPeriod; },
 		get selectedCellId() { return selectedCellId; },
-		get cellData() { return cellData; },
-		get showCellModal() { return !!cellData; },
+		get selectedCellBounds() { return selectedCellBounds; },
+		get showCellModal() { return !!selectedCellId; },
 		get errors() { return errors; },
 
 		// Control methods
 		initialize,
 		setPeriod,
+		setRecordType,
+		syncUrlParameters,
 		selectCell,
-		clearErrors
+		clearErrors,
+		
+		// Callback setters
+		set onCellSelected(callback: ((cellId: string | null, bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number }) => void) | null) {
+			onCellSelected = callback;
+		}
 	};
 }

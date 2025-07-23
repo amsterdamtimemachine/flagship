@@ -1,0 +1,40 @@
+# Node modules
+**/node_modules
+# Note: Keep root bun.lockb for Docker builds
+packages/**/bun.lockb
+package-lock.json
+
+# Build outputs
+**/dist
+**/build
+**/.svelte-kit
+
+# Development files
+**/.git
+**/.gitignore
+**/*.log
+**/.DS_Store
+
+# IDE files
+**/.vscode
+**/.idea
+**/*.swp
+**/*.swo
+
+# Test files
+**/tests
+**/*.test.ts
+**/*.test.js
+
+# Documentation
+**/README.md
+**/DOCKER.md
+
+# Data files (will be mounted as volume)
+data/
+
+# Preprocessor outputs
+packages/preprocessor/*.bin
+packages/preprocessor/vocabulary.json
+packages/preprocessor/visualization*.bin
+packages/app/data/

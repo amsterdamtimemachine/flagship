@@ -3,8 +3,9 @@
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
-		"dev": "bun --bun vite dev --port 5175",
-		"build": "vite build",
+		"dev": "../../scripts/sync-env.sh && bun --bun vite dev --port 5175",
+		"build": "../../scripts/sync-env.sh && vite build",
+		"build:docker": "vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -40,6 +41,7 @@
 	"dependencies": {
 		"@atm/shared": "workspace:*",
 		"@melt-ui/svelte": "^0.86.6",
+		"@msgpack/msgpack": "^3.1.2",
 		"clsx": "^2.1.1",
 		"lodash.debounce": "^4.0.8",
 		"maplibre-gl": "^4.5.1",

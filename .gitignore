@@ -4,8 +4,12 @@ aux/cell_map/output/*
 
 # Assets
 data/*
+!data/docker/
+data/docker/*
 dist/
 public/*
+build/**
+build/
 .bin
 *.bin
 .csv
@@ -23,6 +27,8 @@ public/*
 /build
 .svelte-kit/
 .turbo/*
+vocabulary.json
+
 # OS
 .DS_Store
 Thumbs.db
