@@ -20,9 +20,7 @@ import {
 import { 
   generateHeatmapResolutionsWithDiscovery 
 } from './processing/heatmap_discovery';
-import { 
-  exportVocabularyToJSON 
-} from './utils/vocabulary_core';
+
 import type { 
   HeatmapDimensions, 
   HeatmapResolutionConfig, 
@@ -103,11 +101,6 @@ async function main() {
     
     console.log(`Discovered recordTypes: ${recordTypes.join(', ')}`);
     console.log(`Discovered tags: ${tags.length}`);
-
-    // Save vocabulary
-    const vocabJson = exportVocabularyToJSON(globalVocabulary);
-    await Bun.write(VOCABULARY_PATH, vocabJson);
-    console.log(`Vocabulary saved to: ${VOCABULARY_PATH}`);
 
     // Generate default histograms using discovered recordTypes
     console.log('\nGenerating histograms...');

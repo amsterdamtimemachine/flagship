@@ -1,21 +1,16 @@
 // src/processing/heatmap_discovery.ts - Dynamic heatmap generation with vocabulary discovery
 
 import type { 
-  RecordType, 
   AnyProcessedFeature, 
   HeatmapDimensions, 
-  Coordinates, 
   DatabaseConfig,
   ChunkingConfig,
-  Heatmap,
   HeatmapTimeline,
   HeatmapResolutions,
   HeatmapResolutionConfig,
   HeatmapCellBounds,
-  HeatmapAccumulator,
   TimeSlice,
   VocabularyTracker,
-  DiscoveryChunkResult,
   DiscoveryHeatmapAccumulator
 } from '@atm/shared/types';
 import { 

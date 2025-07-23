@@ -1,4 +1,5 @@
 export * from './data-source';
+export * from './discovery';
 export * from './feature';
 export * from './heatmap';
 export * from './histogram';
