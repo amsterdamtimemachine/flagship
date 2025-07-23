@@ -28,7 +28,7 @@ The app will be available at `http://localhost:5175`
 ## Production (Docker)
 
 ### Prerequisites
-- [Docker](https://docker.com)
+- [Docker](https://docker.com) with Docker Compose
 - [Bun](https://bun.sh) (for running build scripts)
 
 ### Setup
@@ -41,52 +41,69 @@ cp .env.example .env
 
 **Optional**: Configure preprocessor settings in `.env` (uncomment and modify any variables you want to change from defaults)
 
-### Build Images
+### Quick Start
 ```bash
-bun run docker:build
+# Start everything (builds containers if needed)
+bun run docker:up:build
 ```
 
-### Run Production
-```bash
-# Start containers
-bun run docker:up
+The app will be available at `http://localhost:3000`
 
-# View logs
-bun run docker:logs
-
-# Stop containers
-bun run docker:down
-```
-
-The production app will be available at `http://localhost:3000`
-
-**Note**: On first run, Docker will automatically generate visualization data which takes ~20 minutes. Subsequent runs will be much faster as the data is cached in `data/docker/`.
+**Note**: On first run, the system will automatically generate visualization data (~4-8 minutes). Subsequent runs will be much faster as the data is cached in `data/docker/`.
 
 ### Docker Commands
 
+#### Starting & Stopping
 ```bash
-# Generate Docker visualization data separately
-bun run docker:generate
+# Start (normal - uses existing data if available)
+bun run docker:up
 
-# Restart just the app container (after data changes)
-bun run docker:restart:app
+# Start with rebuild (when code changes)
+bun run docker:up:build
 
-# Regenerate data and restart app (complete refresh)
-bun run docker:regenerate
-
-# Stop all containers
+# Stop everything
 bun run docker:down
-
-# Kill data generation process
-bun run docker:kill-generation
-
-# View logs
-bun run docker:logs:app
 ```
+
+#### Data Management
+```bash
+# Force regenerate data + restart everything (when data logic changes)
+bun run docker:regenerate
+```
+
+#### Monitoring & Debugging
+```bash
+# View all logs
+bun run docker:logs
+
+# View app logs only
+bun run docker:logs:app
+
+# View data generation logs only  
+bun run docker:logs:init
+
+# Restart services
+bun run docker:restart        # Restart all
+bun run docker:restart:app    # Restart just app
+```
+
+### How It Works
+
+The Docker setup uses **Docker Compose** with two services:
+
+1. **data-init**: Generates visualization data from the Amsterdam database
+   - Runs once on startup if `data/docker/visualization.bin` doesn't exist
+   - Exits after successful generation
+   - Takes ~4-8 minutes on first run
+
+2. **app**: Serves the web application  
+   - Waits for data-init to complete successfully
+   - Serves the app on port 3000
+   - Automatically restarts if it crashes
 
 ### Data Isolation
 - **Local development**: Uses `data/visualization.bin`
-- **Docker**: Uses `data/docker/visualization.bin` 
+- **Docker production**: Uses `data/docker/visualization.bin` 
 
 Each environment maintains separate data to avoid conflicts during development.
 

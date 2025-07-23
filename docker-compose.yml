@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Data initialization - generates visualization data if missing
   data-init:
@@ -13,12 +11,6 @@ services:
     networks:
       - atm-network
     restart: "no"
-    healthcheck:
-      test: ["CMD", "test", "-f", "/app/data/visualization.bin"]
-      interval: 30s
-      timeout: 10s
-      retries: 1
-      start_period: 2000s 
 
   # Main application - waits for data to be ready
   app:
@@ -36,7 +28,7 @@ services:
     restart: unless-stopped
     depends_on:
       data-init:
-        condition: service_healthy
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/metadata"]
       interval: 30s

@@ -16,18 +16,15 @@
     "lint": "turbo run lint",
     "build:shared": "turbo run build --filter=@atm/shared",
     "clean": "turbo run clean",
-    "docker:build": "docker build -f docker/Dockerfile.app -t atm-app . && docker build -f docker/Dockerfile.preprocessor -t atm-preprocessor .",
-    "docker:network": "docker network create atm-network || true",
-    "docker:up": "scripts/docker-up.sh",
-    "docker:generate": "mkdir -p data/docker && docker run --rm --name atm-preprocessor-generate --env-file .env -v $(pwd)/data/docker:/app/data:rw atm-preprocessor",
-    "docker:down": "docker stop atm-app atm-preprocessor atm-preprocessor-generate || true && docker rm atm-app atm-preprocessor atm-preprocessor-generate || true",
-    "docker:kill-generation": "docker kill atm-preprocessor-generate || true && docker rm atm-preprocessor-generate || true",
-    "docker:logs": "docker logs -f atm-app & docker logs -f atm-preprocessor",
-    "docker:logs:app": "docker logs -f atm-app",
-    "docker:logs:preprocessor": "docker logs -f atm-preprocessor",
-    "docker:restart": "npm run docker:down && npm run docker:up",
-    "docker:restart:app": "docker restart atm-app || echo 'App container not running'",
-    "docker:regenerate": "bun run docker:generate && bun run docker:restart:app"
+    "docker:up": "docker compose up",
+    "docker:up:build": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "docker:regenerate": "rm -f data/docker/visualization.bin && docker compose up --build",
+    "docker:logs": "docker compose logs -f",
+    "docker:logs:app": "docker compose logs -f app",
+    "docker:logs:init": "docker compose logs -f data-init",
+    "docker:restart": "docker compose restart",
+    "docker:restart:app": "docker compose restart app"
   },
   "devDependencies": {
     "turbo": "^2.5.3"
