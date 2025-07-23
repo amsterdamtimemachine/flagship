@@ -153,11 +153,11 @@
 					type: 'Polygon',
 					coordinates: [
 						[
-							[cell.bounds.minlon, cell.bounds.minlat],
-							[cell.bounds.maxlon, cell.bounds.minlat],
-							[cell.bounds.maxlon, cell.bounds.maxlat],
-							[cell.bounds.minlon, cell.bounds.maxlat],
-							[cell.bounds.minlon, cell.bounds.minlat]
+							[cell.bounds.minLon, cell.bounds.minLat],
+							[cell.bounds.maxLon, cell.bounds.minLat],
+							[cell.bounds.maxLon, cell.bounds.maxLat],
+							[cell.bounds.minLon, cell.bounds.maxLat],
+							[cell.bounds.minLon, cell.bounds.minLat]
 						]
 					]
 				}

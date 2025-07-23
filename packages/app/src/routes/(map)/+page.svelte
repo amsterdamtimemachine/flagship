@@ -5,7 +5,7 @@
 	import debounce from 'lodash.debounce';	
 	import { createMapController } from '$state/MapController.svelte';
 	import { createPageErrorData } from '$utils/error';
-	import { mergeHeatmapTimeline } from '$utils/heatmap';
+	import { mergeHeatmapTimeline, mergeHeatmaps } from '$utils/heatmap';
 	import { mergeHistograms } from '$utils/histogram';
 	import { loadingState } from '$lib/state/loadingState.svelte';
 	import Map from '$components/Map.svelte';
@@ -49,47 +49,56 @@
 				? currentRecordTypes 
 				: recordTypes;
 			
+			const timelineData = heatmapTimeline?.heatmapTimeline || heatmapTimeline;
+			
 			const needsMerging = effectiveRecordTypes.length > 1 || (tags && tags.length > 0);
 			
 			if (needsMerging) {
 				// Merge entire timeline for smooth navigation
 				const selectedTag = tags && tags.length > 0 ? tags[0] : undefined;
-				return mergeHeatmapTimeline(heatmapTimeline, effectiveRecordTypes, selectedTag, heatmapBlueprint);
+				return mergeHeatmapTimeline(timelineData, effectiveRecordTypes, selectedTag, heatmapBlueprint);
 			} else {
 				// Single recordType, no tags - use original timeline
-				return heatmapTimeline;
+				return timelineData;
 			}
 		}
 		return null;
 	});
+
+
+	$inspect(mergedHeatmapTimeline);
+
 
 	// Use histogram directly since backend handles merging
 	// Note: Server-side histogram fetching already handles empty recordTypes as "all types"
 	let mergedHistogram = $derived(histogram);
 
-	// Get current heatmap from merged timeline
+	// Get current heatmap - just pick from pre-merged timeline
 	let currentHeatmap = $derived.by(() => {
-		if (mergedHeatmapTimeline && currentPeriod && recordTypes) {
-			// Empty selection = show all recordTypes (default behavior)
-			const effectiveRecordTypes = currentRecordTypes.length > 0 
-				? currentRecordTypes 
-				: recordTypes;
-			
+		if (mergedHeatmapTimeline && currentPeriod) {
 			const timeSliceData = mergedHeatmapTimeline[currentPeriod];
 			if (timeSliceData) {
-				if (effectiveRecordTypes.length > 1 || (tags && tags.length > 0)) {
-					// Merged data: use combined recordType key
-					const combinedKey = effectiveRecordTypes.sort().join('+');
-					return timeSliceData[combinedKey]?.base || null;
-				} else {
-					// Single recordType: use original structure
-					const recordType = effectiveRecordTypes[0];
-					return timeSliceData[recordType]?.base || null;
-				}
+				// Just grab the pre-merged heatmap (there's only one key per time slice)
+				const mergedKey = Object.keys(timeSliceData)[0];
+				return timeSliceData[mergedKey]?.base || null;
 			}
 		}
+		
+		// Return empty heatmap when no data exists for this period
+		// This keeps the map visible with all cells at 0 density
+		if (heatmapBlueprint && dimensions) {
+			const gridSize = dimensions.colsAmount * dimensions.rowsAmount;
+			return {
+				countArray: new Array(gridSize).fill(0),
+				densityArray: new Array(gridSize).fill(0)
+			};
+		}
+		
 		return null;
 	});
+
+	$inspect("curr ", currentHeatmap);
+	console.log(" bp ", heatmapBlueprint);
 
 	// Debounced period changes to avoid too many API calls
 	const debouncedPeriodChange = debounce((period: string) => {
@@ -102,12 +111,20 @@
 		const periodFromUrl = urlParams.get('period');
 		const firstPeriod = mergedHistogram?.bins?.[0]?.timeSlice?.key;
 		
+		
 		// Use period from URL if valid, otherwise fall back to first period
 		let initialPeriod = firstPeriod || '';
 		if (periodFromUrl && mergedHistogram?.bins?.some(bin => bin.timeSlice.key === periodFromUrl)) {
 			initialPeriod = periodFromUrl;
 		}
 		
+		// Fallback to first heatmap period if histogram doesn't have data
+		if (!initialPeriod && mergedHeatmapTimeline) {
+			const heatmapPeriods = Object.keys(mergedHeatmapTimeline);
+			if (heatmapPeriods.length > 0) {
+				initialPeriod = heatmapPeriods[0];
+			}
+		}
 		controller.initialize(initialPeriod);
 		
 		// Set up cell selection callback

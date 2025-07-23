@@ -20,11 +20,14 @@
     "docker:network": "docker network create atm-network || true",
     "docker:up": "scripts/docker-up.sh",
     "docker:generate": "mkdir -p data/docker && docker run --rm --name atm-preprocessor-generate --env-file .env -v $(pwd)/data/docker:/app/data:rw atm-preprocessor",
-    "docker:down": "docker stop atm-app atm-preprocessor || true && docker rm atm-app atm-preprocessor || true",
+    "docker:down": "docker stop atm-app atm-preprocessor atm-preprocessor-generate || true && docker rm atm-app atm-preprocessor atm-preprocessor-generate || true",
+    "docker:kill-generation": "docker kill atm-preprocessor-generate || true && docker rm atm-preprocessor-generate || true",
     "docker:logs": "docker logs -f atm-app & docker logs -f atm-preprocessor",
     "docker:logs:app": "docker logs -f atm-app",
     "docker:logs:preprocessor": "docker logs -f atm-preprocessor",
-    "docker:restart": "npm run docker:down && npm run docker:up"
+    "docker:restart": "npm run docker:down && npm run docker:up",
+    "docker:restart:app": "docker restart atm-app || echo 'App container not running'",
+    "docker:regenerate": "bun run docker:generate && bun run docker:restart:app"
   },
   "devDependencies": {
     "turbo": "^2.5.3"

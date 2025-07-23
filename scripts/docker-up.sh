@@ -31,7 +31,7 @@ fi
 
 # Start containers with Docker-specific data folder
 echo "🌐 Starting application containers..."
-docker run -d --name atm-app --network atm-network --env-file .env -p 3000:3000 -v $(pwd)/data/docker:/app/data:rw atm-app
+docker run -d --name atm-app --network atm-network --env-file .env --restart unless-stopped -p 3000:3000 -v $(pwd)/data/docker:/app/data:rw atm-app
 
 echo "🎉 Containers started successfully!"
 echo "📱 App available at: http://localhost:3000"

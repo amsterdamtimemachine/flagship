@@ -62,10 +62,26 @@ The production app will be available at `http://localhost:3000`
 
 **Note**: On first run, Docker will automatically generate visualization data which takes ~20 minutes. Subsequent runs will be much faster as the data is cached in `data/docker/`.
 
-### Manual Data Generation
+### Docker Commands
+
 ```bash
 # Generate Docker visualization data separately
 bun run docker:generate
+
+# Restart just the app container (after data changes)
+bun run docker:restart:app
+
+# Regenerate data and restart app (complete refresh)
+bun run docker:regenerate
+
+# Stop all containers
+bun run docker:down
+
+# Kill data generation process
+bun run docker:kill-generation
+
+# View logs
+bun run docker:logs:app
 ```
 
 ### Data Isolation

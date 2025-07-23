@@ -32,5 +32,5 @@ RUN chmod 0644 /etc/cron.d/preprocessor-cron
 # Create log file for future cron usage
 RUN touch /var/log/preprocessor.log
 
-# Run preprocessor and exit (for on-demand data generation)
-CMD ["sh", "-c", "cd packages/preprocessor && bun run generate:docker"]
+# Run preprocessor only if data doesn't exist, then exit
+CMD ["sh", "-c", "if [ ! -f /app/data/visualization.bin ]; then echo 'Generating visualization data...'; cd packages/preprocessor && bun run generate:docker; else echo 'Visualization data already exists, skipping generation'; fi"]

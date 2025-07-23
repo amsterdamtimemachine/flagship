@@ -10,18 +10,12 @@ export const GET: RequestHandler = async ({ url }) => {
     const recordTypesParam = url.searchParams.get('recordTypes');
     const tagsParam = url.searchParams.get('tags');
     
-    // Validate recordTypes
+    // Parse recordTypes (no validation - accept discovered recordTypes from data)
     if (!recordTypesParam) {
       return error(400, { message: 'recordTypes parameter is required' });
     }
     
-    const validRecordTypes: RecordType[] = ['text', 'image', 'event'];
     const recordTypes = recordTypesParam.split(',').map(t => t.trim()) as RecordType[];
-    const invalidTypes = recordTypes.filter(type => !validRecordTypes.includes(type));
-    
-    if (invalidTypes.length > 0) {
-      return error(400, { message: `Invalid recordTypes: ${invalidTypes.join(', ')}. Must be one of: ${validRecordTypes.join(', ')}` });
-    }
 
     // Parse tags if provided
     let tags: string[] | undefined;

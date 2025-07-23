@@ -29,40 +29,40 @@ export class VisualizationApiService {
 
 
   /**
-   * Merge heatmap timelines across multiple recordTypes
+   * Filter heatmap timeline to only include requested recordTypes (no merging on server)
    */
-  private mergeHeatmapTimelines(timeline: HeatmapTimeline, recordTypes: RecordType[], tag?: string): HeatmapTimeline {
-    const merged: HeatmapTimeline = {};
+  private filterHeatmapTimelines(timeline: HeatmapTimeline, recordTypes: RecordType[], tag?: string): HeatmapTimeline {
+    const filtered: HeatmapTimeline = {};
     
     for (const [timeSliceKey, timeSliceData] of Object.entries(timeline)) {
-      const mergedTimeSlice: any = {};
+      const filteredTimeSlice: any = {};
       
-      // Merge all recordTypes for this time slice
+      // Include only requested recordTypes for this time slice
       for (const recordType of recordTypes) {
         const recordTypeData = timeSliceData[recordType];
         if (recordTypeData) {
           if (tag) {
             // Use tag-specific heatmap if available
             if (recordTypeData.tags[tag]) {
-              mergedTimeSlice[recordType] = {
+              filteredTimeSlice[recordType] = {
                 base: recordTypeData.tags[tag],
                 tags: { [tag]: recordTypeData.tags[tag] }
               };
             }
           } else {
-            // Use base heatmap
-            mergedTimeSlice[recordType] = recordTypeData;
+            // Use full recordType data (base + all tags)
+            filteredTimeSlice[recordType] = recordTypeData;
           }
         }
       }
       
       // Only include time slices that have data for at least one recordType
-      if (Object.keys(mergedTimeSlice).length > 0) {
-        merged[timeSliceKey] = mergedTimeSlice;
+      if (Object.keys(filteredTimeSlice).length > 0) {
+        filtered[timeSliceKey] = filteredTimeSlice;
       }
     }
     
-    return merged;
+    return filtered;
   }
 
   /**
@@ -198,9 +198,15 @@ export class VisualizationApiService {
       console.log(`📐 Using resolution: ${selectedResolution}`);
       console.log(`📅 Available time periods: ${Object.keys(heatmapTimeline).length}`);
 
-      // Validate that all recordTypes exist in the data
-      const firstTimeSlice = Object.values(heatmapTimeline)[0];
-      const missingTypes = recordTypes.filter(type => !firstTimeSlice || !firstTimeSlice[type]);
+      // Validate that all recordTypes exist in at least one time slice
+      const allRecordTypesInHeatmap = new Set<string>();
+      Object.values(heatmapTimeline).forEach(timeSlice => {
+        Object.keys(timeSlice).forEach(recordType => {
+          allRecordTypesInHeatmap.add(recordType);
+        });
+      });
+      
+      const missingTypes = recordTypes.filter(type => !allRecordTypesInHeatmap.has(type));
       if (missingTypes.length > 0) {
         throw new Error(`RecordTypes "${missingTypes.join(', ')}" not found in heatmap data`);
       }
@@ -209,19 +215,19 @@ export class VisualizationApiService {
       let resultTimeline: HeatmapTimeline;
 
       if (!tags || tags.length === 0) {
-        // Return merged timeline with base heatmaps for all recordTypes
-        resultTimeline = this.mergeHeatmapTimelines(heatmapTimeline, recordTypes);
-        console.log(`🔥 Returning merged base heatmap timeline for recordTypes "${recordTypes.join(', ')}": ${Object.keys(resultTimeline).length} periods`);
+        // Return filtered timeline with individual recordType keys (client will merge)
+        resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, recordTypes);
+        console.log(`🔥 Returning filtered heatmap timeline for recordTypes "${recordTypes.join(', ')}": ${Object.keys(resultTimeline).length} periods`);
       } else if (tags.length === 1) {
-        // Single tag - create timeline with tag-specific heatmaps merged across recordTypes
+        // Single tag - return filtered timeline with tag-specific heatmaps  
         const tag = tags[0];
-        resultTimeline = this.mergeHeatmapTimelines(heatmapTimeline, recordTypes, tag);
+        resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, recordTypes, tag);
         
         if (Object.keys(resultTimeline).length === 0) {
           throw new Error(`Tag "${tag}" not found for recordTypes "${recordTypes.join(', ')}" in any time period`);
         }
         
-        console.log(`🏷️ Returning tag-filtered merged timeline for "${tag}": ${Object.keys(resultTimeline).length} periods`);
+        console.log(`🏷️ Returning tag-filtered timeline for "${tag}": ${Object.keys(resultTimeline).length} periods`);
       } else {
         // Multiple tags - not implemented yet
         throw new Error("Multiple tags filtering not yet implemented");
