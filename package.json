@@ -1,5 +1,5 @@
 {
-  "name": "atm-flagship-prototype",
+  "name": "@atm/flagship",
   "private": true,
   "engines": {
     "bun": "latest"
