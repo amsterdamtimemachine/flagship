@@ -7,7 +7,7 @@ import type { AppError } from '$types/error';
 
 interface CellSelection {
 	cellId: string;
-	bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number };
+	bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number };
 }
 
 /**
@@ -19,11 +19,11 @@ export function createMapController() {
 	// Core reactive state
 	let currentPeriod = $state<string>('');
 	let selectedCellId = $state<string | null>(null);
-	let selectedCellBounds = $state<{ minlat: number; maxlat: number; minlon: number; maxlon: number } | null>(null);
+	let selectedCellBounds = $state<{ minLat: number; maxLat: number; minLon: number; maxLon: number } | null>(null);
 	let errors = $state<AppError[]>([]);
 	
 	// Callback for cell selection
-	let onCellSelected = $state<((cellId: string | null, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) => void) | null>(null);
+	let onCellSelected = $state<((cellId: string | null, bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number }) => void) | null>(null);
 
 	/**
 	 * Initializes the controller with server data.
@@ -87,7 +87,7 @@ export function createMapController() {
 	 * Selects a cell and updates URL. Calls onCellSelected callback.
 	 * Pass null to deselect the current cell.
 	 */
-	function selectCell(cellId: string | null, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) {
+	function selectCell(cellId: string | null, bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number }) {
 		selectedCellId = cellId;
 		selectedCellBounds = bounds || null;
 		
@@ -155,7 +155,7 @@ export function createMapController() {
 		clearErrors,
 		
 		// Callback setters
-		set onCellSelected(callback: ((cellId: string | null, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) => void) | null) {
+		set onCellSelected(callback: ((cellId: string | null, bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number }) => void) | null) {
 			onCellSelected = callback;
 		}
 	};

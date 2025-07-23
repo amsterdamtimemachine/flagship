@@ -128,7 +128,7 @@
 		controller.initialize(initialPeriod);
 		
 		// Set up cell selection callback
-		controller.onCellSelected = (cellId: string | null, bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number }) => {
+		controller.onCellSelected = (cellId: string | null, bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number }) => {
 			// No additional logic needed - controller handles URL updates
 			// CellView will handle data fetching when rendered
 		};
@@ -163,10 +163,10 @@
 			const cell = heatmapBlueprint.find(c => c.cellId === cellId);
 			if (cell?.bounds) {
 				controller.selectCell(cellId, {
-					minlat: cell.bounds.minlat,
-					maxlat: cell.bounds.maxlat,
-					minlon: cell.bounds.minlon,
-					maxlon: cell.bounds.maxlon
+					minLat: cell.bounds.minLat,
+					maxLat: cell.bounds.maxLat,
+					minLon: cell.bounds.minLon,
+					maxLon: cell.bounds.maxLon
 				});
 			} else {
 				controller.selectCell(cellId);

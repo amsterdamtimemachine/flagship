@@ -9,7 +9,7 @@
 	interface Props {
 		cellId: string;
 		period: string;
-		bounds?: { minlat: number; maxlat: number; minlon: number; maxlon: number };
+		bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number };
 		recordTypes: string[];
 		onClose?: () => void; // Optional close handler
 	}
@@ -39,10 +39,10 @@
 			
 			// Build params for API call
 			const params = {
-				min_lat: bounds?.minlat ?? 1,
-				min_lon: bounds?.minlon ?? 1,
-				max_lat: bounds?.maxlat ?? 85,
-				max_lon: bounds?.maxlon ?? 85,
+				min_lat: bounds?.minLat ?? 1,
+				min_lon: bounds?.minLon ?? 1,
+				max_lat: bounds?.maxLat ?? 85,
+				max_lon: bounds?.maxLon ?? 85,
 				start_year: `${startYear}-01-01`,
 				end_year: `${endYear}-01-01`,
 				page,
@@ -151,8 +151,8 @@
 				</span>
 				{#if bounds}
 					<span class="block text-sm text-gray-600">
-						Lat: {bounds.minlat.toFixed(4)} - {bounds.maxlat.toFixed(4)}<br/>
-						Lon: {bounds.minlon.toFixed(4)} - {bounds.maxlon.toFixed(4)}
+						Lat: {bounds.minLat.toFixed(4)} - {bounds.maxLat.toFixed(4)}<br/>
+						Lon: {bounds.minLon.toFixed(4)} - {bounds.maxLon.toFixed(4)}
 					</span>
 				{/if}
 			</h2>
@@ -201,8 +201,8 @@
 				</span>
 				{#if bounds}
 					<span class="block text-sm text-gray-600">
-						Lat: {bounds.minlat.toFixed(4)} - {bounds.maxlat.toFixed(4)}<br/>
-						Lon: {bounds.minlon.toFixed(4)} - {bounds.maxlon.toFixed(4)}
+						Lat: {bounds.minLat.toFixed(4)} - {bounds.maxLat.toFixed(4)}<br/>
+						Lon: {bounds.minLon.toFixed(4)} - {bounds.maxLon.toFixed(4)}
 					</span>
 				{/if}
 			</h2>
