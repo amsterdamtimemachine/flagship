@@ -57,6 +57,8 @@ The app will be available at `http://localhost:3000`
 
 **Note**: On first run, the system will automatically generate visualization data (~3 minutes). Subsequent runs will be much faster as the data is cached in `data/docker/`.
 
+The container will automatically generate visualization data on startup if data/docker/visualization.bin is missing.
+
 ### Docker Commands
 
 #### Starting & Stopping
