@@ -29,7 +29,7 @@ The app will be available at `http://localhost:5175`
 
 ### Prerequisites
 - [Docker](https://docker.com) with Docker Compose
-- [Bun](https://bun.sh) (for running build scripts)
+- [Bun](https://bun.sh) *(optional - for convenient build scripts)*
 
 ### Setup
 ```bash
@@ -42,9 +42,15 @@ cp .env.example .env
 **Optional**: Configure preprocessor settings in `.env` (uncomment and modify any variables you want to change from defaults)
 
 ### Quick Start
+
+**With Bun (convenient):**
 ```bash
-# Start everything (builds containers if needed)
 bun run docker:up:build
+```
+
+**Without Bun (direct Docker Compose):**
+```bash
+docker compose up --build
 ```
 
 The app will be available at `http://localhost:3000`
@@ -55,36 +61,41 @@ The app will be available at `http://localhost:3000`
 
 #### Starting & Stopping
 ```bash
-# Start (normal - uses existing data if available)
-bun run docker:up
+# With Bun
+bun run docker:up              # Start (uses existing data)
+bun run docker:up:build       # Start with rebuild
+bun run docker:down           # Stop everything
 
-# Start with rebuild (when code changes)
-bun run docker:up:build
-
-# Stop everything
-bun run docker:down
+# Direct Docker Compose
+docker compose up             # Start (uses existing data) 
+docker compose up --build    # Start with rebuild
+docker compose down          # Stop everything
 ```
 
 #### Data Management
 ```bash
-# Force regenerate data + restart everything (when data logic changes)
-bun run docker:regenerate
+# With Bun
+bun run docker:regenerate     # Delete data + rebuild + start
+
+# Direct Docker Compose
+rm -f data/docker/visualization.bin && docker compose up --build
 ```
 
 #### Monitoring & Debugging
 ```bash
-# View all logs
-bun run docker:logs
-
-# View app logs only
-bun run docker:logs:app
-
-# View data generation logs only  
-bun run docker:logs:init
-
-# Restart services
-bun run docker:restart        # Restart all
+# With Bun
+bun run docker:logs           # View all logs
+bun run docker:logs:app       # View app logs only
+bun run docker:logs:init      # View data generation logs
+bun run docker:restart        # Restart all services
 bun run docker:restart:app    # Restart just app
+
+# Direct Docker Compose
+docker compose logs -f        # View all logs
+docker compose logs -f app    # View app logs only
+docker compose logs -f data-init  # View data generation logs
+docker compose restart       # Restart all services
+docker compose restart app   # Restart just app
 ```
 
 ### How It Works
