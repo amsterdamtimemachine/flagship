@@ -1,16 +1,13 @@
 // src/data-sources/database.ts - Updated for your API structure
 import type { 
   RawFeature,
-  ProcessedFeature, 
   Coordinates,
-  AnyProcessedFeature,
   RecordType,
-  ImageFeature, EventFeature, TextFeature,
   MinimalFeature,
   DatabaseConfig,
   ApiQueryParams, ApiResponse,
 } from '@atm/shared/types';
-import { parseWKTPoint } from '@atm/shared/utils/geometry';
+import { parseWKTPoint } from '@atm/shared';
 
 export async function fetchBatch(
   baseUrl: string, 
@@ -56,59 +53,6 @@ export async function fetchBatch(
 }
 
 
-
-/**
- * Convert raw feature to processed feature
- * Note: This function is being phased out in favor of createMinimalFeature for discovery modules
- */
-export function convertRawFeature(rawFeature: RawFeature, recordType: RecordType): AnyProcessedFeature {
-    // Parse WKT geometry
-    const coordinates = parseWKTPoint(rawFeature.geom);
-    
-    const baseFeature = {
-        title: rawFeature.tit,
-        dataset: rawFeature.ds,
-        url: rawFeature.url,
-        recordType,
-        tags: rawFeature.tags || [],
-        
-        // Temporal data
-        startYear: rawFeature.per[0],
-        endYear: rawFeature.per[1],
-        
-        // Spatial data
-        geometry: {
-            type: 'Point' as const,
-            coordinates: coordinates
-        }
-    };
-
-    // Assign properties based on record type
-    if (recordType === 'image') {
-        return {
-            ...baseFeature,
-            properties: {
-                thumb: rawFeature.url
-            }
-        } as ImageFeature;
-    } else if (recordType === 'event') {
-        return {
-            ...baseFeature,
-            properties: {
-                street_name: '',
-                city_name: '',
-                info: '',
-                venue_type: ''
-            }
-        } as EventFeature;
-    } else {
-        // text type - no properties
-        return {
-            ...baseFeature
-        } as TextFeature;
-    }
-}
-
 /**
  * Lightweight feature processor for discovery modules
  * Only extracts essential fields needed for accumulator processing
@@ -123,57 +67,3 @@ export function createMinimalFeature(rawFeature: RawFeature, recordType: RecordT
   };
 }
 
-/**
- * Get feature statistics from API response
- */
-export function analyzeFeatures(features: ProcessedFeature[]): {
-  totalFeatures: number;
-  datasets: Record<string, number>;
-  recordTypes: Record<string, number>;
-  timeRange: { earliest: number; latest: number };
-  tagStats: { totalTags: number; uniqueTags: number; topTags: Array<{tag: string; count: number}> };
-} {
-  const datasets: Record<string, number> = {};
-  const recordTypes: Record<string, number> = {};
-  const tagCounts: Record<string, number> = {};
-  
-  let earliest = Infinity;
-  let latest = -Infinity;
-  
-  for (const feature of features) {
-    // Dataset analysis
-    datasets[feature.dataset] = (datasets[feature.dataset] || 0) + 1;
-    
-    // Record type analysis
-    if (feature.recordType) {
-      recordTypes[feature.recordType] = (recordTypes[feature.recordType] || 0) + 1;
-    }
-    
-    // Time range analysis
-    earliest = Math.min(earliest, feature.startYear);
-    latest = Math.max(latest, feature.endYear);
-    
-    // Tag analysis
-    for (const tag of feature.tags) {
-      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-    }
-  }
-  
-  // Top tags
-  const topTags = Object.entries(tagCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([tag, count]) => ({ tag, count }));
-  
-  return {
-    totalFeatures: features.length,
-    datasets,
-    recordTypes,
-    timeRange: { earliest, latest },
-    tagStats: {
-      totalTags: Object.values(tagCounts).reduce((sum, count) => sum + count, 0),
-      uniqueTags: Object.keys(tagCounts).length,
-      topTags
-    }
-  };
-}

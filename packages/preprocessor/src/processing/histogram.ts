@@ -5,7 +5,7 @@ import type {
   ChunkingConfig,
   TimeSlice,
   RecordType, 
-  AnyProcessedFeature, 
+  MinimalFeature, 
   HeatmapCellBounds,
   HistogramBin,
   Histogram,
@@ -13,7 +13,7 @@ import type {
   HistogramRequest,
   HistogramApiResponse
 } from '@atm/shared/types';
-import { streamFeaturesByChunks } from '../data-sources/streaming';
+import { streamFeaturesWithDiscovery } from '../data-sources/streaming_discovery';
 
 /**
  * Create histogram accumulator for specific filter criteria
@@ -40,7 +40,7 @@ export function createEmptyHistogramBin(timeSlice: TimeSlice): HistogramBin {
  * Check if feature matches the filter criteria
  */
 export function featureMatchesFilters(
-  feature: AnyProcessedFeature,
+  feature: MinimalFeature,
   request: HistogramRequest
 ): boolean {
   // Check record type filter
@@ -69,7 +69,7 @@ export function featureMatchesFilters(
  * Process a single feature into histogram bin if it matches filters
  */
 export function processFeatureIntoHistogramBin(
-  feature: AnyProcessedFeature,
+  feature: MinimalFeature,
   accumulator: HistogramAccumulator,
   timeSlice: TimeSlice
 ): void {
@@ -115,9 +115,9 @@ export async function accumulateHistogramForPeriod(
     : ['text', 'image', 'event'] as RecordType[];
   
   // Stream all recordTypes in single API call
-  for await (const result of streamFeaturesByChunks(config, bounds, chunkConfig, {
-    recordTypes: recordTypesToStream,
+  for await (const result of streamFeaturesWithDiscovery(config, bounds, chunkConfig, {
     timeRange: timeSlice.timeRange
+    // Note: Discovery streaming doesn't filter by recordTypes - it discovers all
   })) {
     console.log(`📈 Processing ${result.features.length} mixed features from chunk ${result.chunk.id}`);
     

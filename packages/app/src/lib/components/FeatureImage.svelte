@@ -1,6 +1,8 @@
 <script lang="ts">
+	import type {ImageFeature} from '@atm/shared/types';
+	
 	type Props = {
-		feature: any; // Database API feature
+		feature: ImageFeature; // Database API feature
 	};
 
 	let { feature }: Props = $props();

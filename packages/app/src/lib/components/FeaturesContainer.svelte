@@ -14,23 +14,10 @@
 	console.log("FEATURE :", features[0]);
 
 	// returning a string because record types are not predefined
-	function getFeatureType(feature: AnyProcessedFeature): string {
-		const props = feature?.properties || {};
-		
-		// Check for image indicators
-		if (props.thumb || props.image || props.photo || props.picture || 
-		    props.img_url || props.image_url || props.thumbnail) {
-			return 'image';
-		}
-		
-		// Check if recordType indicates image
-		if (props.recordType === 'image' || props.record_type === 'image') {
-			return 'image';
-		}
-		
-		// Default to text for everything else
-		return 'text';
+	function getFeatureType(feature: RawFeature): string {
+		feature?.recordType ? feature.recordType : 'unknown';
 	}
+
 </script>
 
 <div class="w-100">

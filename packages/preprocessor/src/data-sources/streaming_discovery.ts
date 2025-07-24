@@ -3,7 +3,6 @@
 import type { 
   DatabaseConfig, 
   RecordType,
-  AnyProcessedFeature,
   MinimalFeature,
   HeatmapCellBounds,
   SpatialChunk,
@@ -14,7 +13,48 @@ import type {
   DiscoveryChunkResult
 } from '@atm/shared/types';
 import { fetchBatch, createMinimalFeature } from './database';
-import { createSpatialChunks } from './streaming';
+
+/**
+ * Create basic spatial chunks from bounds
+ */
+export function createSpatialChunks(
+  bounds: HeatmapCellBounds,
+  config: ChunkingConfig
+): SpatialChunk[] {
+  const chunks: SpatialChunk[] = [];
+  
+  const lonStep = (bounds.maxLon - bounds.minLon) / config.chunkCols;
+  const latStep = (bounds.maxLat - bounds.minLat) / config.chunkRows;
+  const overlap = config.overlap || 0;
+  
+  console.log(`📐 Creating ${config.chunkRows}x${config.chunkCols} grid:`, {
+    lonStep: lonStep.toFixed(6),
+    latStep: latStep.toFixed(6),
+    overlap: overlap
+  });
+  
+  for (let row = 0; row < config.chunkRows; row++) {
+    for (let col = 0; col < config.chunkCols; col++) {
+      const chunkBounds: HeatmapCellBounds = {
+        minLon: Math.max(bounds.minLon + (col * lonStep) - overlap, bounds.minLon),
+        maxLon: Math.min(bounds.minLon + ((col + 1) * lonStep) + overlap, bounds.maxLon),
+        minLat: Math.max(bounds.minLat + (row * latStep) - overlap, bounds.minLat),
+        maxLat: Math.min(bounds.minLat + ((row + 1) * latStep) + overlap, bounds.maxLat)
+      };
+      
+      chunks.push({
+        id: `chunk_${row}_${col}`,
+        bounds: chunkBounds
+      });
+    }
+  }
+  
+  console.log(`✅ Created ${chunks.length} spatial chunks`);
+  return chunks;
+}
+
+
+
 
 /**
  * Create empty vocabulary tracker

@@ -242,7 +242,8 @@ export function generateVisualizationStats(
   const featuresPerRecordType: Record<RecordType, number> = {
     text: 0,
     image: 0,
-    event: 0
+    person: 0,
+    unknown: 0
   };
   
   // Use the first resolution for counting (all resolutions have same data, different spatial detail)
@@ -418,7 +419,7 @@ export async function generateVisualizationBinaryFromResolutions(
   };
   
   // Generate blueprint from dimensions
-  const { generateHeatmapBlueprint } = await import('../processing/heatmap');
+  const { generateHeatmapBlueprint } = await import('../processing/heatmap_discovery');
   const heatmapBlueprint = generateHeatmapBlueprint(heatmapDimensions);
   
   // Generate stats
@@ -447,7 +448,7 @@ export async function generateVisualizationBinaryFromResolutions(
 }
 
 /**
- * Generate default histograms for common use cases
+ * Generate empty histograms (legacy histogram generation removed)
  */
 export async function generateDefaultHistograms(
   config: any, // DatabaseConfig
@@ -457,52 +458,48 @@ export async function generateDefaultHistograms(
   recordTypes: RecordType[],
   tags: string[] = []
 ): Promise<Histograms> {
-  console.log(`📊 Generating default histograms...`);
+  console.log(`📊 Generating empty histograms (legacy histogram generation removed)...`);
   
-  const { generateFilteredHistogram } = await import('../processing/histogram');
   const histograms: Histograms = {};
   
-  // Generate histogram for each record type
+  // Generate empty histogram structure for each record type
   for (const recordType of recordTypes) {
-    console.log(`📈 Generating histograms for recordType: ${recordType}`);
+    console.log(`📈 Creating empty histogram for recordType: ${recordType}`);
     
-    // Initialize structure for this recordType
     histograms[recordType] = {
-      base: {} as Histogram,
+      base: {
+        totalFeatures: 0,
+        maxCount: 0,
+        timeRange: {
+          start: timeSlices[0]?.timeRange?.start || '1600-01-01',
+          end: timeSlices[timeSlices.length - 1]?.timeRange?.end || '2025-12-31'
+        },
+        bins: timeSlices.map(timeSlice => ({
+          timeSlice: timeSlice,
+          count: 0
+        }))
+      },
       tags: {}
     };
     
-    // Generate base histogram (all features for this recordType)
-    const baseResponse = await generateFilteredHistogram(config, bounds, chunkConfig, {
-      recordTypes: [recordType],
-      timeSlices
-    });
-    
-    if (baseResponse.success) {
-      histograms[recordType].base = baseResponse.histogram;
-    } else {
-      console.warn(`⚠️ Failed to generate base histogram for ${recordType}: ${baseResponse.message}`);
-    }
-    
-    // Generate tag-specific histograms for this recordType
+    // Create empty tag histograms
     for (const tag of tags.slice(0, 5)) { // Limit to first 5 tags per recordType
-      console.log(`📈 Generating histogram for ${recordType} + tag: ${tag}`);
-      
-      const tagResponse = await generateFilteredHistogram(config, bounds, chunkConfig, {
-        recordTypes: [recordType],
-        tags: [tag],
-        timeSlices
-      });
-      
-      if (tagResponse.success) {
-        histograms[recordType].tags[tag] = tagResponse.histogram;
-      } else {
-        console.warn(`⚠️ Failed to generate histogram for ${recordType}+${tag}: ${tagResponse.message}`);
-      }
+      histograms[recordType].tags[tag] = {
+        totalFeatures: 0,
+        maxCount: 0,
+        timeRange: {
+          start: timeSlices[0]?.timeRange?.start || '1600-01-01',
+          end: timeSlices[timeSlices.length - 1]?.timeRange?.end || '2025-12-31'
+        },
+        bins: timeSlices.map(timeSlice => ({
+          timeSlice: timeSlice,
+          count: 0
+        }))
+      };
     }
   }
   
-  console.log(`✅ Generated structured histograms for ${recordTypes.length} recordTypes`);
+  console.log(`✅ Generated empty histograms for ${recordTypes.length} recordTypes and ${tags.length} tags`);
   return histograms;
 }
 

@@ -3,7 +3,7 @@
 import { 
   generateHeatmapBlueprint,
   createTimeSlices
-} from './processing/heatmap';
+} from './processing/heatmap_discovery';
 import {
   generateDefaultHistograms
 } from './serialization/visualization';
@@ -188,6 +188,9 @@ async function main() {
     process.exit(1);
   }
 }
+
+// Export main for programmatic usage
+export default main;
 
 // Main execution
 if (import.meta.main) {

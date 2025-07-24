@@ -1,7 +1,6 @@
 // src/processing/heatmap_discovery.ts - Dynamic heatmap generation with vocabulary discovery
 
 import type { 
-  AnyProcessedFeature, 
   MinimalFeature,
   RecordType,
   HeatmapDimensions, 
@@ -11,6 +10,7 @@ import type {
   HeatmapResolutions,
   HeatmapResolutionConfig,
   HeatmapCellBounds,
+  HeatmapBlueprint,
   TimeSlice,
   VocabularyTracker,
   DiscoveryHeatmapAccumulator
@@ -20,10 +20,143 @@ import {
   createVocabularyTracker, 
   mergeVocabularies
 } from '../data-sources/streaming_discovery';
-import { 
-  getCellIdForCoordinates, 
-  generateHeatmap 
-} from './heatmap';
+// Utility functions merged from heatmap.ts
+
+/**
+ * Get cell ID from coordinates
+ */
+export function getCellIdForCoordinates(
+  coordinates: { lon: number; lat: number },
+  heatmapDimensions: HeatmapDimensions
+): string | null {
+  const col = Math.floor((coordinates.lon - heatmapDimensions.minLon) / heatmapDimensions.cellWidth);
+  const row = Math.floor((coordinates.lat - heatmapDimensions.minLat) / heatmapDimensions.cellHeight);
+
+  if (row >= 0 && row < heatmapDimensions.rowsAmount && col >= 0 && col < heatmapDimensions.colsAmount) {
+    return `${row}_${col}`;
+  }
+  return null;
+}
+
+/**
+ * Generate heatmap from count data
+ */
+export function generateHeatmap(
+  counts: Map<string, number>,
+  heatmapDimensions: HeatmapDimensions
+): { countArray: number[]; densityArray: number[] } {
+  const totalCells = heatmapDimensions.rowsAmount * heatmapDimensions.colsAmount;
+  const countarray = new Array<number>(totalCells).fill(0);
+  
+  // Fill count array
+  for (const [cellId, count] of Array.from(counts.entries())) {
+    const [row, col] = cellId.split('_').map(Number);
+    const index = row * heatmapDimensions.colsAmount + col;
+    countarray[index] = count;
+  }
+  
+  // Find max count for normalization
+  const maxCount = Math.max(...countarray, 0);
+  
+  // Generate density array with log transformation
+  const densityarray = new Array<number>(totalCells).fill(0);
+  
+  if (maxCount > 0) {
+    const maxTransformed = Math.log(maxCount + 1);
+    for (let i = 0; i < totalCells; i++) {
+      densityarray[i] = countarray[i] > 0 ? 
+        Math.log(countarray[i] + 1) / maxTransformed : 0;
+    }
+  }
+  
+  return {
+    countArray: countarray,
+    densityArray: densityarray
+  };
+}
+
+/**
+ * Calculate cell bounds from row/col position
+ */
+export function calculateCellBounds(
+  row: number, 
+  col: number, 
+  heatmapDimensions: HeatmapDimensions
+): HeatmapCellBounds {
+  const cellWidth = (heatmapDimensions.maxLon - heatmapDimensions.minLon) / heatmapDimensions.colsAmount;
+  const cellHeight = (heatmapDimensions.maxLat - heatmapDimensions.minLat) / heatmapDimensions.rowsAmount;
+  
+  const minlon = heatmapDimensions.minLon + (col * cellWidth);
+  const maxlon = minlon + cellWidth;
+  const minlat = heatmapDimensions.minLat + (row * cellHeight);
+  const maxlat = minlat + cellHeight;
+
+  return { minLon: minlon, maxLon: maxlon, minLat: minlat, maxLat: maxlat };
+}
+
+/**
+ * Generate heatmap blueprint from grid dimensions
+ */
+export function generateHeatmapBlueprint(heatmapDimensions: HeatmapDimensions): HeatmapBlueprint {
+  const cells = [];
+  
+  for (let row = 0; row < heatmapDimensions.rowsAmount; row++) {
+    for (let col = 0; col < heatmapDimensions.colsAmount; col++) {
+      const cellId = `${row}_${col}`;
+      const bounds = calculateCellBounds(row, col, heatmapDimensions);
+      
+      cells.push({
+        cellId,
+        row,
+        col,
+        bounds
+      });
+    }
+  }
+  
+  return {
+    rows: heatmapDimensions.rowsAmount,
+    cols: heatmapDimensions.colsAmount,
+    cells
+  };
+}
+
+/**
+ * Convenience function to create TimeSlice from simple time range
+ */
+export function createTimeSlice(
+  startYear: number,
+  endYear: number,
+  options?: {
+    keyFormat?: 'underscore' | 'hyphen';
+    labelFormat?: 'hyphen' | 'to';
+  }
+): TimeSlice {
+  const keyFormat = options?.keyFormat || 'underscore';
+  const labelFormat = options?.labelFormat || 'hyphen';
+  
+  const key = keyFormat === 'underscore' ? `${startYear}_${endYear}` : `${startYear}-${endYear}`;
+  const label = labelFormat === 'hyphen' ? `${startYear}-${endYear}` : `${startYear} to ${endYear}`;
+  
+  return {
+    key,
+    label,
+    timeRange: {
+      start: `${startYear}-01-01`,
+      end: `${endYear}-12-31`
+    },
+    startYear,
+    endYear,
+    durationYears: endYear - startYear
+  };
+}
+
+/**
+ * Create multiple TimeSlices for common periods
+ */
+export function createTimeSlices(periods: Array<{ start: number; end: number }>): TimeSlice[] {
+  return periods.map(period => createTimeSlice(period.start, period.end));
+}
 
 /**
  * Create empty discovery accumulator

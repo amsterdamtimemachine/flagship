@@ -1,5 +1,5 @@
-import type { RecordType } from './feature';
-import type { ChunkResult } from './streaming';
+import type { RecordType, MinimalFeature } from './feature';
+import type { ChunkResult, SpatialChunk } from './streaming';
 import type { HeatmapAccumulator } from './heatmap';
 
 /**
@@ -11,9 +11,16 @@ export interface VocabularyTracker {
 }
 
 /**
- * Result from discovery streaming including vocabulary
+ * Result from discovery streaming using minimal features
  */
-export interface DiscoveryChunkResult extends ChunkResult {
+export interface DiscoveryChunkResult {
+  chunk: SpatialChunk;
+  features: MinimalFeature[];
+  stats: {
+    totalRaw: number;
+    validProcessed: number;
+    invalidSkipped: number;
+  };
   vocabulary: VocabularyTracker;
 }
 
