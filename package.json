@@ -14,7 +14,7 @@
     "build": "turbo run build",
     "generate": "turbo run generate --filter=@atm/preprocessor",
     "lint": "turbo run lint",
-    "build:shared": "turbo run build --filter=@atm/shared",
+    "build:app": "scripts/sync-env.sh && turbo run build --filter=@atm/app",
     "clean": "turbo run clean",
     "docker:up": "docker compose up",
     "docker:up:build": "docker compose up --build",

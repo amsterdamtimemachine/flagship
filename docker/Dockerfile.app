@@ -18,11 +18,8 @@ COPY packages/ ./packages/
 COPY scripts/ ./scripts/
 COPY .env.example .env
 
-# Build shared package first
-RUN bun run build --filter=@atm/shared
-
-# Build app (use docker build script to avoid env sync)
-RUN cd packages/app && bun run build:docker
+# Build app
+RUN bun run build:app
 
 # Create data directory
 RUN mkdir -p /app/data
@@ -35,4 +32,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:3000/api/metadata || exit 1
 
 # Start the SvelteKit application
-CMD ["sh", "-c", "cd packages/app && bun run build && bun run preview --host 0.0.0.0 --port 3000"]
+CMD ["sh", "-c", "cd packages/app && bun run preview --host 0.0.0.0 --port 3000"]
