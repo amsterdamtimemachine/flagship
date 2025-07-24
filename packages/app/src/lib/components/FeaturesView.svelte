@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import FeaturesContainer from '$components/FeaturesContainer.svelte';
+	import FeaturesLayout from '$components/FeaturesLayout.svelte';
 	import { fetchGeodataFromDatabase } from '$api';
 	import { formatDate } from '$utils/utils';
 	import { loadingState } from '$lib/state/loadingState.svelte';
@@ -220,7 +220,7 @@
 				<span class="text-sm text-gray-600">(Page {currentPage} of {totalPages})</span>
 			{/if}
 		</div>
-		<FeaturesContainer features={allFeatures} />
+		<FeaturesLayout features={allFeatures} />
 		{#if hasMorePages}
 			<button
 				onclick={loadMore}

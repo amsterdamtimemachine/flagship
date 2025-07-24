@@ -15,29 +15,14 @@ export interface RawFeature {
 
 export interface ImageFeature extends RawFeature {
     thumb: string;
+    alt?: string;
 }
 
 export interface TextFeature extends RawFeature {
     text: string;
 }
 
-//export interface ProcessedFeature<R extends RecordType = RecordType> {
-//    title: string;        // From 'tit' field
-//    dataset: string;      // From 'ds' field
-//    url: string;
-//    recordType: R;        // Now required and typed
-//    tags: string[];
-//    
-//    // Temporal data
-//    startYear: number;
-//    endYear: number;
-//    
-//    // Spatial data - supports all geometry types
-//    geometry: Geometry;   // Point, MultiLineString, LineString, or Polygon
-//    
-//    // Optional properties using type factory pattern
-//    properties?: Partial<PropertiesFor<R>>;
-//}
+export type Feature = ImageFeature | TextFeature;
 
 // feature for optimized discovery processing
 // Contains only essential fields needed for accumulator processing
@@ -49,8 +34,4 @@ export interface MinimalFeature {
     endYear: number;
 }
 
-// Type aliases for convenience
-//export type EventFeature = ProcessedFeature<'person'>;
-//export type TextFeature = ProcessedFeature<'text'>;
-//export type AnyProcessedFeature = ProcessedFeature<RecordType>;
 

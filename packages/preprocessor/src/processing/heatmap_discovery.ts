@@ -2,7 +2,6 @@
 
 import type { 
   MinimalFeature,
-  RecordType,
   HeatmapDimensions, 
   DatabaseConfig,
   ChunkingConfig,

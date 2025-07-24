@@ -1,72 +1,47 @@
 <script lang="ts">
-	import type {ImageFeature} from '@atm/shared/types';
-	
 	type Props = {
-		feature: ImageFeature; // Database API feature
+		thumb: string;
+		alt?: string;
 	};
 
-	let { feature }: Props = $props();
+	let { thumb, alt }: Props = $props();
 
-	// Get image URL from various possible properties
-	let imageUrl = $derived(() => {
-		const props = feature?.properties || {};
-		return props.thumb || props.image || props.photo || props.picture || 
-		       props.img_url || props.image_url || props.thumbnail || null;
-	});
+	let imageError = $state(false);
+	let imageLoading = $state(true);
 
-	// Get source URL
-	let sourceUrl = $derived(() => {
-		const props = feature?.properties || {};
-		return props.url || props.source || props.link || null;
-	});
+	const handleImageLoad = () => {
+		imageLoading = false;
+	};
 
-	// Get title or description
-	let title = $derived(() => {
-		const props = feature?.properties || {};
-		return props.title || props.name || props.description || 'Image';
-	});
+	const handleImageError = () => {
+		imageError = true;
+		imageLoading = false;
+	};
 </script>
 
-<div class="w-full h-full flex flex-col border border-gray-200 bg-white">
-	{#if imageUrl}
-		<div class="flex-1">
-			{#if sourceUrl}
-				<a href={sourceUrl} target="_blank" class="block h-full">
-					<img 
-						src={imageUrl} 
-						alt={title}
-						class="h-full w-full object-cover"
-						loading="lazy"
-					/>
-				</a>
-			{:else}
-				<img 
-					src={imageUrl} 
-					alt={title}
-					class="h-full w-full object-cover"
-					loading="lazy"
-				/>
-			{/if}
+<div class="flex-1 p-2">
+	{#if imageError}
+		<div class="w-full h-32 bg-gray-100 flex items-center justify-center text-gray-500 text-sm">
+			<div class="text-center">
+				<div class="mb-1">🖼️</div>
+				<div>Image unavailable</div>
+			</div>
 		</div>
 	{:else}
-		<div class="flex-1 bg-gray-100 flex items-center justify-center">
-			<div class="text-gray-500 text-xs">No image</div>
+		<div class="relative w-full">
+			{#if imageLoading}
+				<div class="w-full h-32 bg-gray-100 animate-pulse flex items-center justify-center">
+					<div class="text-gray-400 text-sm">Loading...</div>
+				</div>
+			{/if}
+			<img
+				src={thumb}
+				alt="Feature thumbnail"
+				class="w-full h-auto object-cover rounded"
+				class:hidden={imageLoading}
+				on:load={handleImageLoad}
+				on:error={handleImageError}
+			/>
 		</div>
 	{/if}
-	
-	<div class="p-2 border-t border-gray-100">
-		<div class="text-xs font-medium text-gray-900 truncate" title={title}>
-			{title}
-		</div>
-		{#if sourceUrl}
-			<a class="text-xs text-blue-600 underline" href={sourceUrl} target="_blank">
-				view source
-			</a>
-		{/if}
-		{#if feature?.geometry?.coordinates}
-			<div class="text-xs text-gray-500 mt-1">
-				{feature.geometry.coordinates[1]?.toFixed(4)}, {feature.geometry.coordinates[0]?.toFixed(4)}
-			</div>
-		{/if}
-	</div>
 </div>
