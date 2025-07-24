@@ -1,16 +1,20 @@
 <script lang="ts">
 	import Masonry from 'svelte-masonry';
-	import BlockImage from '$components/BlockImage.svelte';
+	import FeatureCard from '$components/FeatureCard.svelte';
+	import FeatureImage from '$components/FeatureImage.svelte';
 	import BlockText from '$components/BlockText.svelte';
+	import type { RawFeature } from '@atm/shared/types';
 	
 	type Props = {
-		features: any[]; // Database API features
+		features: RawFeature[]; 
 	};
 
 	let { features }: Props = $props();
 
-	// Function to determine feature type from database API data
-	function getFeatureType(feature: any): 'image' | 'text' {
+	console.log("FEATURE :", features[0]);
+
+	// returning a string because record types are not predefined
+	function getFeatureType(feature: AnyProcessedFeature): string {
 		const props = feature?.properties || {};
 		
 		// Check for image indicators
@@ -37,11 +41,13 @@
 		<Masonry gridGap={'10px'} colWidth={'150px'}>
 			{#each features as feature, index (index)}
 				{@const featureType = getFeatureType(feature)}
-				{#if featureType === 'image'}
-					<BlockImage {feature} />
-				{:else}
-					<BlockText {feature} />
-				{/if}
+				<FeatureCard>
+					{#if featureType === 'image'}
+						<FeatureImage {feature} />
+					{:else}
+						<BlockText {feature} />
+					{/if}
+				</FeatureCard>
 			{/each}
 		</Masonry>
 	{/if}

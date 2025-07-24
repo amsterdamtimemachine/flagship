@@ -12,7 +12,7 @@
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import TimePeriodSelector2 from '$components/TimePeriodSelector2.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
-	import CellView from '$components/CellView.svelte';
+	import FeaturesView from '$components/FeaturesView.svelte';
 	import ErrorHandler from '$lib/components/ErrorHandler.svelte';
 	
 	import type { PageData } from './$types';
@@ -193,7 +193,7 @@
 
 		{#if showCellModal && selectedCellId}
 			<div class="z-50 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
-				<CellView 
+				<FeaturesView 
 					cellId={selectedCellId} 
 					period={currentPeriod} 
 					bounds={selectedCellBounds}

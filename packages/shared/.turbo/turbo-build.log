@@ -1,2 +1,10 @@
 
 [0m[2m[35m$[0m [2m[1mtsc[0m
+[96msrc/types/feature.ts[0m:[93m32[0m:[93m1[0m - [91merror[0m[90m TS1128: [0mDeclaration or statement expected.
+
+[7m32[0m export interface
+[7m  [0m [91m~~~~~~[0m
+
+
+Found 1 error in src/types/feature.ts[90m:32[0m
+
