@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Masonry from 'svelte-masonry';
 	import FeatureCard from '$components/FeatureCard.svelte';
 	import type { RawFeature } from '@atm/shared/types';
 	
@@ -14,10 +13,10 @@
 		<div class="text-gray-500 p-4">No features to display</div>
 	{:else}
 		<div class="mb-2 text-sm text-gray-600">Showing {features.length} features</div>
-		<Masonry gridGap={'10px'} colWidth={'150px'}>
+		<div class="w-100">
 			{#each features as feature, index (index)}
 				<FeatureCard feature={feature}/>
 			{/each}
-		</Masonry>
+		</div>
 	{/if}
 </div>
