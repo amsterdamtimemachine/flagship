@@ -16,7 +16,7 @@ RUN bun install
 # Copy source code, scripts and env template
 COPY packages/ ./packages/
 COPY scripts/ ./scripts/
-COPY .env.example .env
+COPY .env .env
 
 # Build app
 RUN bun run build:app
