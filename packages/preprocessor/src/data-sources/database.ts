@@ -6,9 +6,11 @@ import type {
   AnyProcessedFeature,
   RecordType,
   ImageFeature, EventFeature, TextFeature,
+  MinimalFeature,
   DatabaseConfig,
   ApiQueryParams, ApiResponse,
 } from '@atm/shared/types';
+import { parseWKTPoint } from '@atm/shared/utils/geometry';
 
 export async function fetchBatch(
   baseUrl: string, 
@@ -53,6 +55,12 @@ export async function fetchBatch(
   }
 }
 
+
+
+/**
+ * Convert raw feature to processed feature
+ * Note: This function is being phased out in favor of createMinimalFeature for discovery modules
+ */
 export function convertRawFeature(rawFeature: RawFeature, recordType: RecordType): AnyProcessedFeature {
     // Parse WKT geometry
     const coordinates = parseWKTPoint(rawFeature.geom);
@@ -102,24 +110,17 @@ export function convertRawFeature(rawFeature: RawFeature, recordType: RecordType
 }
 
 /**
- * Parse WKT POINT string to [lon, lat] coordinates
+ * Lightweight feature processor for discovery modules
+ * Only extracts essential fields needed for accumulator processing
  */
-function parseWKTPoint(wktGeom: string): Coordinates {
-  // Example: "POINT(4.88134747873096 52.3638068249909)"
-  const match = wktGeom.match(/POINT\(([+-]?\d*\.?\d+)\s+([+-]?\d*\.?\d+)\)/);
-  
-  if (!match) {
-    throw new Error(`Cannot parse WKT geometry: ${wktGeom}`);
-  }
-  
-  const lon = parseFloat(match[1]);
-  const lat = parseFloat(match[2]);
-  
-  if (isNaN(lon) || isNaN(lat)) {
-    throw new Error(`Invalid coordinates in WKT: ${wktGeom}`);
-  }
-  
-  return {lon: lon, lat: lat};
+export function createMinimalFeature(rawFeature: RawFeature, recordType: RecordType): MinimalFeature {
+  return {
+    coordinates: parseWKTPoint(rawFeature.geom),
+    recordType,
+    tags: rawFeature.tags || [],
+    startYear: rawFeature.per[0],
+    endYear: rawFeature.per[1]
+  };
 }
 
 /**

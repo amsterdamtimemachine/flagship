@@ -2,6 +2,8 @@
 
 import type { 
   AnyProcessedFeature, 
+  MinimalFeature,
+  RecordType,
   HeatmapDimensions, 
   DatabaseConfig,
   ChunkingConfig,
@@ -19,7 +21,6 @@ import {
   mergeVocabularies
 } from '../data-sources/streaming_discovery';
 import { 
-  getFeatureCoordinates, 
   getCellIdForCoordinates, 
   generateHeatmap 
 } from './heatmap';
@@ -40,15 +41,14 @@ export function createDiscoveryHeatmapAccumulator(heatmapDimensions: HeatmapDime
 }
 
 /**
- * Process a single feature into the discovery accumulator
+ * Process a single minimal feature into the discovery accumulator
  */
 export function processFeatureIntoDiscoveryCounts(
-  feature: AnyProcessedFeature,
+  feature: MinimalFeature,
   accumulator: DiscoveryHeatmapAccumulator
 ): void {
   // Get cell position
-  const coordinates = getFeatureCoordinates(feature);
-  const cellId = getCellIdForCoordinates(coordinates, accumulator.heatmapDimensions);
+  const cellId = getCellIdForCoordinates(feature.coordinates, accumulator.heatmapDimensions);
   
   if (!cellId) return; // Feature outside grid bounds
   
@@ -67,8 +67,7 @@ export function processFeatureIntoDiscoveryCounts(
   baseCounts.set(cellId, (baseCounts.get(cellId) || 0) + 1);
   
   // Process tags if they exist
-  const tags = feature.tags || [];
-  for (const tag of tags) {
+  for (const tag of feature.tags) {
     // Track this tag globally
     accumulator.collectedTags.add(tag);
     accumulator.vocabulary.tags.add(tag);

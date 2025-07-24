@@ -1,5 +1,5 @@
 import type { Geometry } from './spatial';
-export type RecordType = 'image' | 'text' | 'person';
+export type RecordType = 'image' | 'text' | 'person' | 'unknown';
 
 export interface EventProperties {
     street_name: string;
@@ -29,19 +29,6 @@ export interface RawFeature {
     tags?: string[];
 }
 
-
-export interface Feature {
-    ds: string;           // Dataset source
-    geom: Geometry;         // WKT geometry string
-    per: [number, number]; // Time period [start_year, end_year]
-    tit: string;          // Title
-    url: string;          // Source URL
-    recordType: RecordType;
-    tags?: string[];
-}
-
-
-
 export interface ProcessedFeature<R extends RecordType = RecordType> {
     title: string;        // From 'tit' field
     dataset: string;      // From 'ds' field
@@ -58,6 +45,16 @@ export interface ProcessedFeature<R extends RecordType = RecordType> {
     
     // Optional properties using type factory pattern
     properties?: Partial<PropertiesFor<R>>;
+}
+
+// Minimal feature for optimized discovery processing
+// Contains only essential fields needed for accumulator processing
+export interface MinimalFeature {
+    coordinates: { lon: number; lat: number };
+    recordType: RecordType;
+    tags: string[];
+    startYear: number;
+    endYear: number;
 }
 
 // Type aliases for convenience

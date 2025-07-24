@@ -4,6 +4,7 @@ import type {
   DatabaseConfig, 
   RecordType,
   AnyProcessedFeature,
+  MinimalFeature,
   HeatmapCellBounds,
   SpatialChunk,
   ChunkingConfig,
@@ -12,7 +13,7 @@ import type {
   VocabularyTracker,
   DiscoveryChunkResult
 } from '@atm/shared/types';
-import { fetchBatch, convertRawFeature } from './database';
+import { fetchBatch, createMinimalFeature } from './database';
 import { createSpatialChunks } from './streaming';
 
 /**
@@ -26,16 +27,15 @@ export function createVocabularyTracker(): VocabularyTracker {
 }
 
 /**
- * Update vocabulary tracker with a feature
+ * Update vocabulary tracker with a minimal feature
  */
 export function updateVocabulary(
   vocabulary: VocabularyTracker, 
-  feature: AnyProcessedFeature
+  feature: MinimalFeature
 ): void {
   vocabulary.recordTypes.add(feature.recordType);
   
-  const tags = feature.tags || [];
-  for (const tag of tags) {
+  for (const tag of feature.tags) {
     vocabulary.tags.add(tag);
   }
 }
@@ -129,14 +129,14 @@ async function fetchChunkFeaturesWithDiscovery(
   config: DatabaseConfig,
   bounds: HeatmapCellBounds,
   timeRange?: { start: string; end: string }
-): Promise<{ features: AnyProcessedFeature[]; stats: ChunkResult['stats']; vocabulary: VocabularyTracker }> {
+): Promise<{ features: MinimalFeature[]; stats: ChunkResult['stats']; vocabulary: VocabularyTracker }> {
   console.log(`🔍 Discovery fetching chunk data for bounds:`, {
     lat: [bounds.minLat.toFixed(3), bounds.maxLat.toFixed(3)],
     lon: [bounds.minLon.toFixed(3), bounds.maxLon.toFixed(3)],
     discoveryMode: true
   });
   
-  const features: AnyProcessedFeature[] = [];
+  const features: MinimalFeature[] = [];
   let currentPage = 1;
   const pageSize = config.batchSize || 500;
   let hasMore = true;
@@ -169,7 +169,7 @@ async function fetchChunkFeaturesWithDiscovery(
       if (response.data && response.data.length > 0) {
         stats.totalRaw += response.data.length;
         
-        // Convert API features to ProcessedFeatures and discover vocabulary
+        // Create minimal features and discover vocabulary
         for (const apiFeature of response.data) {
           try {
             // DEBUG: Log first few features to understand structure
@@ -185,12 +185,12 @@ async function fetchChunkFeaturesWithDiscovery(
             
             const featureRecordType = apiFeature.recordType as RecordType;
             
-            const processedFeature = convertRawFeature(apiFeature, featureRecordType);
+            const minimalFeature = createMinimalFeature(apiFeature, featureRecordType);
             
             // Update vocabulary with discovered feature
-            updateVocabulary(vocabulary, processedFeature);
+            updateVocabulary(vocabulary, minimalFeature);
             
-            features.push(processedFeature);
+            features.push(minimalFeature);
             stats.validProcessed++;
           } catch (error) {
             stats.invalidSkipped++;
