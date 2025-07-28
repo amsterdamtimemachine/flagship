@@ -1,4 +1,5 @@
 <script lang="ts">
+
 	type Props = {
 		text: string;
 	};

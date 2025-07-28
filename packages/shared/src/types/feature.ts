@@ -14,7 +14,7 @@ export interface RawFeature {
 }
 
 export interface ImageFeature extends RawFeature {
-    thumb: string;
+    thumbnail: string;
     alt?: string;
 }
 

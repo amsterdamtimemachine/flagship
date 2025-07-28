@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Feature, RawFeature, ImageFeature, TextFeature } from '@atm/shared/types';
 	import FeatureHeader from '$components/FeatureHeader.svelte';
-	import FeatureImage from '$components/FeatureImage.svelte';
-	import FeatureText from '$components/FeatureText.svelte';
+	import FeatureCardImage from '$components/FeatureCardImage.svelte';
+	import FeatureCardText from '$components/FeatureCardText.svelte';
 
 	type Props = {
 		feature: Feature;
@@ -10,7 +10,7 @@
 
 	let { feature }: Props = $props();
 
-	// Extract common RawFeature properties
+	// Extract generic RawFeature properties
 	const commonProps: RawFeature = {
 		ds: feature.ds,
 		geom: feature.geom,
@@ -25,9 +25,11 @@
 	const getFeatureSpecificProps = () => {
 		switch (feature.recordType) {
 			case 'image':
-				return { thumb: (feature as ImageFeature).thumb };
+				return { thumbnail: feature.thumbnail };
 			case 'text':
-				return { text: (feature as TextFeature).text };
+				return { }; // currently text has no non-generic properties
+			case 'person':
+				return { }; // currently person has no non-generic properties
 			default:
 				return {};
 		}
@@ -38,13 +40,15 @@
 
 <div class="w-full border-2 border-solid border-gray-200 p-2 bg-white">
 	<!-- Common header for all feature types -->
-	<FeatureHeader feature={commonProps} />
-	
+	<FeatureHeader feature={commonProps} />	
 	<!-- Feature-specific content -->
 	{#if feature.recordType === 'image'}
-		<FeatureImage {...specificProps} />
+		<FeatureCardImage {...specificProps} />
 	{:else if feature.recordType === 'text'}
-		<FeatureText {...specificProps} />
+		<!-- <FeatureCardText {...specificProps} /> -->
+	{:else if feature.recordType === 'person'}
+		<!-- Person feature has same properties as text so we're using the text card -->
+		<!-- <FeatureCardText {...specificProps} /> -->
 	{:else}
 		<div class="p-2 text-gray-500 text-sm">
 			Unknown feature type: {feature.recordType}

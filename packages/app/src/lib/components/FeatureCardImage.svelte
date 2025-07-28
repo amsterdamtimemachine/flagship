@@ -1,10 +1,10 @@
 <script lang="ts">
 	type Props = {
-		thumb: string;
+		thumbnail: string;
 		alt?: string;
 	};
 
-	let { thumb, alt }: Props = $props();
+	let { thumbnail, alt }: Props = $props();
 
 	let imageError = $state(false);
 	let imageLoading = $state(true);
@@ -35,8 +35,8 @@
 				</div>
 			{/if}
 			<img
-				src={thumb}
-				alt="Feature thumbnail"
+				src={thumbnail}
+				alt={alt}
 				class="w-full h-auto object-cover rounded"
 				class:hidden={imageLoading}
 				on:load={handleImageLoad}
