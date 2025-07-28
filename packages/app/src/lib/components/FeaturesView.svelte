@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import FeaturesLayout from '$components/FeaturesLayout.svelte';
-	import { fetchGeodataFromDatabase } from '$api';
+	import { fetchGeodataFromDatabase } from '$utils/clientApi';
 	import { formatDate } from '$utils/utils';
 	import { loadingState } from '$lib/state/loadingState.svelte';
 	

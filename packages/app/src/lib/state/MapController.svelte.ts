@@ -5,11 +5,6 @@ import { page } from '$app/state';
 import { replaceState, goto } from '$app/navigation';
 import type { AppError } from '$types/error';
 
-interface CellSelection {
-	cellId: string;
-	bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number };
-}
-
 /**
  * Creates a centralized controller for managing map state, URL synchronization, 
  * and cell data loading. This handles the coordination between user interactions,

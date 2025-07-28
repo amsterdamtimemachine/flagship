@@ -5,8 +5,6 @@ import type {
   HeatmapTimeline, 
   HistogramApiResponse,
   HeatmapTimelineApiResponse,
-  Histograms,
-  HeatmapResolutions
 } from "@atm/shared/types";
 import { VisualizationBinaryHandler } from "./binaryHandler";
 import { mergeHistograms } from "../utils/histogram";
@@ -116,7 +114,7 @@ export class VisualizationApiService {
         // Multiple recordTypes - merge histograms
         if (!tags || tags.length === 0) {
           // Merge base histograms for all recordTypes
-          const baseHistograms = recordTypes.map(type => histograms[type].base);
+          const baseHistograms = recordTypes.map(type => histograms[type].base)
           histogram = mergeHistograms(baseHistograms);
           console.log(`📈 Returning merged base histogram: ${histogram.totalFeatures} total features`);
         } else if (tags.length === 1) {

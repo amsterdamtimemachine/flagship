@@ -92,7 +92,7 @@
 		
 		return null;
 	});
-
+	
 	// Debounced period changes to avoid too many API calls
 	const debouncedPeriodChange = debounce((period: string) => {
 		controller.setPeriod(period);

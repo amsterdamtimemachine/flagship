@@ -24,7 +24,6 @@ const config = {
 			$components: 'src/lib/components',
 			$state: 'src/lib/state',
 			$types: 'src/lib/types',
-			$api: 'src/lib/api.ts',
 			$utils: 'src/lib/utils/',
 			$constants: 'src/lib/constants.ts',
 			$stores: 'src/lib/stores'
