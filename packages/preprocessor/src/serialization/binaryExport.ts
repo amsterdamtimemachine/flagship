@@ -366,86 +366,86 @@ export function createVisualizationData(
 /**
  * Generate visualization binary directly from HeatmapResolutions and generated histograms
  */
-export async function generateVisualizationBinaryFromResolutions(
-  binaryPath: string,
-  heatmapResolutions: HeatmapResolutions,
-  config: any, // DatabaseConfig
-  bounds: any, // HeatmapCellBounds  
-  chunkConfig: any, // ChunkingConfig
-  timeSlices: TimeSlice[],
-  recordTypes: RecordType[],
-  tags: string[] = []
-): Promise<void> {
-  console.log(`🎯 Generating visualization binary from HeatmapResolutions...`);
-  
-  // Generate default histograms
-  const histograms = await generateDefaultHistograms(
-    config,
-    bounds,
-    chunkConfig,
-    timeSlices,
-    recordTypes,
-    tags
-  );
-  
-  // Extract resolutions config from the HeatmapResolutions keys
-  const resolutions: HeatmapResolutionConfig[] = Object.keys(heatmapResolutions).map(key => {
-    const [cols, rows] = key.split('x').map(Number);
-    return { cols, rows };
-  });
-  
-  // Get dimensions from first resolution for metadata
-  const firstResolutionKey = Object.keys(heatmapResolutions)[0];
-  const firstResolution = heatmapResolutions[firstResolutionKey];
-  
-  // Extract dimensions from first heatmap
-  const firstTimeSlice = Object.values(firstResolution)[0];
-  const firstRecordType = Object.values(firstTimeSlice)[0];
-  const gridCellCount = firstRecordType.base.countArray?.length || 0;
-  
-  // Calculate dimensions from grid cell count and first resolution
-  const firstResConfig = resolutions[0];
-  const expectedCellCount = firstResConfig.cols * firstResConfig.rows;
-  
-  const heatmapDimensions: HeatmapDimensions = {
-    colsAmount: firstResConfig.cols,
-    rowsAmount: firstResConfig.rows,
-    cellWidth: (bounds.maxLon - bounds.minLon) / firstResConfig.cols,
-    cellHeight: (bounds.maxLat - bounds.minLat) / firstResConfig.rows,
-    minLon: bounds.minLon,
-    maxLon: bounds.maxLon,
-    minLat: bounds.minLat,
-    maxLat: bounds.maxLat
-  };
-  
-  // Generate blueprint from dimensions
-  const { generateHeatmapBlueprint } = await import('../processing/heatmap_discovery');
-  const heatmapBlueprint = generateHeatmapBlueprint(heatmapDimensions);
-  
-  // Generate stats
-  const stats = generateVisualizationStats(heatmapResolutions, histograms, timeSlices);
-  
-  // Create the binary
-  await createVisualizationBinary(
-    binaryPath,
-    heatmapResolutions,
-    histograms,
-    heatmapDimensions,
-    heatmapBlueprint,
-    timeSlices,
-    recordTypes,
-    resolutions,
-    tags,
-    {
-      minLon: heatmapDimensions.minLon,
-      maxLon: heatmapDimensions.maxLon,
-      minLat: heatmapDimensions.minLat,
-      maxLat: heatmapDimensions.maxLat
-    }
-  );
-  
-  console.log(`✅ Generated visualization binary with ${resolutions.length} resolutions and ${histograms.length} histograms`);
-}
+//export async function generateVisualizationBinaryFromResolutions(
+//  binaryPath: string,
+//  heatmapResolutions: HeatmapResolutions,
+//  config: any, // DatabaseConfig
+//  bounds: any, // HeatmapCellBounds  
+//  chunkConfig: any, // ChunkingConfig
+//  timeSlices: TimeSlice[],
+//  recordTypes: RecordType[],
+//  tags: string[] = []
+//): Promise<void> {
+//  console.log(`🎯 Generating visualization binary from HeatmapResolutions...`);
+//  
+//  // Generate default histograms
+//  const histograms = await generateDefaultHistograms(
+//    config,
+//    bounds,
+//    chunkConfig,
+//    timeSlices,
+//    recordTypes,
+//    tags
+//  );
+//  
+//  // Extract resolutions config from the HeatmapResolutions keys
+//  const resolutions: HeatmapResolutionConfig[] = Object.keys(heatmapResolutions).map(key => {
+//    const [cols, rows] = key.split('x').map(Number);
+//    return { cols, rows };
+//  });
+//  
+//  // Get dimensions from first resolution for metadata
+//  const firstResolutionKey = Object.keys(heatmapResolutions)[0];
+//  const firstResolution = heatmapResolutions[firstResolutionKey];
+//  
+//  // Extract dimensions from first heatmap
+//  const firstTimeSlice = Object.values(firstResolution)[0];
+//  const firstRecordType = Object.values(firstTimeSlice)[0];
+//  const gridCellCount = firstRecordType.base.countArray?.length || 0;
+//  
+//  // Calculate dimensions from grid cell count and first resolution
+//  const firstResConfig = resolutions[0];
+//  const expectedCellCount = firstResConfig.cols * firstResConfig.rows;
+//  
+//  const heatmapDimensions: HeatmapDimensions = {
+//    colsAmount: firstResConfig.cols,
+//    rowsAmount: firstResConfig.rows,
+//    cellWidth: (bounds.maxLon - bounds.minLon) / firstResConfig.cols,
+//    cellHeight: (bounds.maxLat - bounds.minLat) / firstResConfig.rows,
+//    minLon: bounds.minLon,
+//    maxLon: bounds.maxLon,
+//    minLat: bounds.minLat,
+//    maxLat: bounds.maxLat
+//  };
+//  
+//  // Generate blueprint from dimensions
+//  const { generateHeatmapBlueprint } = await import('../visualization/heatmap');
+//  const heatmapBlueprint = generateHeatmapBlueprint(heatmapDimensions);
+//  
+//  // Generate stats
+//  const stats = generateVisualizationStats(heatmapResolutions, histograms, timeSlices);
+//  
+//  // Create the binary
+//  await createVisualizationBinary(
+//    binaryPath,
+//    heatmapResolutions,
+//    histograms,
+//    heatmapDimensions,
+//    heatmapBlueprint,
+//    timeSlices,
+//    recordTypes,
+//    resolutions,
+//    tags,
+//    {
+//      minLon: heatmapDimensions.minLon,
+//      maxLon: heatmapDimensions.maxLon,
+//      minLat: heatmapDimensions.minLat,
+//      maxLat: heatmapDimensions.maxLat
+//    }
+//  );
+//  
+//  console.log(`✅ Generated visualization binary with ${resolutions.length} resolutions and ${histograms.length} histograms`);
+//}
 
 /**
  * Generate empty histograms (legacy histogram generation removed)

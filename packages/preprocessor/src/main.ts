@@ -1,25 +1,23 @@
-// src/main_discovery.ts - Discovery-based binary generation for Amsterdam Time Machine
+// src/main.ts - Binary generation for Amsterdam Time Machine
 
 import { 
   generateHeatmapBlueprint,
-  createTimeSlices
-} from './processing/heatmap_discovery';
+  createTimeSlices,
+  generateHeatmapResolutionsWithDiscovery,
+} from './visualization/heatmap';
 import {
-  generateDefaultHistograms
-} from './serialization/visualization';
+  generateAllHistogramsFromHeatmapTimeline
+} from './visualization/histogram';
 import {
   createVisualizationBinary,
   generateVisualizationStats
-} from './serialization/visualization';
+} from './serialization/binaryExport';
 import { 
   AMSTERDAM_DATABASE_CONFIG, 
   AMSTERDAM_BOUNDS,
   DEFAULT_GRID_CONFIG,
   DEFAULT_CHUNKING,
 } from './config/defaults';
-import { 
-  generateHeatmapResolutionsWithDiscovery 
-} from './processing/heatmap_discovery';
 
 import type { 
   HeatmapDimensions, 
@@ -27,14 +25,12 @@ import type {
   TimeSlice,
 } from '@atm/shared/types';
 
-// Configuration
-const OUTPUT_PATH = process.env.OUTPUT_PATH || './visualization_discovery.bin';
-const VOCABULARY_PATH = process.env.VOCABULARY_PATH || './vocabulary.json';
-
 async function main() {
+  // Configuration - read at runtime to allow test overrides
+  const OUTPUT_PATH = process.env.OUTPUT_PATH;
+  
   console.log('🔍 Starting Amsterdam Time Machine Discovery-Based Binary Generation');
   console.log(`Output path: ${OUTPUT_PATH}`);
-  console.log(`Vocabulary path: ${VOCABULARY_PATH}`);
   
   const startTime = Date.now();
   
@@ -102,12 +98,13 @@ async function main() {
     console.log(`Discovered recordTypes: ${recordTypes.join(', ')}`);
     console.log(`Discovered tags: ${tags.length}`);
 
-    // Generate default histograms using discovered recordTypes
-    console.log('\nGenerating histograms...');
-    const histograms = await generateDefaultHistograms(
-      config.database,
-      bounds,
-      config.chunking,
+    // Generate histograms from heatmap data using discovered recordTypes
+    console.log('\nGenerating histograms from heatmap data...');
+    const primaryResolutionKey = Object.keys(heatmapResolutions)[0];
+    const primaryHeatmapTimeline = heatmapResolutions[primaryResolutionKey];
+    
+    const histograms = generateAllHistogramsFromHeatmapTimeline(
+      primaryHeatmapTimeline,
       timeSlices,
       recordTypes,
       tags.slice(0, 20) // Use top 20 tags

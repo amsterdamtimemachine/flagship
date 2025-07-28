@@ -1,4 +1,4 @@
-// src/processing/heatmap_discovery.ts - Dynamic heatmap generation with vocabulary discovery
+// src/visualization/heatmap.ts - Dynamic heatmap generation with vocabulary discovery
 
 import type { 
   MinimalFeature,
@@ -18,7 +18,7 @@ import {
   streamFeaturesWithDiscovery, 
   createVocabularyTracker, 
   mergeVocabularies
-} from '../data-sources/streaming_discovery';
+} from '../data-sources/streaming';
 // Utility functions merged from heatmap.ts
 
 /**
@@ -285,43 +285,6 @@ export async function accumulateCountsWithDiscovery(
 }
 
 /**
- * Generate heatmap timeline from discovery accumulator using dynamic vocabulary
- */
-export function generateHeatmapTimelineFromDiscoveryAccumulator(
-  accumulator: DiscoveryHeatmapAccumulator, 
-  timeSlice: TimeSlice
-): HeatmapTimeline {
-  // Use discovered recordTypes instead of hardcoded ones
-  const recordTypes = Array.from(accumulator.vocabulary.recordTypes);
-  
-  // Initialize result structure with timeline hierarchy using TimeSlice key
-  const result: HeatmapTimeline = {
-    [timeSlice.key]: {} as any
-  };
-  
-  // Generate heatmaps for each discovered recordType
-  for (const recordType of recordTypes) {
-    // Initialize recordType structure
-    result[timeSlice.key][recordType] = {
-      base: generateHeatmap(new Map(), accumulator.heatmapDimensions), // Default empty
-      tags: {}
-    };
-    
-    // Generate base heatmap for this recordType
-    const counts = accumulator.cellCounts.base.get(recordType) || new Map();
-    result[timeSlice.key][recordType].base = generateHeatmap(counts, accumulator.heatmapDimensions);
-    
-    // Generate tag heatmaps for this recordType using discovered tags
-    for (const tag of Array.from(accumulator.vocabulary.tags)) {
-      const tagCounts = accumulator.cellCounts.tags.get(tag)?.get(recordType) || new Map();
-      result[timeSlice.key][recordType].tags[tag] = generateHeatmap(tagCounts, accumulator.heatmapDimensions);
-    }
-  }
-  
-  return result;
-}
-
-/**
  * Generate heatmaps for multiple resolutions and TimeSlices with vocabulary discovery
  */
 export async function generateHeatmapResolutionsWithDiscovery(
@@ -391,35 +354,3 @@ export async function generateHeatmapResolutionsWithDiscovery(
   return { heatmapResolutions: result, globalVocabulary };
 }
 
-/**
- * Generate vocabulary-aware heatmap timeline for single resolution
- */
-export async function generateDiscoveryHeatmapTimeline(
-  config: DatabaseConfig,
-  bounds: HeatmapCellBounds,
-  chunkConfig: ChunkingConfig,
-  heatmapDimensions: HeatmapDimensions,
-  timeSlices: TimeSlice[]
-): Promise<{ timeline: HeatmapTimeline; vocabulary: VocabularyTracker }> {
-  
-  // Use single resolution
-  const resolutionConfigs: HeatmapResolutionConfig[] = [{
-    cols: heatmapDimensions.colsAmount,
-    rows: heatmapDimensions.rowsAmount
-  }];
-  
-  const { heatmapResolutions, globalVocabulary } = await generateHeatmapResolutionsWithDiscovery(
-    config,
-    bounds,
-    chunkConfig,
-    resolutionConfigs,
-    timeSlices
-  );
-  
-  // Return the single resolution timeline
-  const resolutionKey = `${heatmapDimensions.colsAmount}x${heatmapDimensions.rowsAmount}`;
-  return { 
-    timeline: heatmapResolutions[resolutionKey], 
-    vocabulary: globalVocabulary 
-  };
-}

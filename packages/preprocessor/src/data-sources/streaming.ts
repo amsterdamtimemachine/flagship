@@ -1,4 +1,4 @@
-// src/data-sources/streaming_discovery.ts - Single-pass vocabulary discovery streaming
+// src/data-sources/streaming.ts - Single-pass vocabulary discovery streaming
 
 import type { 
   DatabaseConfig, 
