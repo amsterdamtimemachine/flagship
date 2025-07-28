@@ -13,7 +13,7 @@
 		<div class="text-gray-500 p-4">No features to display</div>
 	{:else}
 		<div class="mb-2 text-sm text-gray-600">Showing {features.length} features</div>
-		<div class="w-100">
+		<div class="w-100 grid grid-cols-3 gap-4">
 			{#each features as feature, index (index)}
 				<FeatureCard feature={feature}/>
 			{/each}
