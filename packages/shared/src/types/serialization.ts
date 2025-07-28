@@ -1,5 +1,5 @@
-import { HeatmapBlueprint, HeatmapTimeline, HeatmapDimensions, HeatmapResolutions, HeatmapResolutionConfig } from "./heatmap";
-import { Histogram } from "./histogram";
+import { HeatmapBlueprint, HeatmapDimensions, HeatmapResolutions, HeatmapResolutionConfig } from "./heatmap";
+import { Histograms } from "./histogram";
 import { TimeSlice } from "./temporal";
 import { RecordType } from "./feature";
 
@@ -36,12 +36,6 @@ export interface VisualizationMetadata {
   };
 }
 
-export interface Histograms {
-  [recordType: string]: {
-    base: Histogram;                    // Timeline for this recordType (all periods)
-    tags: Record<string, Histogram>;   // Timeline for this recordType+tag (all periods)
-  }
-}
 
 export interface VisualizationData {
   heatmaps: HeatmapResolutions;
