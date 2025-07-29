@@ -132,7 +132,52 @@ export function generateAllHistogramsFromHeatmapTimeline(
       histograms[recordType].tags[tag].totalFeatures = tagBins.reduce((sum: number, b: HistogramBin) => sum + b.count, 0);
     }
     
-    console.log(`✅ Generated histograms for ${recordType}: base (${histograms[recordType].base.totalFeatures} features), ${tags.length} tags`);
+    // Process tag combinations (keys with '+' separator)
+    let combinationCount = 0;
+    for (const timeSlice of timeSlices) {
+      const timeSliceData = heatmapTimeline[timeSlice.key];
+      
+      if (timeSliceData && timeSliceData[recordType] && timeSliceData[recordType].tags) {
+        const allTagKeys = Object.keys(timeSliceData[recordType].tags);
+        const combinationKeys = allTagKeys.filter(key => key.includes('+'));
+        
+        for (const comboKey of combinationKeys) {
+          // Initialize combination histogram if not exists
+          if (!histograms[recordType].tags[comboKey]) {
+            histograms[recordType].tags[comboKey] = createEmptyHistogramStructure(timeSlices);
+            combinationCount++;
+          }
+          
+          const comboData = timeSliceData[recordType].tags[comboKey];
+          let totalCount = 0;
+          
+          // Sum up all counts from the combination heatmap's countArray
+          if (comboData && comboData.countArray) {
+            totalCount = comboData.countArray.reduce(
+              (sum: number, count: number) => sum + count, 0
+            );
+          }
+          
+          // Find the bin for this time slice and update count
+          const bin = histograms[recordType].tags[comboKey].bins.find(
+            (b: HistogramBin) => b.timeSlice.key === timeSlice.key
+          );
+          if (bin) {
+            bin.count = totalCount;
+          }
+        }
+      }
+    }
+    
+    // Calculate metadata for all tag combinations
+    const allCombinations = Object.keys(histograms[recordType].tags).filter(key => key.includes('+'));
+    for (const comboKey of allCombinations) {
+      const comboBins = histograms[recordType].tags[comboKey].bins;
+      histograms[recordType].tags[comboKey].maxCount = Math.max(...comboBins.map((b: HistogramBin) => b.count), 0);
+      histograms[recordType].tags[comboKey].totalFeatures = comboBins.reduce((sum: number, b: HistogramBin) => sum + b.count, 0);
+    }
+    
+    console.log(`✅ Generated histograms for ${recordType}: base (${histograms[recordType].base.totalFeatures} features), ${tags.length} individual tags, ${combinationCount} combinations`);
   }
   
   console.log(`✅ Generated complete histogram collection for ${recordTypes.length} recordTypes and ${tags.length} tags`);
