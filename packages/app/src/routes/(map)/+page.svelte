@@ -28,6 +28,8 @@
 	let tags = $derived(data?.tags);
 	let histogram = $derived(data?.histogram?.histogram);
 
+	$inspect("RECS ", currentRecordTypes);
+
 	const controller = createMapController();	
 	let currentPeriod = $derived(controller.currentPeriod);
 	let selectedCellId = $derived(controller.selectedCellId);

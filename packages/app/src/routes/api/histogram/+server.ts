@@ -10,12 +10,18 @@ export const GET: RequestHandler = async ({ url }) => {
     const recordTypesParam = url.searchParams.get('recordTypes');
     const tagsParam = url.searchParams.get('tags');
     
-    // Parse recordTypes (no validation - accept discovered recordTypes from data)
-    if (!recordTypesParam) {
-      return error(400, { message: 'recordTypes parameter is required' });
-    }
+    // Get API service to access metadata for defaulting
+    const apiService = await getApiService();
     
-    const recordTypes = recordTypesParam.split(',').map(t => t.trim()) as RecordType[];
+    // Parse recordTypes - default to all available recordTypes if none specified
+    let recordTypes: RecordType[];
+    if (!recordTypesParam) {
+      const metadata = await apiService.getVisualizationMetadata();
+      recordTypes = metadata.recordTypes;
+      console.log(`📊 No recordTypes specified, defaulting to all: ${recordTypes.join(', ')}`);
+    } else {
+      recordTypes = recordTypesParam.split(',').map(t => t.trim()) as RecordType[];
+    }
 
     // Parse tags if provided
     let tags: string[] | undefined;
@@ -26,7 +32,6 @@ export const GET: RequestHandler = async ({ url }) => {
     console.log(`📊 Histogram API request - recordTypes: ${recordTypes.join(', ')}, tags: ${tags?.join(', ') || 'none'}`);
 
     // Get histogram from service
-    const apiService = await getApiService();
     const response = await apiService.getHistogram(recordTypes, tags);
 
     // Set appropriate cache headers
@@ -40,29 +45,12 @@ export const GET: RequestHandler = async ({ url }) => {
       return json<HistogramApiResponse>(response, { headers });
     } else {
       console.error(`❌ Histogram API error: ${response.message}`);
-      return json(response, { status: 500, headers });
+      return error(500, { message: response.message || 'Failed to load histogram data' });
     }
 
   } catch (err) {
     console.error('❌ Histogram API unexpected error:', err);
-    
-    return json<HistogramApiResponse>({
-      histogram: {
-        bins: [],
-        maxCount: 0,
-        timeRange: { start: '', end: '' },
-        totalFeatures: 0
-      },
-      recordTypes: recordTypes || [],
-      tags,
-      success: false,
-      message: err instanceof Error ? err.message : 'Internal server error'
-    }, { 
-      status: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
+    return error(500, { message: err instanceof Error ? err.message : 'Internal server error' });
   }
 };
 

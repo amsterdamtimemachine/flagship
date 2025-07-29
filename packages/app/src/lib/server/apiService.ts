@@ -65,13 +65,21 @@ export class VisualizationApiService {
 
   /**
    * Get histogram for specific recordTypes and optional tags
+   * If no recordTypes provided, defaults to all available recordTypes
    */
-  async getHistogram(recordTypes: RecordType[], tags?: string[]): Promise<HistogramApiResponse> {
+  async getHistogram(recordTypes?: RecordType[], tags?: string[]): Promise<HistogramApiResponse> {
     const startTime = Date.now();
 
     try {
       await this.initialize();
 
+      // Default to all recordTypes if none provided
+      if (!recordTypes || recordTypes.length === 0) {
+        const metadata = this.binaryHandler.getMetadata();
+        recordTypes = metadata.recordTypes;
+        console.log(`📊 No recordTypes specified, defaulting to all: ${recordTypes.join(', ')}`);
+      }
+      
       console.log(`📊 Fetching histogram for recordTypes: ${recordTypes.join(', ')}`);
       if (tags && tags.length > 0) {
         console.log(`🏷️ With tags: ${tags.join(', ')}`);
@@ -167,15 +175,23 @@ export class VisualizationApiService {
   }
 
   /**
-   * Get HeatmapTimeline for a specific recordType and optional tags
+   * Get HeatmapTimeline for specific recordTypes and optional tags
+   * If no recordTypes provided, defaults to all available recordTypes
    * Always returns all periods at single resolution (first available resolution)
    */
-  async getHeatmapTimeline(recordTypes: RecordType[], tags?: string[]): Promise<HeatmapTimelineApiResponse> {
+  async getHeatmapTimeline(recordTypes?: RecordType[], tags?: string[]): Promise<HeatmapTimelineApiResponse> {
     const startTime = Date.now();
 
     try {
       await this.initialize();
 
+      // Default to all recordTypes if none provided
+      if (!recordTypes || recordTypes.length === 0) {
+        const metadata = this.binaryHandler.getMetadata();
+        recordTypes = metadata.recordTypes;
+        console.log(`🔥 No recordTypes specified, defaulting to all: ${recordTypes.join(', ')}`);
+      }
+      
       console.log(`🔥 Fetching heatmap timeline for recordTypes: ${recordTypes.join(', ')}`);
       if (tags && tags.length > 0) {
         console.log(`🏷️ With tags: ${tags.join(', ')}`);
