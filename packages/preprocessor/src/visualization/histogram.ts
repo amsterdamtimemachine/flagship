@@ -138,24 +138,3 @@ export function generateAllHistogramsFromHeatmapTimeline(
   console.log(`✅ Generated complete histogram collection for ${recordTypes.length} recordTypes and ${tags.length} tags`);
   return histograms;
 }
-
-/**
- * Helper function to create empty histogram structure with proper bins
- */
-function createEmptyHistogramStructure(timeSlices: TimeSlice[]): Histogram {
-  const bins = timeSlices
-    .sort((a, b) => a.startYear - b.startYear)
-    .map(timeSlice => createEmptyHistogramBin(timeSlice));
-  
-  const timeRange = timeSlices.length > 0 ? {
-    start: timeSlices[0].timeRange.start,
-    end: timeSlices[timeSlices.length - 1].timeRange.end
-  } : { start: '', end: '' };
-  
-  return {
-    bins,
-    maxCount: 0,
-    timeRange,
-    totalFeatures: 0
-  };
-}

@@ -27,7 +27,7 @@ import type {
 
 async function main() {
   // Configuration - read at runtime to allow test overrides
-  const OUTPUT_PATH = process.env.OUTPUT_PATH;
+  const OUTPUT_PATH = process.env.OUTPUT_PATH || './visualization.bin';
   
   console.log('🔍 Starting Amsterdam Time Machine Discovery-Based Binary Generation');
   console.log(`Output path: ${OUTPUT_PATH}`);
@@ -79,14 +79,16 @@ async function main() {
     ];
     console.log(`Resolutions: ${resolutions.map(r => `${r.cols}x${r.rows}`).join(', ')}`);
 
-    // Generate heatmap resolutions with discovery
-    console.log('\nGenerating heatmap resolutions with discovery...');
+    // Generate heatmap resolutions with discovery and tag combinations
+    const maxTagCombinations = 2; // Configuration: limit to 2-tag combinations
+    console.log(`\nGenerating heatmap resolutions with discovery (max ${maxTagCombinations} tag combinations)...`);
     const { heatmapResolutions, globalVocabulary } = await generateHeatmapResolutionsWithDiscovery(
       config.database,
       bounds,
       config.chunking,
       resolutions,
-      timeSlices
+      timeSlices,
+      maxTagCombinations
     );
 
     console.log(`Generated ${Object.keys(heatmapResolutions).length} heatmap resolutions`);

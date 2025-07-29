@@ -25,8 +25,10 @@ export interface DiscoveryChunkResult {
 }
 
 /**
- * Enhanced accumulator that includes vocabulary tracking
+ * Enhanced accumulator that includes vocabulary tracking and tag combinations
  */
 export interface DiscoveryHeatmapAccumulator extends HeatmapAccumulator {
   vocabulary: VocabularyTracker;
+  maxTagCombinations: number;
+  tagCombinationStats: Map<string, number>; // Track how many features each combination has
 }

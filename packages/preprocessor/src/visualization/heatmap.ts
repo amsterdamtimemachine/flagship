@@ -158,17 +158,58 @@ export function createTimeSlices(periods: Array<{ start: number; end: number }>)
 }
 
 /**
- * Create empty discovery accumulator
+ * Generate all tag combinations up to maxLength
  */
-export function createDiscoveryHeatmapAccumulator(heatmapDimensions: HeatmapDimensions): DiscoveryHeatmapAccumulator {
+export function generateTagCombinations(tags: string[], maxLength: number): string[][] {
+  const combinations: string[][] = [];
+  
+  // Generate combinations of length 2 to maxLength
+  for (let length = 2; length <= Math.min(maxLength, tags.length); length++) {
+    const combos = getCombinations(tags, length);
+    combinations.push(...combos);
+  }
+  
+  return combinations;
+}
+
+/**
+ * Get combinations of specific length (helper function)
+ */
+function getCombinations(arr: string[], length: number): string[][] {
+  if (length === 1) return arr.map(item => [item]);
+  if (length > arr.length) return [];
+  
+  const result: string[][] = [];
+  
+  for (let i = 0; i <= arr.length - length; i++) {
+    const head = arr[i];
+    const tailCombos = getCombinations(arr.slice(i + 1), length - 1);
+    for (const combo of tailCombos) {
+      result.push([head, ...combo]);
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Create empty discovery accumulator with tag combinations support
+ */
+export function createDiscoveryHeatmapAccumulator(
+  heatmapDimensions: HeatmapDimensions, 
+  maxTagCombinations: number = 2
+): DiscoveryHeatmapAccumulator {
   return {
     cellCounts: {
       base: new Map(),
-      tags: new Map()
+      tags: new Map(),
+      tagCombinations: new Map()
     },
     heatmapDimensions: heatmapDimensions,
     collectedTags: new Set(),
-    vocabulary: createVocabularyTracker()
+    vocabulary: createVocabularyTracker(),
+    maxTagCombinations,
+    tagCombinationStats: new Map()
   };
 }
 
@@ -218,6 +259,35 @@ export function processFeatureIntoDiscoveryCounts(
     const recordTypeTagCounts = tagCounts.get(recordType)!;
     recordTypeTagCounts.set(cellId, (recordTypeTagCounts.get(cellId) || 0) + 1);
   }
+  
+  // Process tag combinations if feature has multiple tags
+  if (feature.tags.length >= 2) {
+    const tagCombinations = generateTagCombinations(feature.tags, accumulator.maxTagCombinations);
+    
+    for (const combination of tagCombinations) {
+      const comboKey = combination.sort().join('+'); // e.g., "politics+economy"
+      
+      // Track combination statistics
+      accumulator.tagCombinationStats.set(
+        comboKey, 
+        (accumulator.tagCombinationStats.get(comboKey) || 0) + 1
+      );
+      
+      // Initialize combination structure if needed
+      if (!accumulator.cellCounts.tagCombinations.has(comboKey)) {
+        accumulator.cellCounts.tagCombinations.set(comboKey, new Map());
+      }
+      
+      const comboCounts = accumulator.cellCounts.tagCombinations.get(comboKey)!;
+      if (!comboCounts.has(recordType)) {
+        comboCounts.set(recordType, new Map());
+      }
+      
+      // Increment combination count - this is the TRUE intersection!
+      const recordTypeComboCounts = comboCounts.get(recordType)!;
+      recordTypeComboCounts.set(cellId, (recordTypeComboCounts.get(cellId) || 0) + 1);
+    }
+  }
 }
 
 /**
@@ -228,7 +298,8 @@ export async function accumulateCountsWithDiscovery(
   bounds: HeatmapCellBounds,
   chunkConfig: ChunkingConfig,
   resolutionConfigs: HeatmapResolutionConfig[],
-  timeSlice: TimeSlice
+  timeSlice: TimeSlice,
+  maxTagCombinations: number = 2
 ): Promise<{ accumulators: Map<string, DiscoveryHeatmapAccumulator>; globalVocabulary: VocabularyTracker }> {
   
   // Create accumulators for each resolution
@@ -248,7 +319,7 @@ export async function accumulateCountsWithDiscovery(
       maxLat: bounds.maxLat
     };
     
-    accumulators.set(resolutionKey, createDiscoveryHeatmapAccumulator(heatmapDimensions));
+    accumulators.set(resolutionKey, createDiscoveryHeatmapAccumulator(heatmapDimensions, maxTagCombinations));
   }
   
   console.log(`🔍 Discovery accumulating counts for period: ${timeSlice.label} across ${resolutionConfigs.length} resolutions`);
@@ -292,7 +363,8 @@ export async function generateHeatmapResolutionsWithDiscovery(
   bounds: HeatmapCellBounds,
   chunkConfig: ChunkingConfig,
   resolutionConfigs: HeatmapResolutionConfig[],
-  timeSlices: TimeSlice[]
+  timeSlices: TimeSlice[],
+  maxTagCombinations: number = 2
 ): Promise<{ heatmapResolutions: HeatmapResolutions; globalVocabulary: VocabularyTracker }> {
   
   const result: HeatmapResolutions = {};
@@ -315,7 +387,8 @@ export async function generateHeatmapResolutionsWithDiscovery(
       bounds,
       chunkConfig,
       resolutionConfigs,
-      timeSlice
+      timeSlice,
+      maxTagCombinations
     );
     
     // Merge slice vocabulary into global vocabulary
@@ -345,6 +418,27 @@ export async function generateHeatmapResolutionsWithDiscovery(
           const tagCounts = accumulator.cellCounts.tags.get(tag)?.get(recordType) || new Map();
           result[resolutionKey][timeSlice.key][recordType].tags[tag] = generateHeatmap(tagCounts, accumulator.heatmapDimensions);
         }
+        
+        // Generate tag combination heatmaps
+        for (const [comboKey, comboRecordTypeCounts] of accumulator.cellCounts.tagCombinations) {
+          const comboCounts = comboRecordTypeCounts.get(recordType) || new Map();
+          
+          // Only generate if there are actual features with this combination
+          if (comboCounts.size > 0) {
+            result[resolutionKey][timeSlice.key][recordType].tags[comboKey] = generateHeatmap(comboCounts, accumulator.heatmapDimensions);
+          }
+        }
+      }
+    }
+    
+    // Log tag combination statistics for this time slice
+    for (const [resolutionKey, accumulator] of accumulators) {
+      if (accumulator.tagCombinationStats.size > 0) {
+        console.log(`📊 Time slice ${timeSlice.key} - Tag combination stats:`, 
+          Array.from(accumulator.tagCombinationStats.entries())
+            .sort((a, b) => b[1] - a[1]) // Sort by count descending
+            .slice(0, 10) // Show top 10
+        );
       }
     }
   }
