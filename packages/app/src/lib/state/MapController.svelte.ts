@@ -55,6 +55,12 @@ export function createMapController() {
 		goto(url.pathname + url.search);
 	}
 
+	function setTags(newTags: string[]) {
+		// Placeholder function for tags filtering
+		// TODO: Implement tags URL parameter handling and navigation
+		console.log('Tags changed:', newTags);
+	}
+
 	/**
 	 * Syncs URL parameters with current state after navigation is complete.
 	 * Should be called from afterNavigate hook in page component.
@@ -142,6 +148,7 @@ export function createMapController() {
 		initialize,
 		setPeriod,
 		setRecordType,
+		setTags,
 		syncUrlParameters,
 		selectCell,
 		clearErrors,

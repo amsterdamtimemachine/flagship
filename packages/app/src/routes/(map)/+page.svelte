@@ -22,11 +22,15 @@
 	// Derived data from server
 	let dimensions = $derived(data?.metadata?.heatmapDimensions);
 	let recordTypes = $derived(data?.metadata?.recordTypes);
+	let availableTags = $derived(data?.metadata?.tags);
 	let heatmapTimeline = $derived(data?.heatmapTimeline?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
 	let currentRecordTypes = $derived(data?.currentRecordTypes);
 	let tags = $derived(data?.tags);
 	let histogram = $derived(data?.histogram?.histogram);
+
+	// Local state for tags (not URL-driven yet)
+	let currentTags = $state<string[]>([]);
 
 	$inspect("RECS ", currentRecordTypes);
 
@@ -151,6 +155,11 @@
 		controller.setRecordType(recordTypes);
 	}
 
+	function handleTagsChange(tags: string[]) {
+		currentTags = tags;
+		controller.setTags(tags);
+	}
+
 	// Handle cell selection from map
 	function handleCellClick(cellId: string | null) {
 		if (cellId && heatmapBlueprint) {
@@ -183,6 +192,7 @@
 <div class="relative flex flex-col w-screen h-screen">
 	<div class="relative flex-1">
 		<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} class="absolute z-50 top-5 left-5"/>
+		<ToggleGroup items={availableTags} selectedItems={currentTags} onItemSelected={handleTagsChange} class="absolute z-50 top-20 left-5"/>
 		{#if currentHeatmap && heatmapBlueprint && dimensions}
 			<Map
 				heatmap={currentHeatmap}
