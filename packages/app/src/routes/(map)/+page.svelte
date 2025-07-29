@@ -56,8 +56,8 @@
 			
 			if (needsMerging) {
 				// Merge entire timeline for smooth navigation
-				const selectedTag = currentTags && currentTags.length > 0 ? currentTags[0] : undefined;
-				return mergeHeatmapTimeline(timelineData, effectiveRecordTypes, selectedTag, heatmapBlueprint);
+				const selectedTags = currentTags && currentTags.length > 0 ? currentTags : undefined;
+				return mergeHeatmapTimeline(timelineData, effectiveRecordTypes, selectedTags, heatmapBlueprint);
 			} else {
 				// Single recordType, no tags - use original timeline
 				return timelineData;
@@ -73,8 +73,8 @@
 				? currentRecordTypes 
 				: recordTypes;
 			
-			// Determine selected tag if any
-			const selectedTag = currentTags && currentTags.length > 0 ? currentTags[0] : undefined;
+			// Determine selected tags if any
+			const selectedTags = currentTags && currentTags.length > 0 ? currentTags : undefined;
 			
 			// Collect histograms to merge
 			const histogramsToMerge = [];
@@ -82,9 +82,12 @@
 			for (const recordType of effectiveRecordTypes) {
 				const recordTypeData = histograms[recordType];
 				if (recordTypeData) {
-					if (selectedTag && recordTypeData.tags[selectedTag]) {
-						// Use tag-specific histogram
-						histogramsToMerge.push(recordTypeData.tags[selectedTag]);
+					if (selectedTags && selectedTags.length > 0) {
+						// Use tag combination or individual tag histogram
+						const tagKey = selectedTags.length > 1 ? selectedTags.sort().join('+') : selectedTags[0];
+						if (recordTypeData.tags[tagKey]) {
+							histogramsToMerge.push(recordTypeData.tags[tagKey]);
+						}
 					} else if (recordTypeData.base) {
 						// Use base histogram
 						histogramsToMerge.push(recordTypeData.base);

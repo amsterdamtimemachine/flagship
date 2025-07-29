@@ -45,6 +45,18 @@ export class VisualizationApiService {
                 base: recordTypeData.tags[tag],
                 tags: { [tag]: recordTypeData.tags[tag] }
               };
+            } else {
+              // Tag doesn't exist - create empty heatmap with same structure as base
+              const baseHeatmap = recordTypeData.base;
+              const emptyHeatmap = {
+                countArray: new Array(baseHeatmap.countArray.length).fill(0),
+                densityArray: new Array(baseHeatmap.densityArray.length).fill(0)
+              };
+              
+              filteredTimeSlice[recordType] = {
+                base: emptyHeatmap,
+                tags: { [tag]: emptyHeatmap }
+              };
             }
           } else {
             // Use full recordType data (base + all tags)
@@ -108,16 +120,56 @@ export class VisualizationApiService {
           const tagHistograms = histograms[recordType].tags;
           
           if (!tagHistograms[tag]) {
-            throw new Error(`Tag "${tag}" not found for recordType "${recordType}"`);
+            // Tag doesn't exist - create empty histogram with same structure as base
+            const baseHistogram = histograms[recordType].base;
+            const emptyHistogram = {
+              bins: baseHistogram.bins.map(bin => ({
+                timeSlice: bin.timeSlice,
+                count: 0
+              })),
+              maxCount: 0,
+              timeRange: baseHistogram.timeRange,
+              totalFeatures: 0
+            };
+            
+            histogramData[recordType] = {
+              base: histograms[recordType].base,
+              tags: { [tag]: emptyHistogram }
+            };
+          } else {
+            histogramData[recordType] = {
+              base: histograms[recordType].base,
+              tags: { [tag]: tagHistograms[tag] }
+            };
           }
-          
-          histogramData[recordType] = {
-            base: histograms[recordType].base,
-            tags: { [tag]: tagHistograms[tag] }
-          };
         } else {
-          // Multiple tags - not implemented yet
-          throw new Error("Multiple tags filtering not yet implemented");
+          // Multiple tags - use combination key
+          const comboKey = tags.sort().join('+');
+          const tagHistograms = histograms[recordType].tags;
+          
+          if (!tagHistograms[comboKey]) {
+            // Combination doesn't exist - create empty histogram with same structure as base
+            const baseHistogram = histograms[recordType].base;
+            const emptyHistogram = {
+              bins: baseHistogram.bins.map(bin => ({
+                timeSlice: bin.timeSlice,
+                count: 0
+              })),
+              maxCount: 0,
+              timeRange: baseHistogram.timeRange,
+              totalFeatures: 0
+            };
+            
+            histogramData[recordType] = {
+              base: histograms[recordType].base,
+              tags: { [comboKey]: emptyHistogram }
+            };
+          } else {
+            histogramData[recordType] = {
+              base: histograms[recordType].base,
+              tags: { [comboKey]: tagHistograms[comboKey] }
+            };
+          }
         }
       }
       
@@ -211,14 +263,17 @@ export class VisualizationApiService {
         const tag = tags[0];
         resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, recordTypes, tag);
         
-        if (Object.keys(resultTimeline).length === 0) {
-          throw new Error(`Tag "${tag}" not found for recordTypes "${recordTypes.join(', ')}" in any time period`);
-        }
+        // No need to throw error - empty timeline is valid (shows empty visualization)
         
         console.log(`🏷️ Returning tag-filtered timeline for "${tag}": ${Object.keys(resultTimeline).length} periods`);
       } else {
-        // Multiple tags - not implemented yet
-        throw new Error("Multiple tags filtering not yet implemented");
+        // Multiple tags - use combination key
+        const comboKey = tags.sort().join('+');
+        resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, recordTypes, comboKey);
+        
+        // No need to throw error - empty timeline is valid (shows empty visualization)
+        
+        console.log(`🏷️ Returning tag-combination-filtered timeline for "${comboKey}": ${Object.keys(resultTimeline).length} periods`);
       }
 
       const processingTime = Date.now() - startTime;
