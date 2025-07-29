@@ -22,17 +22,12 @@
 	// Derived data from server
 	let dimensions = $derived(data?.metadata?.heatmapDimensions);
 	let recordTypes = $derived(data?.metadata?.recordTypes);
-	let availableTags = $derived(data?.metadata?.tags);
+	let tags = $derived(data?.metadata?.tags);
 	let heatmapTimeline = $derived(data?.heatmapTimeline?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
 	let currentRecordTypes = $derived(data?.currentRecordTypes);
-	let tags = $derived(data?.tags);
-	let histogram = $derived(data?.histogram?.histogram);
-
-	// Local state for tags (not URL-driven yet)
-	let currentTags = $state<string[]>([]);
-
-	$inspect("RECS ", currentRecordTypes);
+	let currentTags = $derived(data?.currentTags);
+	let histograms = $derived(data?.histogram?.histograms);
 
 	const controller = createMapController();	
 	let currentPeriod = $derived(controller.currentPeriod);
@@ -57,11 +52,11 @@
 			
 			const timelineData = heatmapTimeline?.heatmapTimeline || heatmapTimeline;
 			
-			const needsMerging = effectiveRecordTypes.length > 1 || (tags && tags.length > 0);
+			const needsMerging = effectiveRecordTypes.length > 1 || (currentTags && currentTags.length > 0);
 			
 			if (needsMerging) {
 				// Merge entire timeline for smooth navigation
-				const selectedTag = tags && tags.length > 0 ? tags[0] : undefined;
+				const selectedTag = currentTags && currentTags.length > 0 ? currentTags[0] : undefined;
 				return mergeHeatmapTimeline(timelineData, effectiveRecordTypes, selectedTag, heatmapBlueprint);
 			} else {
 				// Single recordType, no tags - use original timeline
@@ -71,9 +66,41 @@
 		return null;
 	});
 
-	// Use histogram directly since backend handles merging
-	// Note: Server-side histogram fetching already handles empty recordTypes as "all types"
-	let mergedHistogram = $derived(histogram);
+	let mergedHistogram = $derived.by(() => {
+		if (histograms && currentRecordTypes && recordTypes) {
+			// Empty selection = show all recordTypes (default behavior)
+			const effectiveRecordTypes = currentRecordTypes.length > 0 
+				? currentRecordTypes 
+				: recordTypes;
+			
+			// Determine selected tag if any
+			const selectedTag = currentTags && currentTags.length > 0 ? currentTags[0] : undefined;
+			
+			// Collect histograms to merge
+			const histogramsToMerge = [];
+			
+			for (const recordType of effectiveRecordTypes) {
+				const recordTypeData = histograms[recordType];
+				if (recordTypeData) {
+					if (selectedTag && recordTypeData.tags[selectedTag]) {
+						// Use tag-specific histogram
+						histogramsToMerge.push(recordTypeData.tags[selectedTag]);
+					} else if (recordTypeData.base) {
+						// Use base histogram
+						histogramsToMerge.push(recordTypeData.base);
+					}
+				}
+			}
+			
+			if (histogramsToMerge.length === 0) {
+				return null;
+			}
+			
+			// Merge histograms on client side
+			return mergeHistograms(histogramsToMerge);
+		}
+		return null;
+	});
 
 	// Get current heatmap - just pick from pre-merged timeline
 	let currentHeatmap = $derived.by(() => {
@@ -156,7 +183,6 @@
 	}
 
 	function handleTagsChange(tags: string[]) {
-		currentTags = tags;
 		controller.setTags(tags);
 	}
 
@@ -192,7 +218,7 @@
 <div class="relative flex flex-col w-screen h-screen">
 	<div class="relative flex-1">
 		<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} class="absolute z-50 top-5 left-5"/>
-		<ToggleGroup items={availableTags} selectedItems={currentTags} onItemSelected={handleTagsChange} class="absolute z-50 top-20 left-5"/>
+		<ToggleGroup items={tags} selectedItems={currentTags} onItemSelected={handleTagsChange} class="absolute z-50 top-20 left-5"/>
 		{#if currentHeatmap && heatmapBlueprint && dimensions}
 			<Map
 				heatmap={currentHeatmap}

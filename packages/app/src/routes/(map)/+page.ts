@@ -114,15 +114,33 @@ export const load: PageLoad = async ({ fetch, url }) => {
   }
   
   // Parse tags if provided
-  let tags: string[] | undefined;
-  if (tagsParam) {
-    tags = tagsParam.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+  let currentTags: string[] | undefined;
+
+  if (metadata?.tags) {
+    // Handle recordTypes parameter
+    if (tagsParam) {
+      const requestedTags = tagsParam.split(',').map(t => t.trim()) as string[];
+      const validTags = requestedTags.filter(tag => metadata.tags.includes(tag));
+      
+      if (validTags.length > 0) {
+        currentTags = validTags;
+      } else {
+        // Add validation error for invalid tags 
+        errors.push(createValidationError(
+          'tags',
+          tagsParam,
+          `Must contain at least one of: ${metadata.tags.join(', ')}`
+        ));
+      }
+    } 
   }
+
+
    
   // Histogram promise
   const histogramPromise = (async () => {
     try {  
-      const histogramUrl = `/api/histogram${currentRecordTypes.length > 0 ? `?recordTypes=${currentRecordTypes.join(',')}` : ''}${tags ? `${currentRecordTypes.length > 0 ? '&' : '?'}tags=${tags.join(',')}` : ''}` || '/api/histogram';
+      const histogramUrl = `/api/histogram${currentRecordTypes.length > 0 ? `?recordTypes=${currentRecordTypes.join(',')}` : ''}${currentTags ? `${currentRecordTypes.length > 0 ? '&' : '?'}tags=${currentTags.join(',')}` : ''}` || '/api/histogram';
       const histogramResponse = await fetch(histogramUrl);
       
       if (!histogramResponse.ok) {
@@ -142,7 +160,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
           'warning',
           'Histogram Load Failed',
           errorMessage,
-          { recordTypes: currentRecordTypes, tags, status: histogramResponse.status }
+          { recordTypes: currentRecordTypes, tags: currentTags, status: histogramResponse.status }
         ));
       } else {
         const histogramData = await histogramResponse.json() as HistogramApiResponse;
@@ -158,7 +176,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
         'Could not load histogram data. The map will still function but temporal data may be limited.',
         { 
           recordTypes: currentRecordTypes,
-          tags,
+          tags: currentTags,
           error: err instanceof Error ? err.message : 'Unknown error'
         }
       ));
@@ -168,7 +186,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
   // Heatmap timeline promise
   const heatmapPromise = (async () => {
     try {
-      const heatmapUrl = `/api/heatmaps${currentRecordTypes.length > 0 ? `?recordTypes=${currentRecordTypes.join(',')}` : ''}${tags ? `${currentRecordTypes.length > 0 ? '&' : '?'}tags=${tags.join(',')}` : ''}` || '/api/heatmaps';
+      const heatmapUrl = `/api/heatmaps${currentRecordTypes.length > 0 ? `?recordTypes=${currentRecordTypes.join(',')}` : ''}${currentTags ? `${currentRecordTypes.length > 0 ? '&' : '?'}tags=${currentTags.join(',')}` : ''}` || '/api/heatmaps';
       const heatmapResponse = await fetch(heatmapUrl);
       
       if (!heatmapResponse.ok) {
@@ -188,7 +206,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
           'warning',
           'Heatmap Load Failed',
           errorMessage,
-          { recordTypes: currentRecordTypes, tags, status: heatmapResponse.status }
+          { recordTypes: currentRecordTypes, tags: currentTags, status: heatmapResponse.status }
         ));
       } else {
         const heatmapData = await heatmapResponse.json() as HeatmapTimelineApiResponse;
@@ -204,7 +222,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
         'Could not load heatmap timeline. Spatial visualization may be limited.',
         { 
           recordTypes: currentRecordTypes,
-          tags,
+          tags: currentTags,
           error: err instanceof Error ? err.message : 'Unknown error'
         }
       ));
@@ -220,7 +238,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
     histogram,
     heatmapTimeline,
     currentRecordTypes,
-    tags,
+    currentTags,
     errorData: createPageErrorData(errors)
   };
 };

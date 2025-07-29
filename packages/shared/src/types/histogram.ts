@@ -68,10 +68,12 @@ export interface HistogramCollection {
 }
 
 /**
- * API response format
+ * API response format - updated for client-side merging
  */
 export interface HistogramApiResponse {
-  histogram: Histogram;
+  histograms: Histograms;
+  recordTypes: RecordType[];
+  tags?: string[];
   success: boolean;
   message?: string;
   processingTime?: number;

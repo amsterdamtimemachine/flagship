@@ -41,7 +41,8 @@ export const GET: RequestHandler = async ({ url }) => {
     };
 
     if (response.success) {
-      console.log(`✅ Histogram API success - ${response.histogram.totalFeatures} features, ${response.histogram.bins.length} periods`);
+      const recordTypeCount = Object.keys(response.histograms).length;
+      console.log(`✅ Histogram API success - raw data for ${recordTypeCount} recordTypes`);
       return json<HistogramApiResponse>(response, { headers });
     } else {
       console.error(`❌ Histogram API error: ${response.message}`);

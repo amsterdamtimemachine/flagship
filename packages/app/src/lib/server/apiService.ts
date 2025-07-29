@@ -7,7 +7,6 @@ import type {
   HeatmapTimelineApiResponse,
 } from "@atm/shared/types";
 import { VisualizationBinaryHandler } from "./binaryHandler";
-import { mergeHistograms } from "../utils/histogram";
 
 export class VisualizationApiService {
   private binaryHandler: VisualizationBinaryHandler;
@@ -80,7 +79,7 @@ export class VisualizationApiService {
         console.log(`📊 No recordTypes specified, defaulting to all: ${recordTypes.join(', ')}`);
       }
       
-      console.log(`📊 Fetching histogram for recordTypes: ${recordTypes.join(', ')}`);
+      console.log(`📊 Fetching histogram data for recordTypes: ${recordTypes.join(', ')}`);
       if (tags && tags.length > 0) {
         console.log(`🏷️ With tags: ${tags.join(', ')}`);
       }
@@ -93,18 +92,18 @@ export class VisualizationApiService {
         throw new Error(`RecordTypes "${missingTypes.join(', ')}" not found in histograms data`);
       }
 
-      let histogram: Histogram;
-
-      if (recordTypes.length === 1) {
-        // Single recordType - return directly without merging
-        const recordType = recordTypes[0];
-        
+      // Return raw histogram data for client-side merging
+      const histogramData: { [key: string]: any } = {};
+      
+      for (const recordType of recordTypes) {
         if (!tags || tags.length === 0) {
-          // Return base histogram
-          histogram = histograms[recordType].base;
-          console.log(`📈 Returning base histogram for "${recordType}": ${histogram.totalFeatures} total features`);
+          // Include base histogram
+          histogramData[recordType] = {
+            base: histograms[recordType].base,
+            tags: histograms[recordType].tags
+          };
         } else if (tags.length === 1) {
-          // Single tag - return specific tag histogram
+          // Include specific tag histogram
           const tag = tags[0];
           const tagHistograms = histograms[recordType].tags;
           
@@ -112,42 +111,22 @@ export class VisualizationApiService {
             throw new Error(`Tag "${tag}" not found for recordType "${recordType}"`);
           }
           
-          histogram = tagHistograms[tag];
-          console.log(`📈 Returning tag histogram for "${recordType}" with tag "${tag}": ${histogram.totalFeatures} total features`);
+          histogramData[recordType] = {
+            base: histograms[recordType].base,
+            tags: { [tag]: tagHistograms[tag] }
+          };
         } else {
           // Multiple tags - not implemented yet
           throw new Error("Multiple tags filtering not yet implemented");
         }
-      } else {
-        // Multiple recordTypes - merge histograms
-        if (!tags || tags.length === 0) {
-          // Merge base histograms for all recordTypes
-          const baseHistograms = recordTypes.map(type => histograms[type].base)
-          histogram = mergeHistograms(baseHistograms);
-          console.log(`📈 Returning merged base histogram: ${histogram.totalFeatures} total features`);
-        } else if (tags.length === 1) {
-          // Single tag - merge specific tag histograms if available
-          const tag = tags[0];
-          const tagHistograms = recordTypes.map(type => {
-            const typeTagHistograms = histograms[type].tags;
-            if (!typeTagHistograms[tag]) {
-              throw new Error(`Tag "${tag}" not found for recordType "${type}"`);
-            }
-            return typeTagHistograms[tag];
-          });
-          
-          histogram = mergeHistograms(tagHistograms);
-          console.log(`📈 Returning merged tag histogram for "${tag}": ${histogram.totalFeatures} total features`);
-        } else {
-          // Multiple tags - for now, return error as we don't have intersection logic
-          throw new Error("Multiple tags filtering not yet implemented");
-        }
       }
+      
+      console.log(`📊 Returning raw histogram data for ${recordTypes.length} recordTypes`);
 
       const processingTime = Date.now() - startTime;
 
       return {
-        histogram: this.binaryHandler.prepareForJsonResponse(histogram),
+        histograms: this.binaryHandler.prepareForJsonResponse(histogramData),
         recordTypes,
         tags,
         success: true,
@@ -159,12 +138,7 @@ export class VisualizationApiService {
       console.error(`❌ Failed to get histogram:`, error);
 
       return {
-        histogram: {
-          bins: [],
-          maxCount: 0,
-          timeRange: { start: '', end: '' },
-          totalFeatures: 0
-        },
+        histograms: {},
         recordTypes,
         tags,
         success: false,

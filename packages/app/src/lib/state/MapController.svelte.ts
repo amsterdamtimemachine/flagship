@@ -56,9 +56,18 @@ export function createMapController() {
 	}
 
 	function setTags(newTags: string[]) {
-		// Placeholder function for tags filtering
-		// TODO: Implement tags URL parameter handling and navigation
-		console.log('Tags changed:', newTags);
+		if (!browser) return;
+		
+		const url = new URL(window.location.href);
+		// Update tags parameter
+		if (newTags.length > 0) {
+			url.searchParams.set('tags', newTags.join(','));
+		} else {
+			url.searchParams.delete('tags');
+		}
+
+		// Navigate to new URL to trigger data refetch
+		goto(url.pathname + url.search);
 	}
 
 	/**
