@@ -60,16 +60,16 @@ export const load: PageLoad = async ({ fetch, url }) => {
         });
         
         // Debug: Check actual processing bounds
-        console.log('🗺️ Processing bounds:', {
-          primaryResolution: {
-            minLon: metadata.heatmapDimensions.minLon,
-            maxLon: metadata.heatmapDimensions.maxLon,
-            minLat: metadata.heatmapDimensions.minLat,
-            maxLat: metadata.heatmapDimensions.maxLat,
-            cellWidth: metadata.heatmapDimensions.cellWidth,
-            cellHeight: metadata.heatmapDimensions.cellHeight
-          }
-        });
+       // console.log('🗺️ Processing bounds:', {
+       //   primaryResolution: {
+       //     minLon: metadata.heatmapDimensions.minLon,
+       //     maxLon: metadata.heatmapDimensions.maxLon,
+       //     minLat: metadata.heatmapDimensions.minLat,
+       //     maxLat: metadata.heatmapDimensions.maxLat,
+       //     cellWidth: metadata.heatmapDimensions.cellWidth,
+       //     cellHeight: metadata.heatmapDimensions.cellHeight
+       //   }
+       // });
         
         if (metadata.resolutionDimensions) {
           console.log('📐 Available resolutions:', metadata.resolutionDimensions);

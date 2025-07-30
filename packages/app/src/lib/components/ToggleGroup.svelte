@@ -25,15 +25,15 @@
 	} = createToggleGroup({
 		type,
 		defaultValue: type === 'single' ? selectedItems[0] : selectedItems,
-		orientation: orientation 
-	});
-
-	// Watch value store and call parent callback when it changes
-	$effect(() => {
-		if ($value !== selectedItems) {
-		  onItemSelected?.($value);
+		orientation: orientation,
+		onValueChange: ({_curr, next}) => {
+		  if(onItemSelected) {
+		    onItemSelected(next);
+		  }
+		  return next 
 		}
 	});
+
 </script>
 
 <div
