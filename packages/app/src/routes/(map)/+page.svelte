@@ -246,6 +246,7 @@
 					period={currentPeriod} 
 					bounds={selectedCellBounds}
 					recordTypes={currentRecordTypes}
+					tags={currentTags}
 					onClose={handleCellClose} 
 				/>
 			</div>

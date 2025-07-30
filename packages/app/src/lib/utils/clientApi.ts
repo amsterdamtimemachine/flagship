@@ -22,6 +22,7 @@ export async function fetchGeodataFromDatabase(
 		end_year: string;
 		page?: number;
 		recordTypes?: string[];
+		tags?: string[];
 		limit?: number;
 	},
 	fetchFn: FetchFunction = fetch
@@ -33,8 +34,9 @@ export async function fetchGeodataFromDatabase(
 	Object.entries(params).forEach(([key, value]) => {
 		if (value !== undefined) {
 			if (key === 'recordTypes' && Array.isArray(value)) {
-				// Join array values with comma and use correct parameter name
 				url.searchParams.set('recordtype', value.join(','));
+			} else if (key ==='tags' && Array.isArray(value)) {
+				url.searchParams.set('tags', value.join(','));
 			} else {
 				url.searchParams.set(key, value.toString());
 			}

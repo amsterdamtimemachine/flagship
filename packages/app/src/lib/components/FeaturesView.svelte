@@ -5,16 +5,18 @@
 	import { fetchGeodataFromDatabase } from '$utils/clientApi';
 	import { formatDate } from '$utils/utils';
 	import { loadingState } from '$lib/state/loadingState.svelte';
+	import type { RecordType } from '@atm/shared/types';
 	
 	interface Props {
 		cellId: string;
 		period: string;
 		bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number };
-		recordTypes: string[];
-		onClose?: () => void; // Optional close handler
+		recordTypes: RecordType[];
+		tags: string[];
+		onClose?: () => void; 
 	}
 	
-	let { cellId, period, bounds, recordTypes, onClose }: Props = $props();
+	let { cellId, period, bounds, recordTypes, tags, onClose }: Props = $props();
 	
 	// Cell data state
 	let allFeatures = $state<any[]>([]);
@@ -39,14 +41,15 @@
 			
 			// Build params for API call
 			const params = {
-				min_lat: bounds?.minLat ?? 1,
-				min_lon: bounds?.minLon ?? 1,
-				max_lat: bounds?.maxLat ?? 85,
-				max_lon: bounds?.maxLon ?? 85,
+				min_lat: bounds?.minLat,
+				min_lon: bounds?.minLon,
+				max_lat: bounds?.maxLat,
+				max_lon: bounds?.maxLon,
 				start_year: `${startYear}-01-01`,
 				end_year: `${endYear}-01-01`,
 				page,
-				recordTypes: recordTypes
+				recordTypes: recordTypes,
+				tags: tags,
 			};
 						
 			const response = await fetchGeodataFromDatabase(params);
@@ -123,9 +126,6 @@
 		if (onClose) {
 			// Use the passed close handler
 			onClose();
-		} else {
-			// Fallback: navigate back to period page
-			goto(`/?period=${period}${window.location.search.includes('&') ? '&' + window.location.search.split('&').slice(1).join('&') : ''}`);
 		}
 	}
 </script>
