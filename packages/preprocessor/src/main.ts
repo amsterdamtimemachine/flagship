@@ -80,7 +80,7 @@ async function main() {
     console.log(`Resolutions: ${resolutions.map(r => `${r.cols}x${r.rows}`).join(', ')}`);
 
     // Generate heatmap resolutions with discovery and tag combinations
-    const maxTagCombinations = 2; // Configuration: limit to 2-tag combinations
+    const maxTagCombinations = 4; // Configuration: limit to 2-tag combinations
     console.log(`\nGenerating heatmap resolutions with discovery (max ${maxTagCombinations} tag combinations)...`);
     const { heatmapResolutions, globalVocabulary } = await generateHeatmapResolutionsWithDiscovery(
       config.database,

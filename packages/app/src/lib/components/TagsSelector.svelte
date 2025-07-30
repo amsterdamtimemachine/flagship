@@ -22,7 +22,7 @@
 		recordTypes, 
 		selectedTags, 
 		onTagsSelected,
-		maxColumns = 3,
+		maxColumns = 4,
 		class: className = ''
 	}: Props = $props();
 	
@@ -96,13 +96,6 @@
 <div class={`flex gap-4 ${className}`}>
 	{#each visibleColumns as column, index}
 		<div class="flex flex-col min-w-48">
-			
-			<!-- Column content -->
-			{#if column.availableTags.length === 0}
-				<div class="p-4 text-gray-500 text-sm">
-					No additional tags available
-				</div>
-			{:else}
 				<ToggleGroup
 					items={column.availableTags.map(tag => tag.name)}
 					selectedItems={selectedTags[index] ? [selectedTags[index]] : []}
@@ -110,7 +103,6 @@
 					orientation="vertical"
 					type="single"
 				/>
-			{/if}
 		</div>
 	{/each}
 	

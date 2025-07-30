@@ -10,15 +10,15 @@ export const AMSTERDAM_DATABASE_CONFIG: DatabaseConfig = {
 };
 
 export const AMSTERDAM_BOUNDS = {
-  minLon: parseFloat(process.env.BOUNDS_MIN_LON || '') || 4.85,
-  maxLon: parseFloat(process.env.BOUNDS_MAX_LON || '') || 4.95,
-  minLat: parseFloat(process.env.BOUNDS_MIN_LAT || '') || 52.35,
-  maxLat: parseFloat(process.env.BOUNDS_MAX_LAT || '') || 52.4
+  minLon: parseFloat(process.env.BOUNDS_MIN_LON || '') || 4.81, 
+  maxLon: parseFloat(process.env.BOUNDS_MAX_LON || '') || 4.964447,
+  minLat: parseFloat(process.env.BOUNDS_MIN_LAT || '') || 52.2354339, 
+  maxLat: parseFloat(process.env.BOUNDS_MAX_LAT || '') || 52.4443  
 };
 
 export const DEFAULT_GRID_CONFIG: HeatmapConfig = {
-  colsAmount: parseInt(process.env.GRID_COLS || '') || 20,
-  rowsAmount: parseInt(process.env.GRID_ROWS || '') || 20,
+  colsAmount: parseInt(process.env.GRID_COLS || '') || 100,
+  rowsAmount: parseInt(process.env.GRID_ROWS || '') || 100,
   padding: parseFloat(process.env.GRID_PADDING || '') || 0.05 // 5% padding around Amsterdam
 };
 
