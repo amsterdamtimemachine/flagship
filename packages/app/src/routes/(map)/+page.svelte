@@ -12,6 +12,7 @@
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import TimePeriodSelector2 from '$components/TimePeriodSelector2.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
+	import TagCascade from '$components/TagCascade.svelte';
 	import FeaturesView from '$components/FeaturesView.svelte';
 	import ErrorHandler from '$lib/components/ErrorHandler.svelte';
 	
@@ -222,7 +223,8 @@
 <div class="relative flex flex-col w-screen h-screen">
 	<div class="relative flex-1">
 		<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} class="absolute z-40 top-5 left-5"/>
-		<ToggleGroup items={availableTagNames} selectedItems={currentTags} onItemSelected={handleTagsChange} orientation="vertical" class="absolute z-40 top-20 left-5"/>
+		<!-- <ToggleGroup items={availableTagNames} selectedItems={currentTags} onItemSelected={handleTagsChange} orientation="vertical" class="absolute z-40 top-20 left-5"/> -->
+		<TagCascade recordTypes={currentRecordTypes || []} selectedTags={currentTags || []} onTagsSelected={handleTagsChange} class="absolute z-40 top-20 left-5"/>
 		{#if currentHeatmap && heatmapBlueprint && dimensions}
 			<Map
 				heatmap={currentHeatmap}

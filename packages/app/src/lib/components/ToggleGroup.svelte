@@ -5,6 +5,7 @@
 	interface Props {
 		items: string[];
 		orientation?: 'vertical';
+		type?: 'single' | 'multiple';
 		selectedItems?: string[];
 		onItemSelected?: (selected: string[]) => void;
 		className?: string;
@@ -13,6 +14,7 @@
 	let { items, 
 				selectedItems = [], 
 				orientation,
+				type = 'multiple',
 				onItemSelected,
 				class: className
 			}: Props = $props();
@@ -21,15 +23,17 @@
 		elements: { root, item },
 		states: { value }
 	} = createToggleGroup({
-		type: 'multiple',
+		type,
 		defaultValue: selectedItems,
-		orientation: orientation || 'horizontal',
-		onValueChange: ({curr, next}) => {
-			if(onItemSelected) {
-			      onItemSelected(next);
-			}
-			return next; 
-		},
+		orientation: orientation || 'horizontal'
+	});
+
+	// Watch value store and call parent callback when it changes
+	$effect(() => {
+		if ($value !== selectedItems) {
+		  console.log($value);
+			onItemSelected?.($value);
+		}
 	});
 </script>
 

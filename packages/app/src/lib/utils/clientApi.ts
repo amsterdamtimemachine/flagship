@@ -9,107 +9,6 @@
 
 type FetchFunction = typeof fetch;
 
-// export async function fetchApi<T>(endpoint: string, fetchFn: FetchFunction = fetch): Promise<T> {
-// 	loadingState.startLoading();
-// 
-// 	try {
-// 		const response = await fetchFn(endpoint);
-// 
-// 		if (!response.ok) {
-// 			throw new Error(`HTTP error! status: ${response.status}`);
-// 		}
-// 		return (await response.json()) as T;
-// 	} catch (err) {
-// 		const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-// 		error(500, { message: errorMessage, code: 'API_ERROR' });
-// 	} finally {
-// 		loadingState.stopLoading();
-// 	}
-// }
-// 
-// export async function postApi<T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> {
-// 	const defaultOptions: RequestInit = {
-// 		method: 'POST',
-// 		headers: {
-// 			'Content-Type': 'application/json'
-// 		},
-// 		body: data ? JSON.stringify(data) : undefined
-// 	};
-// 
-// 	const mergedOptions = { ...defaultOptions, ...options };
-// 
-// 	try {
-// 		const response = await fetch(endpoint, mergedOptions);
-// 		if (!response.ok) {
-// 			throw new Error(`HTTP error! status: ${response.status}`);
-// 		}
-// 
-// 		return (await response.json()) as T;
-// 	} catch (err) {
-// 		const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-// 		throw new Error(`API Error: ${errorMessage}`);
-// 	}
-// }
-
-// API functions for visualization data
-import type { 
-	RecordType, 
-	HistogramApiResponse, 
-	VisualizationMetadata 
-} from '@atm/shared/types';
-import type { HeatmapTimelineApiResponse } from '@atm/shared/types';
-
-/**
- * Fetch histogram data for specific recordTypes and optional tags
- */
-// export async function fetchHistogram(
-// 	recordTypes: RecordType[],
-// 	tags?: string[],
-// 	fetchFn: FetchFunction = fetch
-// ): Promise<HistogramApiResponse> {
-// 	// Build the URL with parameters
-// 	const url = new URL('/api/histogram', window.location.origin);
-// 	url.searchParams.set('recordTypes', recordTypes.join(','));
-// 	
-// 	if (tags && tags.length > 0) {
-// 		url.searchParams.set('tags', tags.join(','));
-// 	}
-// 
-// 	console.log(`📊 Fetching histogram: ${url.toString()}`);
-// 	return fetchApi<HistogramApiResponse>(url.toString(), fetchFn);
-// }
-
-/**
- * Fetch heatmap timeline for specific recordTypes and optional tags
- * Returns all time periods at single resolution
- */
-// export async function fetchHeatmapTimeline(
-// 	recordTypes: RecordType[],
-// 	tags?: string[],
-// 	fetchFn: FetchFunction = fetch
-// ): Promise<HeatmapTimelineApiResponse> {
-// 	// Build the URL with parameters
-// 	const url = new URL('/api/heatmaps', window.location.origin);
-// 	url.searchParams.set('recordTypes', recordTypes.join(','));
-// 	
-// 	if (tags && tags.length > 0) {
-// 		url.searchParams.set('tags', tags.join(','));
-// 	}
-// 
-// 	console.log(`🔥 Fetching heatmap timeline: ${url.toString()}`);
-// 	return fetchApi<HeatmapTimelineApiResponse>(url.toString(), fetchFn);
-// }
-
-/**
- * Fetch visualization metadata (timeSlices, recordTypes, tags, etc.)
- */
-// export async function fetchVisualizationMetadata(
-// 	fetchFn: FetchFunction = fetch
-// ): Promise<VisualizationMetadata & { success: boolean }> {
-// 	console.log('📋 Fetching visualization metadata');
-// 	return fetchApi<VisualizationMetadata & { success: boolean }>('/api/metadata', fetchFn);
-// }
-
 /**
  * Fetch geodata directly from the external database API
  */
@@ -155,5 +54,41 @@ export async function fetchGeodataFromDatabase(
 	} catch (err) {
 		const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
 		throw new Error(`Database API Error: ${errorMessage}`);
+	}
+}
+
+/**
+ * Fetch tag combinations for TagCascade component
+ */
+export async function fetchTagCombinations(
+	params: {
+		recordTypes: string[];
+		selectedTags?: string[];
+	},
+	fetchFn: FetchFunction = fetch
+) {
+	try {
+		const query = new URLSearchParams();
+		query.set('recordTypes', params.recordTypes.join(','));
+		if (params.selectedTags && params.selectedTags.length > 0) {
+			query.set('selected', params.selectedTags.join(','));
+		}
+		
+		const response = await fetchFn(`/api/tag-combinations?${query}`);
+		
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+		}
+		
+		const data = await response.json();
+		
+		if (!data.success) {
+			throw new Error(data.message || 'API returned unsuccessful response');
+		}
+		
+		return data;
+	} catch (error) {
+		console.error('Failed to fetch tag combinations:', error);
+		throw error;
 	}
 }

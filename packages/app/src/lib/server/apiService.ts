@@ -379,6 +379,112 @@ export class VisualizationApiService {
   }
 
   /**
+   * Get tag combinations that extend the current selection
+   * Returns tags that can be added to form valid combinations
+   */
+  async getTagCombinations(recordTypes?: RecordType[], selectedTags: string[] = []): Promise<{
+    availableTags: Array<{ name: string; totalFeatures: number }>;
+    currentSelection: string[];
+    maxDepth: number;
+    recordTypes: RecordType[];
+    success: boolean;
+    message?: string;
+  }> {
+    try {
+      await this.initialize();
+
+      // Default to all recordTypes if none provided
+      if (!recordTypes || recordTypes.length === 0) {
+        const metadata = this.binaryHandler.getMetadata();
+        recordTypes = metadata.recordTypes;
+      }
+
+      console.log(`🔗 Getting tag combinations for recordTypes: ${recordTypes.join(', ')}, selected: ${selectedTags.join(', ')}`);
+
+      const histograms = await this.binaryHandler.readHistograms();
+      
+      // Track available next tags with their feature counts
+      const nextTagStats = new Map<string, number>();
+
+      for (const recordType of recordTypes) {
+        const recordTypeData = histograms[recordType];
+        if (!recordTypeData) continue;
+
+        const tagKeys = Object.keys(recordTypeData.tags);
+
+        if (selectedTags.length === 0) {
+          // No selection - return all individual tags (same as available-tags but with structure)
+          for (const tagKey of tagKeys) {
+            if (tagKey.includes('+')) continue; // Skip combinations
+            
+            const histogram = recordTypeData.tags[tagKey];
+            const currentCount = nextTagStats.get(tagKey) || 0;
+            nextTagStats.set(tagKey, currentCount + histogram.totalFeatures);
+          }
+        } else {
+          // Find combinations that extend current selection
+          const validCombinations = tagKeys.filter(key => {
+            if (!key.includes('+')) return false; // Must be a combination
+            
+            const keyTags = key.split('+').sort();
+            
+            // Check if combination contains all selected tags and exactly one more
+            const hasAllSelected = selectedTags.every(tag => keyTags.includes(tag));
+            const isNextLevel = keyTags.length === selectedTags.length + 1;
+            
+            return hasAllSelected && isNextLevel;
+          });
+
+          // Extract the "next" tags from valid combinations
+          for (const combo of validCombinations) {
+            const comboTags = combo.split('+');
+            const nextTags = comboTags.filter(tag => !selectedTags.includes(tag));
+            
+            for (const nextTag of nextTags) {
+              const histogram = recordTypeData.tags[combo];
+              const currentCount = nextTagStats.get(nextTag) || 0;
+              nextTagStats.set(nextTag, currentCount + histogram.totalFeatures);
+            }
+          }
+        }
+      }
+
+      // Convert to response format
+      const availableTags = Array.from(nextTagStats.entries())
+        .filter(([_, count]) => count > 0)
+        .map(([tagName, totalFeatures]) => ({
+          name: tagName,
+          totalFeatures
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      // Determine max depth (currently limited by maxTagCombinations = 2)
+      const maxDepth = 2;
+
+      console.log(`✅ Found ${availableTags.length} available next tags for current selection`);
+
+      return {
+        availableTags,
+        currentSelection: selectedTags,
+        maxDepth,
+        recordTypes,
+        success: true
+      };
+
+    } catch (error) {
+      console.error(`❌ Failed to get tag combinations:`, error);
+      return {
+        availableTags: [],
+        currentSelection: selectedTags,
+        maxDepth: 2,
+        recordTypes: recordTypes || [],
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * Get available metadata for the client
    */
   async getVisualizationMetadata() {
