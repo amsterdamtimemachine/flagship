@@ -36,6 +36,15 @@
 		📅 {formatTimePeriod(feature.per)}
 	</div>
 	
+	<!-- Source URL -->
+	{#if feature.url}
+		<div class="mb-2">
+			<a href={feature.url} target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 hover:text-blue-800 underline">
+				source
+			</a>
+		</div>
+	{/if}
+	
 	<!-- Tags -->
 	{#if feature.tags && feature.tags.length > 0}
 		<div class="flex flex-wrap gap-1">
