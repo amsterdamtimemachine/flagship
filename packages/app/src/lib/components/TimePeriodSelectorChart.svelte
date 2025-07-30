@@ -27,7 +27,7 @@
 			y={timelineHeight - barHeight}
 			width="{barWidth}%"
 			height={barHeight}
-			fill="#60a5fa"
+			fill="#5373cf"
 			class="transition-colors duration-200"
 		>
 			<title>Period: {bin.timeSlice.label}, Count: {bin.count}</title>

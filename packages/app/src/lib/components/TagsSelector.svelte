@@ -34,7 +34,6 @@
 		columns.filter(col => col.availableTags.length > 0)
 	);
 	
-	// Load columns based on current selection and recordTypes
 	$effect(() => {
 		if (recordTypes) {
 			loadColumnsForSelection();
@@ -76,10 +75,12 @@
 		}
 	}
 	
-	function handleColumnSelection(level: number, selectedItems: string[]) {
-		const selectedTag = selectedItems[0]; // Single selection mode
+	function handleColumnSelection(level: number, selected: string) {
 		
-		if (!selectedTag) {
+		// Clear columns beyond current level immediately to prevent stale UI
+		columns = columns.slice(0, level + 1);
+		
+		if (!selected) {
 			// Deselection - build new selection without this level
 			const newSelection = selectedTags.slice(0, level);
 			onTagsSelected(newSelection);
@@ -87,7 +88,7 @@
 		}
 		
 		// Build new selection including this choice
-		const newSelection = [...selectedTags.slice(0, level), selectedTag];
+		const newSelection = [...selectedTags.slice(0, level), selected];
 		onTagsSelected(newSelection);
 	}
 </script>
@@ -95,14 +96,6 @@
 <div class={`flex gap-4 ${className}`}>
 	{#each visibleColumns as column, index}
 		<div class="flex flex-col min-w-48">
-			<!-- Column header -->
-			<div class="mb-2 text-sm font-medium text-gray-600">
-				{#if index === 0}
-					Base Tags
-				{:else}
-					+ Tag {index + 1}
-				{/if}
-			</div>
 			
 			<!-- Column content -->
 			{#if column.availableTags.length === 0}
