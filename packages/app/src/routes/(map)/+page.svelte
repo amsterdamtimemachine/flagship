@@ -23,6 +23,7 @@
 	let dimensions = $derived(data?.metadata?.heatmapDimensions);
 	let recordTypes = $derived(data?.metadata?.recordTypes);
 	let tags = $derived(data?.metadata?.tags);
+	let availableTagNames = $derived(data?.availableTags?.tags?.map(tag => tag.name) || data?.metadata?.tags || []);
 	let heatmapTimeline = $derived(data?.heatmapTimeline?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
 	let currentRecordTypes = $derived(data?.currentRecordTypes);
@@ -220,8 +221,8 @@
 
 <div class="relative flex flex-col w-screen h-screen">
 	<div class="relative flex-1">
-		<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} class="absolute z-50 top-5 left-5"/>
-		<ToggleGroup items={tags} selectedItems={currentTags} onItemSelected={handleTagsChange} class="absolute z-50 top-20 left-5"/>
+		<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} class="absolute z-40 top-5 left-5"/>
+		<ToggleGroup items={availableTagNames} selectedItems={currentTags} onItemSelected={handleTagsChange} orientation="vertical" class="absolute z-40 top-20 left-5"/>
 		{#if currentHeatmap && heatmapBlueprint && dimensions}
 			<Map
 				heatmap={currentHeatmap}
@@ -233,7 +234,7 @@
 		{/if}
 
 		{#if showCellModal && selectedCellId}
-			<div class="z-50 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
+			<div class="z-40 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
 				<FeaturesView 
 					cellId={selectedCellId} 
 					period={currentPeriod} 

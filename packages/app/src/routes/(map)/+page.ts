@@ -17,6 +17,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
   let metadata: VisualizationMetadata | null = null;
   let histogram: HistogramApiResponse | null = null;
   let heatmapTimeline: HeatmapTimelineApiResponse | null = null;
+  let availableTags: any = null;
   
   // Parse URL parameters
   const recordTypesParam = url.searchParams.get('recordTypes');
@@ -229,14 +230,60 @@ export const load: PageLoad = async ({ fetch, url }) => {
     }
   })();
   
-  // Wait for both data requests to complete
-  await Promise.all([histogramPromise, heatmapPromise]);
+  // Available tags promise
+  const availableTagsPromise = (async () => {
+    try {
+      const tagsUrl = `/api/available-tags${currentRecordTypes.length > 0 ? `?recordTypes=${currentRecordTypes.join(',')}` : ''}`;
+      const tagsResponse = await fetch(tagsUrl);
+      
+      if (!tagsResponse.ok) {
+        // Parse error message from SvelteKit error response
+        let errorMessage = `HTTP ${tagsResponse.status}`;
+        try {
+          const errorData = await tagsResponse.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          // Fallback to status text if JSON parsing fails
+          errorMessage = tagsResponse.statusText || errorMessage;
+        }
+        
+        errors.push(createError(
+          'warning',
+          'Available Tags Load Failed',
+          errorMessage,
+          { recordTypes: currentRecordTypes, status: tagsResponse.status }
+        ));
+      } else {
+        const tagsData = await tagsResponse.json();
+        availableTags = tagsData;
+      }
+      
+    } catch (err) {
+      console.error('❌ Failed to load available tags:', err);
+      
+      errors.push(createError(
+        'warning',
+        'Available Tags Load Error',
+        'Could not load available tags. All tags will be shown in the interface.',
+        { 
+          recordTypes: currentRecordTypes,
+          error: err instanceof Error ? err.message : 'Unknown error'
+        }
+      ));
+    }
+  })();
+  
+  // Wait for all data requests to complete
+  await Promise.all([histogramPromise, heatmapPromise, availableTagsPromise]);
   
   loadingState.stopLoading(); 
   return {
     metadata,
     histogram,
     heatmapTimeline,
+    availableTags,
     currentRecordTypes,
     currentTags,
     errorData: createPageErrorData(errors)

@@ -4,6 +4,7 @@
 
 	interface Props {
 		items: string[];
+		orientation?: 'vertical';
 		selectedItems?: string[];
 		onItemSelected?: (selected: string[]) => void;
 		className?: string;
@@ -11,6 +12,7 @@
 
 	let { items, 
 				selectedItems = [], 
+				orientation,
 				onItemSelected,
 				class: className
 			}: Props = $props();
@@ -21,6 +23,7 @@
 	} = createToggleGroup({
 		type: 'multiple',
 		defaultValue: selectedItems,
+		orientation: orientation || 'horizontal',
 		onValueChange: ({curr, next}) => {
 			if(onItemSelected) {
 			      onItemSelected(next);
@@ -104,15 +107,16 @@
 
   .toggle-item[data-orientation='vertical'] {
     @apply border border-blue-500;
-    @apply mx-1;
+    @apply my-1;
     @apply p-2;
+    @apply w-full;
 
     &:first-child {
-      @apply mx-0;
+      @apply my-0;
     }
 
     &:last-child {
-      @apply mx-0;
+      @apply my-0;
     }
   }
 

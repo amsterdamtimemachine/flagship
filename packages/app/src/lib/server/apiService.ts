@@ -304,6 +304,81 @@ export class VisualizationApiService {
   }
 
   /**
+   * Get tags that have data for the specified recordTypes
+   * Returns individual tags (not combinations) with feature counts
+   */
+  async getAvailableTags(recordTypes?: RecordType[]): Promise<{
+    tags: Array<{ name: string; totalFeatures: number; recordTypes: RecordType[] }>;
+    recordTypes: RecordType[];
+    success: boolean;
+    message?: string;
+  }> {
+    try {
+      await this.initialize();
+
+      // Default to all recordTypes if none provided
+      if (!recordTypes || recordTypes.length === 0) {
+        const metadata = this.binaryHandler.getMetadata();
+        recordTypes = metadata.recordTypes;
+      }
+
+      console.log(`🏷️ Getting available tags for recordTypes: ${recordTypes.join(', ')}`);
+
+      const histograms = await this.binaryHandler.readHistograms();
+      
+      // Track tags across all requested recordTypes
+      const tagStats = new Map<string, { totalFeatures: number; recordTypes: Set<RecordType> }>();
+
+      for (const recordType of recordTypes) {
+        const recordTypeData = histograms[recordType];
+        if (!recordTypeData) continue;
+
+        // Process all tags for this recordType
+        for (const [tagKey, histogram] of Object.entries(recordTypeData.tags)) {
+          // Skip combination tags (contain '+')
+          if (tagKey.includes('+')) continue;
+
+          // Initialize or update tag stats
+          if (!tagStats.has(tagKey)) {
+            tagStats.set(tagKey, { totalFeatures: 0, recordTypes: new Set() });
+          }
+
+          const stats = tagStats.get(tagKey)!;
+          stats.totalFeatures += histogram.totalFeatures;
+          stats.recordTypes.add(recordType);
+        }
+      }
+
+      // Convert to response format, filter out zero-feature tags
+      const availableTags = Array.from(tagStats.entries())
+        .filter(([_, stats]) => stats.totalFeatures > 0)
+        .map(([tagName, stats]) => ({
+          name: tagName,
+          totalFeatures: stats.totalFeatures,
+          recordTypes: Array.from(stats.recordTypes).sort()
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
+
+      console.log(`✅ Found ${availableTags.length} available tags with data`);
+
+      return {
+        tags: availableTags,
+        recordTypes,
+        success: true
+      };
+
+    } catch (error) {
+      console.error(`❌ Failed to get available tags:`, error);
+      return {
+        tags: [],
+        recordTypes: recordTypes || [],
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * Get available metadata for the client
    */
   async getVisualizationMetadata() {
