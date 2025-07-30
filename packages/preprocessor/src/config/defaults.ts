@@ -17,8 +17,8 @@ export const AMSTERDAM_BOUNDS = {
 };
 
 export const DEFAULT_GRID_CONFIG: HeatmapConfig = {
-  colsAmount: parseInt(process.env.GRID_COLS || '') || 100,
-  rowsAmount: parseInt(process.env.GRID_ROWS || '') || 100,
+  colsAmount: parseInt(process.env.GRID_COLS || '') || 75,
+  rowsAmount: parseInt(process.env.GRID_ROWS || '') || 75,
   padding: parseFloat(process.env.GRID_PADDING || '') || 0.05 // 5% padding around Amsterdam
 };
 
