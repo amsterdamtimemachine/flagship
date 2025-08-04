@@ -1,5 +1,5 @@
 import type { HeatmapCellBounds } from './heatmap';
-import type { RecordType, AnyProcessedFeature } from './feature';
+import type { RecordType, MinimalFeature } from './feature';
 
 export interface SpatialChunk {
   id: string;
@@ -15,7 +15,7 @@ export interface ChunkingConfig {
 
 export interface ChunkResult {
   chunk: SpatialChunk;
-  features: AnyProcessedFeature[];
+  features: MinimalFeature[];
   stats: {
     totalRaw: number;      // Total features from API
     validProcessed: number; // Successfully converted features

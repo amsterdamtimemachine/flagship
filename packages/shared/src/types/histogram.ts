@@ -27,6 +27,14 @@ export interface Histogram {
   totalFeatures: number;                             // Sum across all periods (moved from metadata)
 }
 
+
+export interface Histograms {
+  [recordType: string]: {
+    base: Histogram;                    // Timeline for this recordType (all periods)
+    tags: Record<string, Histogram>;   // Timeline for this recordType+tag (all periods)
+  }
+}
+
 /**
  * Request parameters for histogram generation
  */
@@ -60,10 +68,12 @@ export interface HistogramCollection {
 }
 
 /**
- * API response format
+ * API response format - updated for client-side merging
  */
 export interface HistogramApiResponse {
-  histogram: Histogram;
+  histograms: Histograms;
+  recordTypes: RecordType[];
+  tags?: string[];
   success: boolean;
   message?: string;
   processingTime?: number;

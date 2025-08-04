@@ -5,11 +5,6 @@ import { page } from '$app/state';
 import { replaceState, goto } from '$app/navigation';
 import type { AppError } from '$types/error';
 
-interface CellSelection {
-	cellId: string;
-	bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number };
-}
-
 /**
  * Creates a centralized controller for managing map state, URL synchronization, 
  * and cell data loading. This handles the coordination between user interactions,
@@ -56,6 +51,21 @@ export function createMapController() {
 			url.searchParams.delete('recordTypes');
 		}
 	
+		// Navigate to new URL to trigger data refetch
+		goto(url.pathname + url.search);
+	}
+
+	function setTags(newTags: string[]) {
+		if (!browser) return;
+		
+		const url = new URL(window.location.href);
+		// Update tags parameter
+		if (newTags.length > 0) {
+			url.searchParams.set('tags', newTags.join(','));
+		} else {
+			url.searchParams.delete('tags');
+		}
+
 		// Navigate to new URL to trigger data refetch
 		goto(url.pathname + url.search);
 	}
@@ -147,6 +157,7 @@ export function createMapController() {
 		initialize,
 		setPeriod,
 		setRecordType,
+		setTags,
 		syncUrlParameters,
 		selectCell,
 		clearErrors,

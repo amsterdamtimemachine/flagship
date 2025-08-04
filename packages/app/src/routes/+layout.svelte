@@ -12,7 +12,7 @@
 </script>
 
 	<main class="relative">
-		<LoadingBar class="fixed top-0 z-50"/>
+		<LoadingBar class="z-50 fixed top-0 "/>
 
 		<Toaster />
 	<!-- <h1 class="z-50 absolute top-1 left-1">Amsterdam Time Machine</h1> -->

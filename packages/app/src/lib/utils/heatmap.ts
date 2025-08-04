@@ -128,14 +128,14 @@ export function mergeTimeSliceHeatmaps(
  * 
  * @param timeline Original HeatmapTimeline containing multiple recordTypes
  * @param recordTypes Array of recordTypes to merge
- * @param selectedTag Optional tag to use instead of base heatmaps
+ * @param selectedTags Optional tags to use instead of base heatmaps (supports combinations)
  * @param blueprint Optional heatmap blueprint for grid size validation
  * @returns New HeatmapTimeline with merged recordTypes for smooth navigation
  */
 export function mergeHeatmapTimeline(
   timeline: HeatmapTimeline,
   recordTypes: RecordType[],
-  selectedTag?: string,
+  selectedTags?: string[],
   blueprint?: HeatmapBlueprint
 ): HeatmapTimeline {
   const mergedTimeline: HeatmapTimeline = {};
@@ -149,9 +149,12 @@ export function mergeHeatmapTimeline(
       const recordTypeData = timeSliceData[recordType];
       
       if (recordTypeData) {
-        if (selectedTag && recordTypeData.tags[selectedTag]) {
-          // Use tag-specific heatmap if tag is selected
-          heatmapsToMerge.push(recordTypeData.tags[selectedTag]);
+        if (selectedTags && selectedTags.length > 0) {
+          // Use tag combination or individual tag heatmap
+          const tagKey = selectedTags.length > 1 ? selectedTags.sort().join('+') : selectedTags[0];
+          if (recordTypeData.tags[tagKey]) {
+            heatmapsToMerge.push(recordTypeData.tags[tagKey]);
+          }
         } else if (recordTypeData.base) {
           // Use base heatmap
           heatmapsToMerge.push(recordTypeData.base);
@@ -167,10 +170,13 @@ export function mergeHeatmapTimeline(
       const combinedRecordType = recordTypes.sort().join('+') as RecordType;
       
       // Structure the merged data as a single recordType in the timeline
+      const tagKey = selectedTags && selectedTags.length > 0 ? 
+        (selectedTags.length > 1 ? selectedTags.sort().join('+') : selectedTags[0]) : undefined;
+      
       mergedTimeline[timeSliceKey] = {
         [combinedRecordType]: {
           base: mergedHeatmap,
-          tags: selectedTag ? { [selectedTag]: mergedHeatmap } : {}
+          tags: tagKey ? { [tagKey]: mergedHeatmap } : {}
         }
       } as any;
     }

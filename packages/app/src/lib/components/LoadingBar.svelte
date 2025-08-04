@@ -32,7 +32,6 @@
 
 	function startLoading() {
 		if (isActive) return;
-		console.log("starting loader");
 		
 		isActive = true;
 		progress.value = 0;

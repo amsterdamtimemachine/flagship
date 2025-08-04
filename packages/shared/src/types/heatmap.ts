@@ -61,12 +61,16 @@ export interface HeatmapCellCounts {
   base: Map<RecordType, Map<string, number>>;
   // Tag counts per tag per recordtype per cell  
   tags: Map<string, Map<RecordType, Map<string, number>>>;
+  // Tag combination counts per combination per recordtype per cell
+  tagCombinations: Map<string, Map<RecordType, Map<string, number>>>;
 }
 
 export interface HeatmapAccumulator {
   cellCounts: HeatmapCellCounts;
   heatmapDimensions: HeatmapDimensions;
   collectedTags: Set<string>;
+  maxTagCombinations: number;
+  tagCombinationStats: Map<string, number>;
 }
 
 export interface HeatmapConfig {

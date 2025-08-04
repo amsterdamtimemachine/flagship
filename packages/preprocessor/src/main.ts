@@ -1,43 +1,47 @@
-// src/main.ts - Main binary generation script for Amsterdam Time Machine
+// src/main.ts - Binary generation for Amsterdam Time Machine
+
 import { 
-  generateHeatmapResolutions,
   generateHeatmapBlueprint,
-  createTimeSlices
-} from './processing/heatmap';
+  createTimeSlices,
+  generateHeatmapResolutionsWithDiscovery,
+} from './visualization/heatmap';
 import {
-  generateDefaultHistograms
-} from './serialization/visualization';
+  generateAllHistogramsFromHeatmapTimeline
+} from './visualization/histogram';
 import {
   createVisualizationBinary,
   generateVisualizationStats
-} from './serialization/visualization';
+} from './serialization/binaryExport';
 import { 
   AMSTERDAM_DATABASE_CONFIG, 
   AMSTERDAM_BOUNDS,
-  PRODUCTION_PRESET
+  DEFAULT_GRID_CONFIG,
+  DEFAULT_CHUNKING,
 } from './config/defaults';
+
 import type { 
   HeatmapDimensions, 
   HeatmapResolutionConfig, 
-  RecordType, 
-  TimeSlice 
+  TimeSlice,
 } from '@atm/shared/types';
 
-// Configuration
-const OUTPUT_PATH = process.env.OUTPUT_PATH || './visualization.bin';
-const INCLUDE_TEST_RESOLUTIONS = process.env.INCLUDE_TEST_RESOLUTIONS === 'true';
-
 async function main() {
-  console.log('Starting Amsterdam Time Machine Binary Generation');
-  console.log(`Using preset: PRODUCTION`);
+  // Configuration - read at runtime to allow test overrides
+  const OUTPUT_PATH = process.env.OUTPUT_PATH || './visualization.bin';
+  
+  console.log('🔍 Starting Amsterdam Time Machine Discovery-Based Binary Generation');
   console.log(`Output path: ${OUTPUT_PATH}`);
   
   const startTime = Date.now();
   
   try {
-    // Use production preset configuration
-    const config = PRODUCTION_PRESET;
-    console.log(`Canonical resolution: ${config.resolutionCanonical.colsAmount}x${config.resolutionCanonical.rowsAmount}`);
+    const config = {
+      database: AMSTERDAM_DATABASE_CONFIG,
+      resolutionCanonical: DEFAULT_GRID_CONFIG,
+      chunking: DEFAULT_CHUNKING
+    };
+
+    console.log(`Resolution: ${config.resolutionCanonical.colsAmount}x${config.resolutionCanonical.rowsAmount}`);
     console.log(`Chunking: ${config.chunking.chunkRows}x${config.chunking.chunkCols} chunks`);
 
     // Define time periods
@@ -53,18 +57,6 @@ async function main() {
 
     console.log(`Time periods: ${timeSlices.length} (${timeSlices[0].label} to ${timeSlices[timeSlices.length-1].label})`);
 
-    // Define record types to process
-    const recordTypes: RecordType[] = ['text', 'image'];
-    console.log(`Record types: ${recordTypes.join(', ')}`);
-
-    // Define resolutions to generate
-    const resolutions: HeatmapResolutionConfig[] = [
-      { cols: config.resolutionCanonical.colsAmount, rows: config.resolutionCanonical.rowsAmount },
-      { cols: 8, rows: 8 },   
-      { cols: 16, rows: 16 }, 
-    ];
-    console.log(`Resolutions: ${resolutions.map(r => `${r.cols}x${r.rows}`).join(', ')}`);
-
     // Calculate bounds with padding
     const padding = config.resolutionCanonical.padding;
     const lonRange = AMSTERDAM_BOUNDS.maxLon - AMSTERDAM_BOUNDS.minLon;
@@ -77,36 +69,53 @@ async function main() {
       maxLat: AMSTERDAM_BOUNDS.maxLat + (latRange * padding)
     };
 
-    console.log(`=� Processing bounds: [${bounds.minLon.toFixed(3)}, ${bounds.minLat.toFixed(3)}] to [${bounds.maxLon.toFixed(3)}, ${bounds.maxLat.toFixed(3)}]`);
+    console.log(`Processing bounds: [${bounds.minLon.toFixed(3)}, ${bounds.minLat.toFixed(3)}] to [${bounds.maxLon.toFixed(3)}, ${bounds.maxLat.toFixed(3)}]`);
 
-    // Step 1: Generate heatmap resolutions
-    console.log('\n=% Step 1: Generating heatmap resolutions...');
-    const heatmapResolutions = await generateHeatmapResolutions(
+    // Define resolutions to generate
+    const resolutions: HeatmapResolutionConfig[] = [
+      { cols: config.resolutionCanonical.colsAmount, rows: config.resolutionCanonical.rowsAmount },
+      { cols: 8, rows: 8 },   
+      { cols: 16, rows: 16 }, 
+    ];
+    console.log(`Resolutions: ${resolutions.map(r => `${r.cols}x${r.rows}`).join(', ')}`);
+
+    // Generate heatmap resolutions with discovery and tag combinations
+    const maxTagCombinations = 4; // Configuration: limit to 2-tag combinations
+    console.log(`\nGenerating heatmap resolutions with discovery (max ${maxTagCombinations} tag combinations)...`);
+    const { heatmapResolutions, globalVocabulary } = await generateHeatmapResolutionsWithDiscovery(
       config.database,
       bounds,
       config.chunking,
-      recordTypes,
       resolutions,
-      timeSlices
+      timeSlices,
+      maxTagCombinations
     );
 
     console.log(`Generated ${Object.keys(heatmapResolutions).length} heatmap resolutions`);
 
-    // Step 2: Generate default histograms
-    console.log('\n Step 2: Generating default histograms...');
-    const histograms = await generateDefaultHistograms(
-      config.database,
-      bounds,
-      config.chunking,
+    // Extract dynamic recordTypes and tags from vocabulary
+    const recordTypes = Array.from(globalVocabulary.recordTypes);
+    const tags = Array.from(globalVocabulary.tags);
+    
+    console.log(`Discovered recordTypes: ${recordTypes.join(', ')}`);
+    console.log(`Discovered tags: ${tags.length}`);
+
+    // Generate histograms from heatmap data using discovered recordTypes
+    console.log('\nGenerating histograms from heatmap data...');
+    const primaryResolutionKey = Object.keys(heatmapResolutions)[0];
+    const primaryHeatmapTimeline = heatmapResolutions[primaryResolutionKey];
+    
+    const histograms = generateAllHistogramsFromHeatmapTimeline(
+      primaryHeatmapTimeline,
       timeSlices,
       recordTypes,
-      [] // Start with no specific tags, will extract from data
+      tags.slice(0, 20) // Use top 20 tags
     );
 
     console.log(`Generated histograms for ${Object.keys(histograms).length} record types`);
 
-    // Step 3: Generate heatmap dimensions and blueprint
-    console.log('\n Step 3: Generating heatmap metadata...');
+    // Generate heatmap metadata
+    console.log('\nGenerating heatmap metadata...');
     const primaryResolution = resolutions[0];
     const heatmapDimensions: HeatmapDimensions = {
       colsAmount: primaryResolution.cols,
@@ -120,39 +129,21 @@ async function main() {
     };
 
     const heatmapBlueprint = generateHeatmapBlueprint(heatmapDimensions);
-    console.log(` Generated blueprint with ${heatmapBlueprint.cells.length} cells`);
+    console.log(`Generated blueprint with ${heatmapBlueprint.cells.length} cells`);
 
-    // Step 4: Extract unique tags from data
-    console.log('\n<� Step 4: Extracting tags from heatmap data...');
-    const allTags = new Set<string>();
-    
-    // Extract tags from heatmap data
-    for (const [resolutionKey, timeline] of Object.entries(heatmapResolutions)) {
-      for (const [timeSliceKey, timeSliceData] of Object.entries(timeline)) {
-        for (const [recordType, recordTypeData] of Object.entries(timeSliceData)) {
-          for (const tag of Object.keys(recordTypeData.tags)) {
-            allTags.add(tag);
-          }
-        }
-      }
-    }
-
-    const tags = Array.from(allTags).sort();
-    console.log(` Found ${tags.length} unique tags: ${tags.slice(0, 10).join(', ')}${tags.length > 10 ? '...' : ''}`);
-
-    // Step 5: Generate visualization statistics
-    console.log('\n=� Step 5: Generating visualization statistics...');
+    // Generate visualization statistics
+    console.log('\nGenerating visualization statistics...');
     const stats = generateVisualizationStats(heatmapResolutions, histograms, timeSlices);
     
-    console.log(` Statistics generated:`);
+    console.log(`Statistics generated:`);
     console.log(`   - Total features: ${stats?.totalFeatures || 0}`);
     console.log(`   - Features per type: ${stats ? Object.entries(stats.featuresPerRecordType).map(([type, count]) => `${type}: ${count}`).join(', ') : 'none'}`);
     console.log(`   - Time slices: ${stats?.timeSliceCount || 0}`);
     console.log(`   - Grid cells: ${stats?.gridCellCount || 0}`);
     console.log(`   - Resolutions: ${stats?.resolutionCount || 0}`);
 
-    // Step 6: Create visualization binary
-    console.log('\n=� Step 6: Creating visualization binary...');
+    // Create visualization binary
+    console.log('\nCreating visualization binary...');
     await createVisualizationBinary(
       OUTPUT_PATH,
       heatmapResolutions,
@@ -167,40 +158,28 @@ async function main() {
       stats
     );
 
-    // Step 7: Verify binary file
-    console.log('\n Step 7: Verifying binary file...');
+    // Verify binary file
     const file = Bun.file(OUTPUT_PATH);
     const fileExists = await file.exists();
     const fileSize = fileExists ? file.size : 0;
     
     if (fileExists) {
-      console.log(` Binary file created successfully:`);
+      console.log(`Binary file created successfully:`);
       console.log(`   - Path: ${OUTPUT_PATH}`);
       console.log(`   - Size: ${(fileSize / (1024 * 1024)).toFixed(2)} MB`);
       console.log(`   - Resolutions: ${Object.keys(heatmapResolutions).length}`);
       console.log(`   - Time periods: ${timeSlices.length}`);
-      console.log(`   - Record types: ${recordTypes.length}`);
-      console.log(`   - Tags: ${tags.length}`);
+      console.log(`   - Discovered recordTypes: ${recordTypes.length} (${recordTypes.join(', ')})`);
+      console.log(`   - Discovered tags: ${tags.length}`);
     } else {
       throw new Error('Binary file was not created successfully');
     }
 
     const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`\n<� Binary generation completed successfully in ${totalTime}s`);
-    
-    // Print usage instructions
-    console.log('\n Usage Instructions:');
-    console.log(`   1. Copy the binary file to your app server:`);
-    console.log(`      cp ${OUTPUT_PATH} /path/to/your/app/data/`);
-    console.log(`   2. Set environment variable in your SvelteKit app:`);
-    console.log(`      VISUALIZATION_BINARY_PATH=/path/to/your/app/data/visualization.bin`);
-    console.log(`   3. Start your SvelteKit app and test the API endpoints:`);
-    console.log(`      GET /api/metadata`);
-    console.log(`      GET /api/histogram?recordType=text`);
-    console.log(`      GET /api/heatmaps?recordType=text`);
+    console.log(`\nCompleted in ${totalTime}s`);
 
   } catch (error) {
-    console.error('\nL Binary generation failed:', error);
+    console.error('\nBinary generation failed:', error);
     if (error instanceof Error) {
       console.error('Error details:', error.message);
       console.error('Stack trace:', error.stack);
@@ -209,45 +188,11 @@ async function main() {
   }
 }
 
-// Handle CLI arguments and environment variables
-function parseArgs() {
-  const args = process.argv.slice(2);
-  
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    
-    if (arg === '--output' && i + 1 < args.length) {
-      process.env.OUTPUT_PATH = args[i + 1];
-      i++;
-    } else if (arg === '--help') {
-      console.log(`
-Amsterdam Time Machine Binary Generator
-
-Usage: bun run src/main.ts [options]
-
-Options:
-  --output <path>       Output path for binary file (default: ./visualization.bin)
-  --test-resolutions    Include additional test resolutions (8x8, 16x16, 32x32)
-  --help               Show this help message
-
-Environment Variables:
-  OUTPUT_PATH          Same as --output
-
-Examples:
-  bun run src/main.ts --output ./test.bin
-  OUTPUT_PATH=./production.bin bun run src/main.ts
-      `);
-      process.exit(0);
-    }
-  }
-}
-
 // Export main for programmatic usage
 export default main;
 
 // Main execution
 if (import.meta.main) {
-  parseArgs();
   main().catch((error) => {
     console.error('Unhandled error:', error);
     process.exit(1);

@@ -1,4 +1,4 @@
-import type { RecordType, RawFeature, AnyProcessedFeature } from './feature'; 
+import type { RecordType, RawFeature } from './feature'; 
 import type { Heatmap, HeatmapTimeline } from './heatmap';
 import type { Histogram } from './histogram';
 import type { TimeRange } from './temporal';
@@ -33,22 +33,10 @@ export interface ApiResponse {
 }
 
 // responses from sveltekit server to the frontend
+// WIP gotta finish this
 export interface MetadataResponse {
   data: any;
 }
-// WIP: this needs to be adjusted to reflect actual metadata from the updated api
-
-//extends Pick<BinaryMetadata, 'dimensions' | 'timeRange'  | 'heatmapBlueprint' | 'featuresStatistics'> { timePeriods: string[] }
-
-export interface HeatmapCellResponse {
-    cellId: string;
-    currentPage: number;
-    totalPages: number;
-    featureCount: number;
-    period: string;
-    features: AnyProcessedFeature[];
-}
-
 
 export interface HeatmapResponse {
     heatmap: Heatmap;

@@ -5,11 +5,8 @@ import type {
   HeatmapTimeline, 
   HistogramApiResponse,
   HeatmapTimelineApiResponse,
-  Histograms,
-  HeatmapResolutions
 } from "@atm/shared/types";
 import { VisualizationBinaryHandler } from "./binaryHandler";
-import { mergeHistograms } from "../utils/histogram";
 
 export class VisualizationApiService {
   private binaryHandler: VisualizationBinaryHandler;
@@ -48,6 +45,18 @@ export class VisualizationApiService {
                 base: recordTypeData.tags[tag],
                 tags: { [tag]: recordTypeData.tags[tag] }
               };
+            } else {
+              // Tag doesn't exist - create empty heatmap with same structure as base
+              const baseHeatmap = recordTypeData.base;
+              const emptyHeatmap = {
+                countArray: new Array(baseHeatmap.countArray.length).fill(0),
+                densityArray: new Array(baseHeatmap.densityArray.length).fill(0)
+              };
+              
+              filteredTimeSlice[recordType] = {
+                base: emptyHeatmap,
+                tags: { [tag]: emptyHeatmap }
+              };
             }
           } else {
             // Use full recordType data (base + all tags)
@@ -67,14 +76,22 @@ export class VisualizationApiService {
 
   /**
    * Get histogram for specific recordTypes and optional tags
+   * If no recordTypes provided, defaults to all available recordTypes
    */
-  async getHistogram(recordTypes: RecordType[], tags?: string[]): Promise<HistogramApiResponse> {
+  async getHistogram(recordTypes?: RecordType[], tags?: string[]): Promise<HistogramApiResponse> {
     const startTime = Date.now();
 
     try {
       await this.initialize();
 
-      console.log(`📊 Fetching histogram for recordTypes: ${recordTypes.join(', ')}`);
+      // Default to all recordTypes if none provided
+      if (!recordTypes || recordTypes.length === 0) {
+        const metadata = this.binaryHandler.getMetadata();
+        recordTypes = metadata.recordTypes;
+        console.log(`📊 No recordTypes specified, defaulting to all: ${recordTypes.join(', ')}`);
+      }
+      
+      console.log(`📊 Fetching histogram data for recordTypes: ${recordTypes.join(', ')}`);
       if (tags && tags.length > 0) {
         console.log(`🏷️ With tags: ${tags.join(', ')}`);
       }
@@ -87,61 +104,81 @@ export class VisualizationApiService {
         throw new Error(`RecordTypes "${missingTypes.join(', ')}" not found in histograms data`);
       }
 
-      let histogram: Histogram;
-
-      if (recordTypes.length === 1) {
-        // Single recordType - return directly without merging
-        const recordType = recordTypes[0];
-        
+      // Return raw histogram data for client-side merging
+      const histogramData: { [key: string]: any } = {};
+      
+      for (const recordType of recordTypes) {
         if (!tags || tags.length === 0) {
-          // Return base histogram
-          histogram = histograms[recordType].base;
-          console.log(`📈 Returning base histogram for "${recordType}": ${histogram.totalFeatures} total features`);
+          // Include base histogram
+          histogramData[recordType] = {
+            base: histograms[recordType].base,
+            tags: histograms[recordType].tags
+          };
         } else if (tags.length === 1) {
-          // Single tag - return specific tag histogram
+          // Include specific tag histogram
           const tag = tags[0];
           const tagHistograms = histograms[recordType].tags;
           
           if (!tagHistograms[tag]) {
-            throw new Error(`Tag "${tag}" not found for recordType "${recordType}"`);
+            // Tag doesn't exist - create empty histogram with same structure as base
+            const baseHistogram = histograms[recordType].base;
+            const emptyHistogram = {
+              bins: baseHistogram.bins.map(bin => ({
+                timeSlice: bin.timeSlice,
+                count: 0
+              })),
+              maxCount: 0,
+              timeRange: baseHistogram.timeRange,
+              totalFeatures: 0
+            };
+            
+            histogramData[recordType] = {
+              base: histograms[recordType].base,
+              tags: { [tag]: emptyHistogram }
+            };
+          } else {
+            histogramData[recordType] = {
+              base: histograms[recordType].base,
+              tags: { [tag]: tagHistograms[tag] }
+            };
           }
-          
-          histogram = tagHistograms[tag];
-          console.log(`📈 Returning tag histogram for "${recordType}" with tag "${tag}": ${histogram.totalFeatures} total features`);
         } else {
-          // Multiple tags - not implemented yet
-          throw new Error("Multiple tags filtering not yet implemented");
-        }
-      } else {
-        // Multiple recordTypes - merge histograms
-        if (!tags || tags.length === 0) {
-          // Merge base histograms for all recordTypes
-          const baseHistograms = recordTypes.map(type => histograms[type].base);
-          histogram = mergeHistograms(baseHistograms);
-          console.log(`📈 Returning merged base histogram: ${histogram.totalFeatures} total features`);
-        } else if (tags.length === 1) {
-          // Single tag - merge specific tag histograms if available
-          const tag = tags[0];
-          const tagHistograms = recordTypes.map(type => {
-            const typeTagHistograms = histograms[type].tags;
-            if (!typeTagHistograms[tag]) {
-              throw new Error(`Tag "${tag}" not found for recordType "${type}"`);
-            }
-            return typeTagHistograms[tag];
-          });
+          // Multiple tags - use combination key
+          const comboKey = tags.sort().join('+');
+          const tagHistograms = histograms[recordType].tags;
           
-          histogram = mergeHistograms(tagHistograms);
-          console.log(`📈 Returning merged tag histogram for "${tag}": ${histogram.totalFeatures} total features`);
-        } else {
-          // Multiple tags - for now, return error as we don't have intersection logic
-          throw new Error("Multiple tags filtering not yet implemented");
+          if (!tagHistograms[comboKey]) {
+            // Combination doesn't exist - create empty histogram with same structure as base
+            const baseHistogram = histograms[recordType].base;
+            const emptyHistogram = {
+              bins: baseHistogram.bins.map(bin => ({
+                timeSlice: bin.timeSlice,
+                count: 0
+              })),
+              maxCount: 0,
+              timeRange: baseHistogram.timeRange,
+              totalFeatures: 0
+            };
+            
+            histogramData[recordType] = {
+              base: histograms[recordType].base,
+              tags: { [comboKey]: emptyHistogram }
+            };
+          } else {
+            histogramData[recordType] = {
+              base: histograms[recordType].base,
+              tags: { [comboKey]: tagHistograms[comboKey] }
+            };
+          }
         }
       }
+      
+      console.log(`📊 Returning raw histogram data for ${recordTypes.length} recordTypes`);
 
       const processingTime = Date.now() - startTime;
 
       return {
-        histogram: this.binaryHandler.prepareForJsonResponse(histogram),
+        histograms: this.binaryHandler.prepareForJsonResponse(histogramData),
         recordTypes,
         tags,
         success: true,
@@ -153,12 +190,7 @@ export class VisualizationApiService {
       console.error(`❌ Failed to get histogram:`, error);
 
       return {
-        histogram: {
-          bins: [],
-          maxCount: 0,
-          timeRange: { start: '', end: '' },
-          totalFeatures: 0
-        },
+        histograms: {},
         recordTypes,
         tags,
         success: false,
@@ -169,15 +201,23 @@ export class VisualizationApiService {
   }
 
   /**
-   * Get HeatmapTimeline for a specific recordType and optional tags
+   * Get HeatmapTimeline for specific recordTypes and optional tags
+   * If no recordTypes provided, defaults to all available recordTypes
    * Always returns all periods at single resolution (first available resolution)
    */
-  async getHeatmapTimeline(recordTypes: RecordType[], tags?: string[]): Promise<HeatmapTimelineApiResponse> {
+  async getHeatmapTimeline(recordTypes?: RecordType[], tags?: string[]): Promise<HeatmapTimelineApiResponse> {
     const startTime = Date.now();
 
     try {
       await this.initialize();
 
+      // Default to all recordTypes if none provided
+      if (!recordTypes || recordTypes.length === 0) {
+        const metadata = this.binaryHandler.getMetadata();
+        recordTypes = metadata.recordTypes;
+        console.log(`🔥 No recordTypes specified, defaulting to all: ${recordTypes.join(', ')}`);
+      }
+      
       console.log(`🔥 Fetching heatmap timeline for recordTypes: ${recordTypes.join(', ')}`);
       if (tags && tags.length > 0) {
         console.log(`🏷️ With tags: ${tags.join(', ')}`);
@@ -223,14 +263,17 @@ export class VisualizationApiService {
         const tag = tags[0];
         resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, recordTypes, tag);
         
-        if (Object.keys(resultTimeline).length === 0) {
-          throw new Error(`Tag "${tag}" not found for recordTypes "${recordTypes.join(', ')}" in any time period`);
-        }
+        // No need to throw error - empty timeline is valid (shows empty visualization)
         
         console.log(`🏷️ Returning tag-filtered timeline for "${tag}": ${Object.keys(resultTimeline).length} periods`);
       } else {
-        // Multiple tags - not implemented yet
-        throw new Error("Multiple tags filtering not yet implemented");
+        // Multiple tags - use combination key
+        const comboKey = tags.sort().join('+');
+        resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, recordTypes, comboKey);
+        
+        // No need to throw error - empty timeline is valid (shows empty visualization)
+        
+        console.log(`🏷️ Returning tag-combination-filtered timeline for "${comboKey}": ${Object.keys(resultTimeline).length} periods`);
       }
 
       const processingTime = Date.now() - startTime;
@@ -256,6 +299,187 @@ export class VisualizationApiService {
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error',
         processingTime
+      };
+    }
+  }
+
+  /**
+   * Get tags that have data for the specified recordTypes
+   * Returns individual tags (not combinations) with feature counts
+   */
+  async getAvailableTags(recordTypes?: RecordType[]): Promise<{
+    tags: Array<{ name: string; totalFeatures: number; recordTypes: RecordType[] }>;
+    recordTypes: RecordType[];
+    success: boolean;
+    message?: string;
+  }> {
+    try {
+      await this.initialize();
+
+      // Default to all recordTypes if none provided
+      if (!recordTypes || recordTypes.length === 0) {
+        const metadata = this.binaryHandler.getMetadata();
+        recordTypes = metadata.recordTypes;
+      }
+
+      console.log(`🏷️ Getting available tags for recordTypes: ${recordTypes.join(', ')}`);
+
+      const histograms = await this.binaryHandler.readHistograms();
+      
+      // Track tags across all requested recordTypes
+      const tagStats = new Map<string, { totalFeatures: number; recordTypes: Set<RecordType> }>();
+
+      for (const recordType of recordTypes) {
+        const recordTypeData = histograms[recordType];
+        if (!recordTypeData) continue;
+
+        // Process all tags for this recordType
+        for (const [tagKey, histogram] of Object.entries(recordTypeData.tags)) {
+          // Skip combination tags (contain '+')
+          if (tagKey.includes('+')) continue;
+
+          // Initialize or update tag stats
+          if (!tagStats.has(tagKey)) {
+            tagStats.set(tagKey, { totalFeatures: 0, recordTypes: new Set() });
+          }
+
+          const stats = tagStats.get(tagKey)!;
+          stats.totalFeatures += histogram.totalFeatures;
+          stats.recordTypes.add(recordType);
+        }
+      }
+
+      // Convert to response format, filter out zero-feature tags
+      const availableTags = Array.from(tagStats.entries())
+        .filter(([_, stats]) => stats.totalFeatures > 0)
+        .map(([tagName, stats]) => ({
+          name: tagName,
+          totalFeatures: stats.totalFeatures,
+          recordTypes: Array.from(stats.recordTypes).sort()
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically
+
+      console.log(`✅ Found ${availableTags.length} available tags with data`);
+
+      return {
+        tags: availableTags,
+        recordTypes,
+        success: true
+      };
+
+    } catch (error) {
+      console.error(`❌ Failed to get available tags:`, error);
+      return {
+        tags: [],
+        recordTypes: recordTypes || [],
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Get tag combinations that extend the current selection
+   * Returns tags that can be added to form valid combinations
+   */
+  async getTagCombinations(recordTypes?: RecordType[], selectedTags: string[] = []): Promise<{
+    availableTags: Array<{ name: string; totalFeatures: number }>;
+    currentSelection: string[];
+    maxDepth: number;
+    recordTypes: RecordType[];
+    success: boolean;
+    message?: string;
+  }> {
+    try {
+      await this.initialize();
+
+      // Default to all recordTypes if none provided
+      if (!recordTypes || recordTypes.length === 0) {
+        const metadata = this.binaryHandler.getMetadata();
+        recordTypes = metadata.recordTypes;
+      }
+
+      console.log(`🔗 Getting tag combinations for recordTypes: ${recordTypes.join(', ')}, selected: ${selectedTags.join(', ')}`);
+
+      const histograms = await this.binaryHandler.readHistograms();
+      
+      // Track available next tags with their feature counts
+      const nextTagStats = new Map<string, number>();
+
+      for (const recordType of recordTypes) {
+        const recordTypeData = histograms[recordType];
+        if (!recordTypeData) continue;
+
+        const tagKeys = Object.keys(recordTypeData.tags);
+
+        if (selectedTags.length === 0) {
+          // No selection - return all individual tags (same as available-tags but with structure)
+          for (const tagKey of tagKeys) {
+            if (tagKey.includes('+')) continue; // Skip combinations
+            
+            const histogram = recordTypeData.tags[tagKey];
+            const currentCount = nextTagStats.get(tagKey) || 0;
+            nextTagStats.set(tagKey, currentCount + histogram.totalFeatures);
+          }
+        } else {
+          // Find combinations that extend current selection
+          const validCombinations = tagKeys.filter(key => {
+            if (!key.includes('+')) return false; // Must be a combination
+            
+            const keyTags = key.split('+').sort();
+            
+            // Check if combination contains all selected tags and exactly one more
+            const hasAllSelected = selectedTags.every(tag => keyTags.includes(tag));
+            const isNextLevel = keyTags.length === selectedTags.length + 1;
+            
+            return hasAllSelected && isNextLevel;
+          });
+
+          // Extract the "next" tags from valid combinations
+          for (const combo of validCombinations) {
+            const comboTags = combo.split('+');
+            const nextTags = comboTags.filter(tag => !selectedTags.includes(tag));
+            
+            for (const nextTag of nextTags) {
+              const histogram = recordTypeData.tags[combo];
+              const currentCount = nextTagStats.get(nextTag) || 0;
+              nextTagStats.set(nextTag, currentCount + histogram.totalFeatures);
+            }
+          }
+        }
+      }
+
+      // Convert to response format
+      const availableTags = Array.from(nextTagStats.entries())
+        .filter(([_, count]) => count > 0)
+        .map(([tagName, totalFeatures]) => ({
+          name: tagName,
+          totalFeatures
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      // Determine max depth (currently limited by maxTagCombinations = 2)
+      const maxDepth = 2;
+
+      console.log(`✅ Found ${availableTags.length} available next tags for current selection`);
+
+      return {
+        availableTags,
+        currentSelection: selectedTags,
+        maxDepth,
+        recordTypes,
+        success: true
+      };
+
+    } catch (error) {
+      console.error(`❌ Failed to get tag combinations:`, error);
+      return {
+        availableTags: [],
+        currentSelection: selectedTags,
+        maxDepth: 2,
+        recordTypes: recordTypes || [],
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }

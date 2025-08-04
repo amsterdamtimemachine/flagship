@@ -242,7 +242,8 @@ export function generateVisualizationStats(
   const featuresPerRecordType: Record<RecordType, number> = {
     text: 0,
     image: 0,
-    event: 0
+    person: 0,
+    unknown: 0
   };
   
   // Use the first resolution for counting (all resolutions have same data, different spatial detail)
@@ -365,89 +366,89 @@ export function createVisualizationData(
 /**
  * Generate visualization binary directly from HeatmapResolutions and generated histograms
  */
-export async function generateVisualizationBinaryFromResolutions(
-  binaryPath: string,
-  heatmapResolutions: HeatmapResolutions,
-  config: any, // DatabaseConfig
-  bounds: any, // HeatmapCellBounds  
-  chunkConfig: any, // ChunkingConfig
-  timeSlices: TimeSlice[],
-  recordTypes: RecordType[],
-  tags: string[] = []
-): Promise<void> {
-  console.log(`🎯 Generating visualization binary from HeatmapResolutions...`);
-  
-  // Generate default histograms
-  const histograms = await generateDefaultHistograms(
-    config,
-    bounds,
-    chunkConfig,
-    timeSlices,
-    recordTypes,
-    tags
-  );
-  
-  // Extract resolutions config from the HeatmapResolutions keys
-  const resolutions: HeatmapResolutionConfig[] = Object.keys(heatmapResolutions).map(key => {
-    const [cols, rows] = key.split('x').map(Number);
-    return { cols, rows };
-  });
-  
-  // Get dimensions from first resolution for metadata
-  const firstResolutionKey = Object.keys(heatmapResolutions)[0];
-  const firstResolution = heatmapResolutions[firstResolutionKey];
-  
-  // Extract dimensions from first heatmap
-  const firstTimeSlice = Object.values(firstResolution)[0];
-  const firstRecordType = Object.values(firstTimeSlice)[0];
-  const gridCellCount = firstRecordType.base.countArray?.length || 0;
-  
-  // Calculate dimensions from grid cell count and first resolution
-  const firstResConfig = resolutions[0];
-  const expectedCellCount = firstResConfig.cols * firstResConfig.rows;
-  
-  const heatmapDimensions: HeatmapDimensions = {
-    colsAmount: firstResConfig.cols,
-    rowsAmount: firstResConfig.rows,
-    cellWidth: (bounds.maxLon - bounds.minLon) / firstResConfig.cols,
-    cellHeight: (bounds.maxLat - bounds.minLat) / firstResConfig.rows,
-    minLon: bounds.minLon,
-    maxLon: bounds.maxLon,
-    minLat: bounds.minLat,
-    maxLat: bounds.maxLat
-  };
-  
-  // Generate blueprint from dimensions
-  const { generateHeatmapBlueprint } = await import('../processing/heatmap');
-  const heatmapBlueprint = generateHeatmapBlueprint(heatmapDimensions);
-  
-  // Generate stats
-  const stats = generateVisualizationStats(heatmapResolutions, histograms, timeSlices);
-  
-  // Create the binary
-  await createVisualizationBinary(
-    binaryPath,
-    heatmapResolutions,
-    histograms,
-    heatmapDimensions,
-    heatmapBlueprint,
-    timeSlices,
-    recordTypes,
-    resolutions,
-    tags,
-    {
-      minLon: heatmapDimensions.minLon,
-      maxLon: heatmapDimensions.maxLon,
-      minLat: heatmapDimensions.minLat,
-      maxLat: heatmapDimensions.maxLat
-    }
-  );
-  
-  console.log(`✅ Generated visualization binary with ${resolutions.length} resolutions and ${histograms.length} histograms`);
-}
+//export async function generateVisualizationBinaryFromResolutions(
+//  binaryPath: string,
+//  heatmapResolutions: HeatmapResolutions,
+//  config: any, // DatabaseConfig
+//  bounds: any, // HeatmapCellBounds  
+//  chunkConfig: any, // ChunkingConfig
+//  timeSlices: TimeSlice[],
+//  recordTypes: RecordType[],
+//  tags: string[] = []
+//): Promise<void> {
+//  console.log(`🎯 Generating visualization binary from HeatmapResolutions...`);
+//  
+//  // Generate default histograms
+//  const histograms = await generateDefaultHistograms(
+//    config,
+//    bounds,
+//    chunkConfig,
+//    timeSlices,
+//    recordTypes,
+//    tags
+//  );
+//  
+//  // Extract resolutions config from the HeatmapResolutions keys
+//  const resolutions: HeatmapResolutionConfig[] = Object.keys(heatmapResolutions).map(key => {
+//    const [cols, rows] = key.split('x').map(Number);
+//    return { cols, rows };
+//  });
+//  
+//  // Get dimensions from first resolution for metadata
+//  const firstResolutionKey = Object.keys(heatmapResolutions)[0];
+//  const firstResolution = heatmapResolutions[firstResolutionKey];
+//  
+//  // Extract dimensions from first heatmap
+//  const firstTimeSlice = Object.values(firstResolution)[0];
+//  const firstRecordType = Object.values(firstTimeSlice)[0];
+//  const gridCellCount = firstRecordType.base.countArray?.length || 0;
+//  
+//  // Calculate dimensions from grid cell count and first resolution
+//  const firstResConfig = resolutions[0];
+//  const expectedCellCount = firstResConfig.cols * firstResConfig.rows;
+//  
+//  const heatmapDimensions: HeatmapDimensions = {
+//    colsAmount: firstResConfig.cols,
+//    rowsAmount: firstResConfig.rows,
+//    cellWidth: (bounds.maxLon - bounds.minLon) / firstResConfig.cols,
+//    cellHeight: (bounds.maxLat - bounds.minLat) / firstResConfig.rows,
+//    minLon: bounds.minLon,
+//    maxLon: bounds.maxLon,
+//    minLat: bounds.minLat,
+//    maxLat: bounds.maxLat
+//  };
+//  
+//  // Generate blueprint from dimensions
+//  const { generateHeatmapBlueprint } = await import('../visualization/heatmap');
+//  const heatmapBlueprint = generateHeatmapBlueprint(heatmapDimensions);
+//  
+//  // Generate stats
+//  const stats = generateVisualizationStats(heatmapResolutions, histograms, timeSlices);
+//  
+//  // Create the binary
+//  await createVisualizationBinary(
+//    binaryPath,
+//    heatmapResolutions,
+//    histograms,
+//    heatmapDimensions,
+//    heatmapBlueprint,
+//    timeSlices,
+//    recordTypes,
+//    resolutions,
+//    tags,
+//    {
+//      minLon: heatmapDimensions.minLon,
+//      maxLon: heatmapDimensions.maxLon,
+//      minLat: heatmapDimensions.minLat,
+//      maxLat: heatmapDimensions.maxLat
+//    }
+//  );
+//  
+//  console.log(`✅ Generated visualization binary with ${resolutions.length} resolutions and ${histograms.length} histograms`);
+//}
 
 /**
- * Generate default histograms for common use cases
+ * Generate empty histograms (legacy histogram generation removed)
  */
 export async function generateDefaultHistograms(
   config: any, // DatabaseConfig
@@ -457,52 +458,48 @@ export async function generateDefaultHistograms(
   recordTypes: RecordType[],
   tags: string[] = []
 ): Promise<Histograms> {
-  console.log(`📊 Generating default histograms...`);
+  console.log(`📊 Generating empty histograms (legacy histogram generation removed)...`);
   
-  const { generateFilteredHistogram } = await import('../processing/histogram');
   const histograms: Histograms = {};
   
-  // Generate histogram for each record type
+  // Generate empty histogram structure for each record type
   for (const recordType of recordTypes) {
-    console.log(`📈 Generating histograms for recordType: ${recordType}`);
+    console.log(`📈 Creating empty histogram for recordType: ${recordType}`);
     
-    // Initialize structure for this recordType
     histograms[recordType] = {
-      base: {} as Histogram,
+      base: {
+        totalFeatures: 0,
+        maxCount: 0,
+        timeRange: {
+          start: timeSlices[0]?.timeRange?.start || '1600-01-01',
+          end: timeSlices[timeSlices.length - 1]?.timeRange?.end || '2025-12-31'
+        },
+        bins: timeSlices.map(timeSlice => ({
+          timeSlice: timeSlice,
+          count: 0
+        }))
+      },
       tags: {}
     };
     
-    // Generate base histogram (all features for this recordType)
-    const baseResponse = await generateFilteredHistogram(config, bounds, chunkConfig, {
-      recordTypes: [recordType],
-      timeSlices
-    });
-    
-    if (baseResponse.success) {
-      histograms[recordType].base = baseResponse.histogram;
-    } else {
-      console.warn(`⚠️ Failed to generate base histogram for ${recordType}: ${baseResponse.message}`);
-    }
-    
-    // Generate tag-specific histograms for this recordType
+    // Create empty tag histograms
     for (const tag of tags.slice(0, 5)) { // Limit to first 5 tags per recordType
-      console.log(`📈 Generating histogram for ${recordType} + tag: ${tag}`);
-      
-      const tagResponse = await generateFilteredHistogram(config, bounds, chunkConfig, {
-        recordTypes: [recordType],
-        tags: [tag],
-        timeSlices
-      });
-      
-      if (tagResponse.success) {
-        histograms[recordType].tags[tag] = tagResponse.histogram;
-      } else {
-        console.warn(`⚠️ Failed to generate histogram for ${recordType}+${tag}: ${tagResponse.message}`);
-      }
+      histograms[recordType].tags[tag] = {
+        totalFeatures: 0,
+        maxCount: 0,
+        timeRange: {
+          start: timeSlices[0]?.timeRange?.start || '1600-01-01',
+          end: timeSlices[timeSlices.length - 1]?.timeRange?.end || '2025-12-31'
+        },
+        bins: timeSlices.map(timeSlice => ({
+          timeSlice: timeSlice,
+          count: 0
+        }))
+      };
     }
   }
   
-  console.log(`✅ Generated structured histograms for ${recordTypes.length} recordTypes`);
+  console.log(`✅ Generated empty histograms for ${recordTypes.length} recordTypes and ${tags.length} tags`);
   return histograms;
 }
 

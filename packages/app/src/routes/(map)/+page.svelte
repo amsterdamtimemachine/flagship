@@ -12,7 +12,8 @@
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import TimePeriodSelector2 from '$components/TimePeriodSelector2.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
-	import CellView from '$components/CellView.svelte';
+	import TagsSelector from '$components/TagsSelector.svelte';
+	import FeaturesView from '$components/FeaturesView.svelte';
 	import ErrorHandler from '$lib/components/ErrorHandler.svelte';
 	
 	import type { PageData } from './$types';
@@ -22,11 +23,13 @@
 	// Derived data from server
 	let dimensions = $derived(data?.metadata?.heatmapDimensions);
 	let recordTypes = $derived(data?.metadata?.recordTypes);
+	let tags = $derived(data?.metadata?.tags);
+	let availableTagNames = $derived(data?.availableTags?.tags?.map(tag => tag.name) || data?.metadata?.tags || []);
 	let heatmapTimeline = $derived(data?.heatmapTimeline?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
 	let currentRecordTypes = $derived(data?.currentRecordTypes);
-	let tags = $derived(data?.tags);
-	let histogram = $derived(data?.histogram?.histogram);
+	let currentTags = $derived(data?.currentTags);
+	let histograms = $derived(data?.histogram?.histograms);
 
 	const controller = createMapController();	
 	let currentPeriod = $derived(controller.currentPeriod);
@@ -51,12 +54,12 @@
 			
 			const timelineData = heatmapTimeline?.heatmapTimeline || heatmapTimeline;
 			
-			const needsMerging = effectiveRecordTypes.length > 1 || (tags && tags.length > 0);
+			const needsMerging = effectiveRecordTypes.length > 1 || (currentTags && currentTags.length > 0);
 			
 			if (needsMerging) {
 				// Merge entire timeline for smooth navigation
-				const selectedTag = tags && tags.length > 0 ? tags[0] : undefined;
-				return mergeHeatmapTimeline(timelineData, effectiveRecordTypes, selectedTag, heatmapBlueprint);
+				const selectedTags = currentTags && currentTags.length > 0 ? currentTags : undefined;
+				return mergeHeatmapTimeline(timelineData, effectiveRecordTypes, selectedTags, heatmapBlueprint);
 			} else {
 				// Single recordType, no tags - use original timeline
 				return timelineData;
@@ -65,9 +68,44 @@
 		return null;
 	});
 
-	// Use histogram directly since backend handles merging
-	// Note: Server-side histogram fetching already handles empty recordTypes as "all types"
-	let mergedHistogram = $derived(histogram);
+	let mergedHistogram = $derived.by(() => {
+		if (histograms && currentRecordTypes && recordTypes) {
+			// Empty selection = show all recordTypes (default behavior)
+			const effectiveRecordTypes = currentRecordTypes.length > 0 
+				? currentRecordTypes 
+				: recordTypes;
+			
+			// Determine selected tags if any
+			const selectedTags = currentTags && currentTags.length > 0 ? currentTags : undefined;
+			
+			// Collect histograms to merge
+			const histogramsToMerge = [];
+			
+			for (const recordType of effectiveRecordTypes) {
+				const recordTypeData = histograms[recordType];
+				if (recordTypeData) {
+					if (selectedTags && selectedTags.length > 0) {
+						// Use tag combination or individual tag histogram
+						const tagKey = selectedTags.length > 1 ? selectedTags.sort().join('+') : selectedTags[0];
+						if (recordTypeData.tags[tagKey]) {
+							histogramsToMerge.push(recordTypeData.tags[tagKey]);
+						}
+					} else if (recordTypeData.base) {
+						// Use base histogram
+						histogramsToMerge.push(recordTypeData.base);
+					}
+				}
+			}
+			
+			if (histogramsToMerge.length === 0) {
+				return null;
+			}
+			
+			// Merge histograms on client side
+			return mergeHistograms(histogramsToMerge);
+		}
+		return null;
+	});
 
 	// Get current heatmap - just pick from pre-merged timeline
 	let currentHeatmap = $derived.by(() => {
@@ -92,7 +130,7 @@
 		
 		return null;
 	});
-
+	
 	// Debounced period changes to avoid too many API calls
 	const debouncedPeriodChange = debounce((period: string) => {
 		controller.setPeriod(period);
@@ -147,6 +185,14 @@
 
 	function handleRecordTypeChange(recordTypes: string[]) {
 		controller.setRecordType(recordTypes);
+	
+		// WIP: this currently triggers 2nd goto page reload after setRecordType!
+		// reset tags Selection when record types change
+    //controller.setTags([]); 
+	}
+
+	function handleTagsChange(tags: string[]) {
+		controller.setTags(tags);
 	}
 
 	// Handle cell selection from map
@@ -180,7 +226,9 @@
 
 <div class="relative flex flex-col w-screen h-screen">
 	<div class="relative flex-1">
-		<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} class="absolute z-50 top-5 left-5"/>
+		<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} class="absolute z-40 top-5 left-5"/>
+		<!-- <ToggleGroup items={availableTagNames} selectedItems={currentTags} onItemSelected={handleTagsChange} orientation="vertical" class="absolute z-40 top-20 left-5"/> -->
+		<TagsSelector recordTypes={currentRecordTypes || []} selectedTags={currentTags || []} onTagsSelected={handleTagsChange} class="absolute z-40 top-20 left-5"/>
 		{#if currentHeatmap && heatmapBlueprint && dimensions}
 			<Map
 				heatmap={currentHeatmap}
@@ -192,12 +240,13 @@
 		{/if}
 
 		{#if showCellModal && selectedCellId}
-			<div class="z-50 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
-				<CellView 
+			<div class="z-40 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
+				<FeaturesView 
 					cellId={selectedCellId} 
 					period={currentPeriod} 
 					bounds={selectedCellBounds}
 					recordTypes={currentRecordTypes}
+					tags={currentTags}
 					onClose={handleCellClose} 
 				/>
 			</div>

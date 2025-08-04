@@ -17,6 +17,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
   let metadata: VisualizationMetadata | null = null;
   let histogram: HistogramApiResponse | null = null;
   let heatmapTimeline: HeatmapTimelineApiResponse | null = null;
+  let availableTags: any = null;
   
   // Parse URL parameters
   const recordTypesParam = url.searchParams.get('recordTypes');
@@ -59,16 +60,16 @@ export const load: PageLoad = async ({ fetch, url }) => {
         });
         
         // Debug: Check actual processing bounds
-        console.log('🗺️ Processing bounds:', {
-          primaryResolution: {
-            minLon: metadata.heatmapDimensions.minLon,
-            maxLon: metadata.heatmapDimensions.maxLon,
-            minLat: metadata.heatmapDimensions.minLat,
-            maxLat: metadata.heatmapDimensions.maxLat,
-            cellWidth: metadata.heatmapDimensions.cellWidth,
-            cellHeight: metadata.heatmapDimensions.cellHeight
-          }
-        });
+       // console.log('🗺️ Processing bounds:', {
+       //   primaryResolution: {
+       //     minLon: metadata.heatmapDimensions.minLon,
+       //     maxLon: metadata.heatmapDimensions.maxLon,
+       //     minLat: metadata.heatmapDimensions.minLat,
+       //     maxLat: metadata.heatmapDimensions.maxLat,
+       //     cellWidth: metadata.heatmapDimensions.cellWidth,
+       //     cellHeight: metadata.heatmapDimensions.cellHeight
+       //   }
+       // });
         
         if (metadata.resolutionDimensions) {
           console.log('📐 Available resolutions:', metadata.resolutionDimensions);
@@ -90,8 +91,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
     ));
   }
   
-  // Determine recordTypes to use for histogram and heatmap
-  let currentRecordTypes: RecordType[] = ['text']; // Default fallback
+  // Determine recordTypes to use for API requests and UI state
+  let currentRecordTypes: RecordType[] = [];
   
   if (metadata?.recordTypes) {
     // Handle recordTypes parameter
@@ -102,9 +103,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
       if (validTypes.length > 0) {
         currentRecordTypes = validTypes;
       } else {
-        // Use first available recordType as default
-        currentRecordTypes = [metadata.recordTypes[0] || 'text'];
-        
+        // If no valid record types are provided the app will default to fetching all data
         // Add validation error for invalid recordTypes
         errors.push(createValidationError(
           'recordTypes',
@@ -112,47 +111,61 @@ export const load: PageLoad = async ({ fetch, url }) => {
           `Must contain at least one of: ${metadata.recordTypes.join(', ')}`
         ));
       }
-    } else {
-      // Use ALL available recordTypes as default when no recordTypes specified
-      currentRecordTypes = metadata.recordTypes;
-    }
+    } 
   }
   
   // Parse tags if provided
-  let tags: string[] | undefined;
-  if (tagsParam) {
-    tags = tagsParam.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+  let currentTags: string[] | undefined;
+
+  if (metadata?.tags) {
+    // Handle recordTypes parameter
+    if (tagsParam) {
+      const requestedTags = tagsParam.split(',').map(t => t.trim()) as string[];
+      const validTags = requestedTags.filter(tag => metadata.tags.includes(tag));
+      
+      if (validTags.length > 0) {
+        currentTags = validTags;
+      } else {
+        // Add validation error for invalid tags 
+        errors.push(createValidationError(
+          'tags',
+          tagsParam,
+          `Must contain at least one of: ${metadata.tags.join(', ')}`
+        ));
+      }
+    } 
   }
-  
-  // Fetch histogram and heatmap timeline data in parallel
-  const dataPromises = [];
-  
+
+
+   
   // Histogram promise
   const histogramPromise = (async () => {
     try {  
-      const histogramUrl = `/api/histogram?recordTypes=${currentRecordTypes.join(',')}${tags ? `&tags=${tags.join(',')}` : ''}`;
+      const histogramUrl = `/api/histogram${currentRecordTypes.length > 0 ? `?recordTypes=${currentRecordTypes.join(',')}` : ''}${currentTags ? `${currentRecordTypes.length > 0 ? '&' : '?'}tags=${currentTags.join(',')}` : ''}` || '/api/histogram';
       const histogramResponse = await fetch(histogramUrl);
       
       if (!histogramResponse.ok) {
+        // Parse error message from SvelteKit error response
+        let errorMessage = `HTTP ${histogramResponse.status}`;
+        try {
+          const errorData = await histogramResponse.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          // Fallback to status text if JSON parsing fails
+          errorMessage = histogramResponse.statusText || errorMessage;
+        }
+        
         errors.push(createError(
           'warning',
           'Histogram Load Failed',
-          `Failed to load histogram data: HTTP ${histogramResponse.status}`,
-          { recordTypes: currentRecordTypes, tags, status: histogramResponse.status }
+          errorMessage,
+          { recordTypes: currentRecordTypes, tags: currentTags, status: histogramResponse.status }
         ));
       } else {
         const histogramData = await histogramResponse.json() as HistogramApiResponse;
-        
-        if (!histogramData.success) {
-          errors.push(createError(
-            'warning',
-            'Histogram API Error',
-            histogramData.message || 'Failed to get histogram data',
-            { recordTypes: currentRecordTypes, tags, response: histogramData }
-          ));
-        } else {
-          histogram = histogramData;
-        }
+        histogram = histogramData;
       }
       
     } catch (err) {
@@ -164,7 +177,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
         'Could not load histogram data. The map will still function but temporal data may be limited.',
         { 
           recordTypes: currentRecordTypes,
-          tags,
+          tags: currentTags,
           error: err instanceof Error ? err.message : 'Unknown error'
         }
       ));
@@ -174,29 +187,31 @@ export const load: PageLoad = async ({ fetch, url }) => {
   // Heatmap timeline promise
   const heatmapPromise = (async () => {
     try {
-      const heatmapUrl = `/api/heatmaps?recordTypes=${currentRecordTypes.join(',')}${tags ? `&tags=${tags.join(',')}` : ''}`;
+      const heatmapUrl = `/api/heatmaps${currentRecordTypes.length > 0 ? `?recordTypes=${currentRecordTypes.join(',')}` : ''}${currentTags ? `${currentRecordTypes.length > 0 ? '&' : '?'}tags=${currentTags.join(',')}` : ''}` || '/api/heatmaps';
       const heatmapResponse = await fetch(heatmapUrl);
       
       if (!heatmapResponse.ok) {
+        // Parse error message from SvelteKit error response
+        let errorMessage = `HTTP ${heatmapResponse.status}`;
+        try {
+          const errorData = await heatmapResponse.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          // Fallback to status text if JSON parsing fails
+          errorMessage = heatmapResponse.statusText || errorMessage;
+        }
+        
         errors.push(createError(
           'warning',
           'Heatmap Load Failed',
-          `Failed to load heatmap timeline: HTTP ${heatmapResponse.status}`,
-          { recordTypes: currentRecordTypes, tags, status: heatmapResponse.status }
+          errorMessage,
+          { recordTypes: currentRecordTypes, tags: currentTags, status: heatmapResponse.status }
         ));
       } else {
         const heatmapData = await heatmapResponse.json() as HeatmapTimelineApiResponse;
-        
-        if (!heatmapData.success) {
-          errors.push(createError(
-            'warning',
-            'Heatmap API Error',
-            heatmapData.message || 'Failed to get heatmap timeline data',
-            { recordTypes: currentRecordTypes, tags, response: heatmapData }
-          ));
-        } else {
-          heatmapTimeline = heatmapData;  
-        }
+        heatmapTimeline = heatmapData;
       }
       
     } catch (err) {
@@ -208,23 +223,69 @@ export const load: PageLoad = async ({ fetch, url }) => {
         'Could not load heatmap timeline. Spatial visualization may be limited.',
         { 
           recordTypes: currentRecordTypes,
-          tags,
+          tags: currentTags,
           error: err instanceof Error ? err.message : 'Unknown error'
         }
       ));
     }
   })();
   
-  // Wait for both data requests to complete
-  await Promise.all([histogramPromise, heatmapPromise]);
+  // Available tags promise
+  const availableTagsPromise = (async () => {
+    try {
+      const tagsUrl = `/api/available-tags${currentRecordTypes.length > 0 ? `?recordTypes=${currentRecordTypes.join(',')}` : ''}`;
+      const tagsResponse = await fetch(tagsUrl);
+      
+      if (!tagsResponse.ok) {
+        // Parse error message from SvelteKit error response
+        let errorMessage = `HTTP ${tagsResponse.status}`;
+        try {
+          const errorData = await tagsResponse.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          // Fallback to status text if JSON parsing fails
+          errorMessage = tagsResponse.statusText || errorMessage;
+        }
+        
+        errors.push(createError(
+          'warning',
+          'Available Tags Load Failed',
+          errorMessage,
+          { recordTypes: currentRecordTypes, status: tagsResponse.status }
+        ));
+      } else {
+        const tagsData = await tagsResponse.json();
+        availableTags = tagsData;
+      }
+      
+    } catch (err) {
+      console.error('❌ Failed to load available tags:', err);
+      
+      errors.push(createError(
+        'warning',
+        'Available Tags Load Error',
+        'Could not load available tags. All tags will be shown in the interface.',
+        { 
+          recordTypes: currentRecordTypes,
+          error: err instanceof Error ? err.message : 'Unknown error'
+        }
+      ));
+    }
+  })();
+  
+  // Wait for all data requests to complete
+  await Promise.all([histogramPromise, heatmapPromise, availableTagsPromise]);
   
   loadingState.stopLoading(); 
   return {
     metadata,
     histogram,
     heatmapTimeline,
+    availableTags,
     currentRecordTypes,
-    tags,
+    currentTags,
     errorData: createPageErrorData(errors)
   };
 };

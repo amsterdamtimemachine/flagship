@@ -45,7 +45,6 @@
 		"lodash.debounce": "^4.0.8",
 		"maplibre-gl": "^4.5.1",
 		"melt": "^0.34.0",
-		"svelte-masonry": "^0.1.5",
 		"tailwind-merge": "^2.6.0"
 	}
 }
