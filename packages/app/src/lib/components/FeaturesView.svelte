@@ -5,7 +5,10 @@
 	import { fetchGeodataFromDatabase } from '$utils/clientApi';
 	import { formatDate } from '$utils/utils';
 	import { loadingState } from '$lib/state/loadingState.svelte';
+	import { createError, createPageErrorData } from '$utils/error';
+	import ErrorHandler from '$components/ErrorHandler.svelte';
 	import type { RecordType } from '@atm/shared/types';
+	import type { AppError } from '$types/error';
 	
 	interface Props {
 		cellId: string;
@@ -27,7 +30,8 @@
 	let loading = $state(false);
 	let loadingMore = $state(false);
 	let initialLoading = $state(true);
-	let error = $state<string | null>(null);
+	let errors = $state<AppError[]>([]);
+	let errorData = $derived(createPageErrorData(errors));
 	
 	async function loadCellData(page: number = 1, triggerGlobalLoading: boolean = true) {
 		// Only trigger global loading state when explicitly requested
@@ -82,11 +86,17 @@
 				totalCount = response.total || totalCount;
 			}
 			
-			error = null;
+			// Clear previous errors on successful load
+			errors = [];
 			
 		} catch (err) {
 			console.error('Error loading cell data:', err);
-			error = err instanceof Error ? err.message : 'Failed to load cell data';
+			errors = [createError(
+				'error',
+				'Cell Data Load Failed',
+				err instanceof Error ? err.message : 'Failed to load cell data',
+				{ cellId, period, page, recordTypes, tags }
+			)];
 		} finally {
 			// Stop global loading state when explicitly requested
 			if (triggerGlobalLoading) {
@@ -113,7 +123,7 @@
 		currentPage = 1;
 		totalPages = 1;
 		totalCount = 0;
-		error = null;
+		errors = [];
 		initialLoading = true;
 		
 		// Load new data
@@ -129,6 +139,8 @@
 		}
 	}
 </script>
+
+<ErrorHandler errorData={errorData} />
 
 {#if initialLoading}
 	<div class="w-full flex justify-between">
@@ -158,28 +170,6 @@
 		</button>
 	</div>
 	<div class="text-gray-500">Loading cell data...</div>
-{:else if error}
-	<div class="w-full flex justify-between">
-		<div>
-			<h2>
-				<span>
-					<span class="font-bold">Cell</span>
-					{cellId}
-				</span>
-				<span class="block">
-					<span class="font-bold">Period</span>
-					{formatDate(period)}
-				</span>
-			</h2>
-		</div>
-		<button
-			onclick={closeModal}
-			class="px-2 py-1 text-sm text-black border border-solid border-black"
-		>
-			close
-		</button>
-	</div>
-	<div class="text-red-500">Error: {error}</div>
 {:else}
 	<div class="w-full flex justify-between">
 		<div>
