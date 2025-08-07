@@ -10,7 +10,6 @@
 	import { loadingState } from '$lib/state/loadingState.svelte';
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
-	import TimePeriodSelector2 from '$components/TimePeriodSelector2.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
 	import TagsSelector from '$components/TagsSelector.svelte';
 	import FeaturesView from '$components/FeaturesView.svelte';
