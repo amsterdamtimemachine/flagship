@@ -13,7 +13,8 @@
 	import ToggleGroup from '$components/ToggleGroup.svelte';
 	import TagsSelector from '$components/TagsSelector.svelte';
 	import FeaturesView from '$components/FeaturesView.svelte';
-	import ErrorHandler from '$lib/components/ErrorHandler.svelte';
+	import NavContainer from '$components/NavContainer.svelte';
+	import ErrorHandler from '$components/ErrorHandler.svelte';
 	
 	import type { PageData } from './$types';
 
@@ -237,6 +238,7 @@
 				handleCellClick={handleCellClick}
 			/>
 		{/if}
+
 
 		{#if showCellModal && selectedCellId}
 			<div class="z-40 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
