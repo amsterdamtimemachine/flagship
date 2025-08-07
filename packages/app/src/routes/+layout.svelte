@@ -13,8 +13,6 @@
 
 	<main class="relative">
 		<LoadingBar class="z-50 fixed top-0 "/>
-
 		<Toaster />
-	<!-- <h1 class="z-50 absolute top-1 left-1">Amsterdam Time Machine</h1> -->
 		{@render children?.()}
 	</main>

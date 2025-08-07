@@ -37,6 +37,9 @@
 	let selectedCellBounds = $derived(controller.selectedCellBounds);
 	let showCellModal = $derived(controller.showCellModal);
 	
+	// Navigation state
+	let navExpanded = $state(false);
+	
 	
 	// Combine server errors with controller errors for ErrorHandler
 	let allErrors = $derived.by(() => {
@@ -226,9 +229,7 @@
 
 <div class="relative flex flex-col w-screen h-screen">
 	<div class="relative flex-1">
-		<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} class="absolute z-40 top-5 left-5"/>
-		<!-- <ToggleGroup items={availableTagNames} selectedItems={currentTags} onItemSelected={handleTagsChange} orientation="vertical" class="absolute z-40 top-20 left-5"/> -->
-		<TagsSelector recordTypes={currentRecordTypes || []} selectedTags={currentTags || []} onTagsSelected={handleTagsChange} class="absolute z-40 top-20 left-5"/>
+		<!-- Map renders as background layer -->
 		{#if currentHeatmap && heatmapBlueprint && dimensions}
 			<Map
 				heatmap={currentHeatmap}
@@ -239,7 +240,15 @@
 			/>
 		{/if}
 
+		<!-- NavContainer overlays on top with nav content -->
+		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
+			<div class="p-4 space-y-4">
+				<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} />
+				<TagsSelector recordTypes={currentRecordTypes || []} selectedTags={currentTags || []} onTagsSelected={handleTagsChange} />
+			</div>
+		</NavContainer>
 
+		<!-- Cell modal -->
 		{#if showCellModal && selectedCellId}
 			<div class="z-40 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
 				<FeaturesView 

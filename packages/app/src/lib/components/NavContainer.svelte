@@ -1,9 +1,8 @@
 <script lang="ts">
 	import NavToggle from '$components/NavToggle.svelte';
-	import { navigationHeight } from '$stores/layoutStore';
 	import { cubicOut } from 'svelte/easing';
 	import { tweened } from 'svelte/motion';
-	import { mergeCss } from '$utils';
+	import { mergeCss } from '$utils/utils';
 	import type { Snippet } from 'svelte';
 
 	interface Props {
@@ -40,7 +39,7 @@
 <div
 	id="table-of-contents-container"
 	class={mergeCss(
-		'left-0 fixed w-[300px] top-0 h-[100vh] xl:w-[290px] 2xl:w-[400px] border-r border-light-gray bg-white shadow-[5px_0px_20px_5px_rgba(0,0,0,0.07)]',
+		'absolute left-0 top-0 w-[300px] h-full xl:w-[290px] 2xl:w-[400px] border-r border-light-gray bg-white shadow-[5px_0px_20px_5px_rgba(0,0,0,0.07)]',
 		className
 	)}
 	style="transform: translateX({$navPosition}%);"
