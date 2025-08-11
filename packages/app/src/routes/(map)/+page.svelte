@@ -242,10 +242,8 @@
 
 		<!-- NavContainer overlays on top with nav content -->
 		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
-			<div class="p-4 space-y-4">
 				<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} />
 				<TagsSelector recordTypes={currentRecordTypes || []} selectedTags={currentTags || []} onTagsSelected={handleTagsChange} />
-			</div>
 		</NavContainer>
 
 		<!-- Cell modal -->
