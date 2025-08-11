@@ -8,12 +8,15 @@
 		orientation?: 'horizontal' | 'vertical';
 		type?: 'single' | 'multiple';
 		selectedItems?: string[];
+		disabledItems?: string[];
 		onItemSelected?: (selected: string[]) => void;
 		class?: string;
 	}
 
-	let { items, 
+	let { 
+		items, 
 		selectedItems = [], 
+		disabledItems = [],
 		orientation = 'vertical',
 		type = 'multiple',
 		onItemSelected,
@@ -35,7 +38,12 @@
 		  }
 		  return next 
 		}
-	});	
+	});
+
+	// Check if an item is disabled
+	function isDisabled(itemValue: string): boolean {
+		return disabledItems.includes(itemValue);
+	}
 </script>
 
 <div
@@ -46,14 +54,17 @@
 >
 	{#each sortedItems as itemValue (itemValue)}
 		<button
-			class="pb-1 last-child:pb-0 flex items-center gap-2 w-full text-left cursor-pointer transition-colors hover:bg-gray-50 focus:outline-none focus:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-			use:melt={$item(itemValue)}
+			class="pb-1 last-child:pb-0 flex items-center gap-2 w-full text-left cursor-pointer transition-colors hover:bg-gray-50 focus:outline-none focus:bg-gray-50 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[disabled]:hover:bg-transparent"
+			use:melt={$item({ value: itemValue, disabled: isDisabled(itemValue) })}
 			aria-label="Toggle {itemValue}"
 			role={type === 'single' ? 'radio' : 'checkbox'}
 			aria-checked={$value && $value.includes(itemValue) || (type === 'single' && $value === itemValue)}
 		>
 			<span 
 				class="w-5 h-5 border-2 border-gray-300 rounded flex items-center justify-center bg-white text-blue-600 transition-colors data-[state='on']:border-blue-600 data-[state='on']:bg-blue-600 data-[state='on']:text-white"
+				class:border-gray-200={isDisabled(itemValue)}
+				class:bg-gray-100={isDisabled(itemValue)}
+				class:text-gray-400={isDisabled(itemValue)}
 				aria-hidden="true"
 			>
 				{#if $value && $value.includes(itemValue) || (type === 'single' && $value === itemValue)}
@@ -62,6 +73,7 @@
 			</span>
 			<span 
 				class="text-sm text-gray-700 transition-colors select-none"
+				class:text-gray-400={isDisabled(itemValue)}
 				aria-hidden="true"
 			>
 				{itemValue}
@@ -69,4 +81,3 @@
 		</button>
 	{/each}
 </div>
-

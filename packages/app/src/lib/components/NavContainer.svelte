@@ -1,6 +1,5 @@
 <script lang="ts">
 	import NavToggle from '$components/NavToggle.svelte';
-	import NavHeader from '$components/NavHeader.svelte';
 	import { cubicOut } from 'svelte/easing';
 	import { tweened } from 'svelte/motion';
 	import { mergeCss } from '$utils/utils';
@@ -52,7 +51,7 @@
 		class="absolute right-[-30px] top-[50vh]"
 	/>
 	<div class="w-full h-full p-4 space-y-4" inert={!isExpanded}>
-		<NavHeader></NavHeader>
+	<h1> Amsterdam Time Machine </h1>
 		{@render children?.()}
 	</div>
 </div>

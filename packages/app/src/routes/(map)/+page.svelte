@@ -12,6 +12,7 @@
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
 	import TagsSelector from '$components/TagsSelector.svelte';
+	import TagsSelector2 from '$components/TagsSelector2.svelte';
 	import FeaturesPanel from '$components/FeaturesPanel.svelte';
 	import NavContainer from '$components/NavContainer.svelte';
 	import ErrorHandler from '$components/ErrorHandler.svelte';
@@ -27,7 +28,7 @@
 	let availableTagNames = $derived(data?.availableTags?.tags?.map(tag => tag.name) || data?.metadata?.tags || []);
 	let heatmapTimeline = $derived(data?.heatmapTimeline?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
-	let currentRecordTypes = $derived(data?.currentRecordTypes?.sort() || []);
+	let currentRecordTypes = $derived(data?.currentRecordTypes || []);
 	let currentTags = $derived(data?.currentTags);
 	let histograms = $derived(data?.histogram?.histograms);
 
@@ -238,8 +239,19 @@
 		{/if}
 
 		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
+
+				<h2> Categories </h2>
 				<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} />
-				<!-- <TagsSelector recordTypes={currentRecordTypes || []} selectedTags={currentTags || []} onTagsSelected={handleTagsChange} /> -->
+
+
+				<h2> Themes </h2>
+				<TagsSelector2 
+					recordTypes={currentRecordTypes || []}
+					allRecordTypes={recordTypes}
+					availableTags={availableTagNames}
+					selectedTags={currentTags || []} 
+					onTagsSelected={handleTagsChange} 
+				/>
 		</NavContainer>
 
 		{#if showCellModal && selectedCellId}

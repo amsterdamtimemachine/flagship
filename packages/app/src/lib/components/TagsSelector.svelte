@@ -2,6 +2,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import ToggleGroup from './ToggleGroup.svelte';
+	import ToggleGroup2 from './ToggleGroup2.svelte';
 	import { fetchTagCombinations } from '$utils/clientApi';
 	import type { RecordType } from '@atm/shared/types';
 	
