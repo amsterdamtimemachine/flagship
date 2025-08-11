@@ -22,12 +22,12 @@
 
 	// Derived data from server
 	let dimensions = $derived(data?.metadata?.heatmapDimensions);
-	let recordTypes = $derived(data?.metadata?.recordTypes);
+	let recordTypes = $derived(data?.metadata?.recordTypes?.sort() || []);
 	let tags = $derived(data?.metadata?.tags);
 	let availableTagNames = $derived(data?.availableTags?.tags?.map(tag => tag.name) || data?.metadata?.tags || []);
 	let heatmapTimeline = $derived(data?.heatmapTimeline?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
-	let currentRecordTypes = $derived(data?.currentRecordTypes);
+	let currentRecordTypes = $derived(data?.currentRecordTypes || []);
 	let currentTags = $derived(data?.currentTags);
 	let histograms = $derived(data?.histogram?.histograms);
 
