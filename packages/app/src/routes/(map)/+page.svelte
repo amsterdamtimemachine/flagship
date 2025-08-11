@@ -12,7 +12,7 @@
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
 	import TagsSelector from '$components/TagsSelector.svelte';
-	import FeaturesView from '$components/FeaturesView.svelte';
+	import FeaturesPanel from '$components/FeaturesPanel.svelte';
 	import NavContainer from '$components/NavContainer.svelte';
 	import ErrorHandler from '$components/ErrorHandler.svelte';
 	
@@ -22,12 +22,12 @@
 
 	// Derived data from server
 	let dimensions = $derived(data?.metadata?.heatmapDimensions);
-	let recordTypes = $derived(data?.metadata?.recordTypes?.sort() || []);
+	let recordTypes = $derived(data?.metadata?.recordTypes || []);
 	let tags = $derived(data?.metadata?.tags);
 	let availableTagNames = $derived(data?.availableTags?.tags?.map(tag => tag.name) || data?.metadata?.tags || []);
 	let heatmapTimeline = $derived(data?.heatmapTimeline?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
-	let currentRecordTypes = $derived(data?.currentRecordTypes || []);
+	let currentRecordTypes = $derived(data?.currentRecordTypes?.sort() || []);
 	let currentTags = $derived(data?.currentTags);
 	let histograms = $derived(data?.histogram?.histograms);
 
@@ -110,12 +110,10 @@
 		return null;
 	});
 
-	// Get current heatmap - just pick from pre-merged timeline
 	let currentHeatmap = $derived.by(() => {
 		if (mergedHeatmapTimeline && currentPeriod) {
 			const timeSliceData = mergedHeatmapTimeline[currentPeriod];
 			if (timeSliceData) {
-				// Just grab the pre-merged heatmap (there's only one key per time slice)
 				const mergedKey = Object.keys(timeSliceData)[0];
 				return timeSliceData[mergedKey]?.base || null;
 			}
@@ -134,7 +132,6 @@
 		return null;
 	});
 	
-	// Debounced period changes to avoid too many API calls
 	const debouncedPeriodChange = debounce((period: string) => {
 		controller.setPeriod(period);
 	}, 300);
@@ -173,6 +170,8 @@
 		});
 	});
 
+
+	
 	onNavigate(() => {
 		loadingState.startLoading();
 	});
@@ -218,18 +217,20 @@
 		}
 	}
 
-	// Handle cell modal close
-	function handleCellClose() {
+	function handleFeaturesPanelClose() {
 		controller.clearErrors();
 		controller.selectCell(null);
 	}
+	
+//	$inspect("r types ", recordTypes);
+//	$inspect("curr ", currentRecordTypes);
+
 </script>
 
 <ErrorHandler errorData={allErrors} />
 
 <div class="relative flex flex-col w-screen h-screen">
 	<div class="relative flex-1">
-		<!-- Map renders as background layer -->
 		{#if currentHeatmap && heatmapBlueprint && dimensions}
 			<Map
 				heatmap={currentHeatmap}
@@ -240,22 +241,20 @@
 			/>
 		{/if}
 
-		<!-- NavContainer overlays on top with nav content -->
 		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
 				<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} />
-				<TagsSelector recordTypes={currentRecordTypes || []} selectedTags={currentTags || []} onTagsSelected={handleTagsChange} />
+				<!-- <TagsSelector recordTypes={currentRecordTypes || []} selectedTags={currentTags || []} onTagsSelected={handleTagsChange} /> -->
 		</NavContainer>
 
-		<!-- Cell modal -->
 		{#if showCellModal && selectedCellId}
 			<div class="z-40 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
-				<FeaturesView 
+				<FeaturesPanel 
 					cellId={selectedCellId} 
 					period={currentPeriod} 
 					bounds={selectedCellBounds}
 					recordTypes={currentRecordTypes}
 					tags={currentTags}
-					onClose={handleCellClose} 
+					onClose={handleFeaturesPanelClose} 
 				/>
 			</div>
 		{/if}
