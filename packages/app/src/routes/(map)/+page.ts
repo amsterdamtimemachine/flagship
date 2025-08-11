@@ -114,26 +114,29 @@ export const load: PageLoad = async ({ fetch, url }) => {
     } 
   }
   
-  // Parse tags if provided
+  // Parse tags if provided - need to validate combinations, not just existence
   let currentTags: string[] | undefined;
 
-  if (metadata?.tags) {
-    // Handle recordTypes parameter
-    if (tagsParam) {
-      const requestedTags = tagsParam.split(',').map(t => t.trim()) as string[];
-      const validTags = requestedTags.filter(tag => metadata.tags.includes(tag));
-      
-      if (validTags.length > 0) {
-        currentTags = validTags;
-      } else {
-        // Add validation error for invalid tags 
-        errors.push(createValidationError(
-          'tags',
-          tagsParam,
-          `Must contain at least one of: ${metadata.tags.join(', ')}`
-        ));
-      }
-    } 
+  if (metadata?.tags && tagsParam) {
+    const requestedTags = tagsParam.split(',').map(t => t.trim()) as string[];
+    
+    // First filter: tags that exist in metadata
+    const existingTags = requestedTags.filter(tag => metadata.tags.includes(tag));
+    const nonExistentTags = requestedTags.filter(tag => !metadata.tags.includes(tag));
+    
+    // Add errors for non-existent tags
+    for (const invalidTag of nonExistentTags) {
+      errors.push(createError(
+        'warning',
+        'Invalid Tag Removed',
+        `"${invalidTag}" is not a valid tag and was removed from your search.`,
+        { invalidTag, availableTags: metadata.tags }
+      ));
+    }
+    
+    // Second filter: validate tag combinations with current record types
+    // We'll validate this after we have currentRecordTypes determined
+    currentTags = existingTags; // For now, will validate combinations later
   }
 
 
@@ -277,6 +280,46 @@ export const load: PageLoad = async ({ fetch, url }) => {
   
   // Wait for all data requests to complete
   await Promise.all([histogramPromise, heatmapPromise, availableTagsPromise]);
+  
+  // Now validate tag combinations in a single API call
+  if (currentTags && currentTags.length > 0 && currentRecordTypes && metadata?.recordTypes) {
+    try {
+      // Use the "show all" exception: if no current record types, use all record types  
+      const effectiveRecordTypes = currentRecordTypes.length > 0 ? currentRecordTypes : metadata.recordTypes;
+      
+      // Send all tags to validate in a single API call
+      const response = await fetch(`/api/tag-combinations?recordTypes=${effectiveRecordTypes.join(',')}&selected=${currentTags.join(',')}&validateAll=true`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // API should return validTags and invalidTags when validateAll=true
+        const validCombinations = data.validTags || [];
+        const invalidCombinations = data.invalidTags || [];
+        
+        // Update currentTags to only valid combinations
+        currentTags = validCombinations.length > 0 ? validCombinations : undefined;
+
+        console.log("INVALID COMBINATIONS:");
+        console.log(invalidCombinations);
+        
+        // Add errors for invalid combinations
+        for (const invalidTag of invalidCombinations) {
+          errors.push(createError(
+            'warning',
+            'Invalid Tag Combination Removed',
+            `"${invalidTag}" is not available with the current selection and was removed from your search.`,
+            { invalidTag, recordTypes: effectiveRecordTypes, validTags: validCombinations }
+          ));
+        }
+      } else {
+        console.error('Failed to validate tag combinations - API error:', response.status);
+      }
+    } catch (error) {
+      console.error('Failed to validate tag combinations in route loader:', error);
+      // On error, don't modify currentTags
+    }
+  }
   
   loadingState.stopLoading(); 
   return {

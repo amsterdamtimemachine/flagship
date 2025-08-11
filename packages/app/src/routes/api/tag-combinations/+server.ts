@@ -11,6 +11,9 @@ interface TagCombinationsResponse {
   recordTypes: RecordType[];
   success: boolean;
   message?: string;
+  // New fields for validation
+  validTags?: string[];
+  invalidTags?: string[];
 }
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -18,6 +21,7 @@ export const GET: RequestHandler = async ({ url }) => {
     // Parse query parameters
     const recordTypesParam = url.searchParams.get('recordTypes');
     const selectedParam = url.searchParams.get('selected');
+    const validateAllParam = url.searchParams.get('validateAll');
     
     // Get API service
     const apiService = await getApiService();
@@ -34,9 +38,46 @@ export const GET: RequestHandler = async ({ url }) => {
       selectedTags = selectedParam.split(',').map(t => t.trim()).filter(t => t.length > 0);
     }
 
-    console.log(`🔗 Tag combinations API request - recordTypes: ${recordTypes?.join(', ') || 'all'}, selected: ${selectedTags.join(', ') || 'none'}`);
+    console.log(`🔗 Tag combinations API request - recordTypes: ${recordTypes?.join(', ') || 'all'}, selected: ${selectedTags.join(', ') || 'none'}, validateAll: ${validateAllParam}`);
 
-    // Get tag combinations from service
+    // Handle validation mode
+    if (validateAllParam === 'true' && selectedTags.length > 0) {
+      // Validation mode: check which of the selectedTags are valid
+      const validTags: string[] = [];
+      const invalidTags: string[] = [];
+      
+      // Test each tag incrementally
+      for (const tag of selectedTags) {
+        const testTags = [...validTags, tag];
+        const testResponse = await apiService.getTagCombinations(recordTypes, testTags);
+        
+        if (testResponse.success && testResponse.availableTags.length > 0) {
+          validTags.push(tag);
+        } else {
+          invalidTags.push(tag);
+        }
+      }
+      
+      // Set appropriate cache headers
+      const headers = {
+        'Cache-Control': 'public, max-age=1800',
+        'Access-Control-Allow-Origin': '*'
+      };
+      
+      console.log(`✅ Tag validation complete - valid: ${validTags.join(', ')}, invalid: ${invalidTags.join(', ')}`);
+      
+      return json<TagCombinationsResponse>({
+        availableTags: [],
+        currentSelection: validTags,
+        maxDepth: 0,
+        recordTypes: recordTypes || [],
+        success: true,
+        validTags,
+        invalidTags
+      }, { headers });
+    }
+    
+    // Normal mode: get available next tags
     const response = await apiService.getTagCombinations(recordTypes, selectedTags);
 
     // Set appropriate cache headers

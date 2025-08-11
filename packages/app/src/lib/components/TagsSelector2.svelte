@@ -65,6 +65,22 @@
 			availableTagsForSelection = availableTags;
 		}
 	}
+	
+	// Validate tags before emitting to parent
+	function handleTagSelection(selected: string[]) {
+		console.log('🔄 TagsSelector2 handleTagSelection called');
+		console.log('📥 Received selected:', selected);
+		console.log('📋 Available tags:', availableTags);
+		
+		// Filter to only valid tags that exist in availableTags
+		const validSelected = selected.filter(tag => availableTags.includes(tag));
+		
+		console.log('✅ Valid selected (after filter):', validSelected);
+		console.log('❌ Invalid tags filtered out:', selected.filter(tag => !availableTags.includes(tag)));
+		
+		onTagsSelected(validSelected);
+		console.log('📤 Emitted to parent:', validSelected);
+	}
 </script>
 
 <div class={className}>
@@ -75,7 +91,7 @@
 			items={availableTags}
 			selectedItems={validSelectedTags}
 			disabledItems={disabledTags}
-			onItemSelected={onTagsSelected}
+			onItemSelected={handleTagSelection}
 			orientation="vertical"
 			type="multiple"
 		/>

@@ -195,7 +195,12 @@
 	}
 
 	function handleTagsChange(tags: string[]) {
+		console.log('🔄 Page handleTagsChange called');
+		console.log('📥 Received tags from TagsSelector2:', tags);
+		console.log('📋 Available tag names:', availableTagNames);
+		
 		controller.setTags(tags);
+		console.log('📤 Sent to MapController:', tags);
 	}
 
 	// Handle cell selection from map

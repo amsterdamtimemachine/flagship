@@ -56,15 +56,23 @@ export function createMapController() {
 	}
 
 	function setTags(newTags: string[]) {
+		console.log('🔄 MapController setTags called');
+		console.log('📥 Received tags from page:', newTags);
+		
 		if (!browser) return;
 		
 		const url = new URL(window.location.href);
+		const oldTags = url.searchParams.get('tags');
+		
 		// Update tags parameter
 		if (newTags.length > 0) {
 			url.searchParams.set('tags', newTags.join(','));
 		} else {
 			url.searchParams.delete('tags');
 		}
+
+		console.log('🔄 URL tags changed from:', oldTags, 'to:', newTags.join(','));
+		console.log('🌐 Navigating to:', url.pathname + url.search);
 
 		// Navigate to new URL to trigger data refetch
 		goto(url.pathname + url.search);
