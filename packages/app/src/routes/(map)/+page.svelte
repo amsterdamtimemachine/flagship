@@ -221,10 +221,6 @@
 		controller.clearErrors();
 		controller.selectCell(null);
 	}
-	
-//	$inspect("r types ", recordTypes);
-//	$inspect("curr ", currentRecordTypes);
-
 </script>
 
 <ErrorHandler errorData={allErrors} />

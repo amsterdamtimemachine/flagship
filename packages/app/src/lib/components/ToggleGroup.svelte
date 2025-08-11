@@ -19,7 +19,7 @@
 		onItemSelected,
 		class: className
 	}: Props = $props();
-	
+
 	const {
 		elements: { root, item },
 		states: { value }
@@ -31,17 +31,9 @@
 		  if(onItemSelected) {
 		    onItemSelected(next);
 		  }
-		  console.log("change");
-		  console.log(curr);
-		  console.log(next);
-
 		  return next 
 		}
-	});
-
-	console.log("TOGGLE GRUP");
-		
-	$inspect(items);
+	});	
 </script>
 
 <div
@@ -50,7 +42,7 @@
 	aria-label="Toggle selection"
 	role={type === 'single' ? 'radiogroup' : 'group'}
 >
-	{#each items as itemValue, i (i)}
+	{#each items.sort() as itemValue (itemValue)}
 		<button
 			class="py-2 flex items-center gap-2 w-full text-left cursor-pointer transition-colors hover:bg-gray-50 focus:outline-none focus:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
 			use:melt={$item(itemValue)}
