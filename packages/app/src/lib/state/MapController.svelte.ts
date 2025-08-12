@@ -35,12 +35,12 @@ export function createMapController() {
 	function setPeriod(newPeriod: string) {
 		currentPeriod = newPeriod;
 		updateUrlParams({ period: newPeriod });
-		
-		// Note: Cell data reloading is now handled by CellView component
-		// when it detects period prop changes via $effect()
+
+		// note period change affects only individual cell, hence this fn doesn't trigger goto
+		// cell data are fetched in $components/FeaturesPanel.svelte
 	}
 
-	function setRecordType(newRecordTypes: string[]) {
+	function setRecordType(newRecordTypes: string[], resetTags: boolean = false) {
 		if (!browser) return;
 		
 		const url = new URL(window.location.href)		
@@ -50,19 +50,20 @@ export function createMapController() {
 		} else {
 			url.searchParams.delete('recordTypes');
 		}
+
+		if (resetTags) {
+			console.log("resettting tags!");
+			url.searchParams.delete('tags');
+		}
 	
 		// Navigate to new URL to trigger data refetch
 		goto(url.pathname + url.search);
 	}
-
-	function setTags(newTags: string[]) {
-		console.log('🔄 MapController setTags called');
-		console.log('📥 Received tags from page:', newTags);
-		
+	
+	function setTags(newTags: string[]) {	
 		if (!browser) return;
 		
 		const url = new URL(window.location.href);
-		const oldTags = url.searchParams.get('tags');
 		
 		// Update tags parameter
 		if (newTags.length > 0) {
@@ -70,17 +71,12 @@ export function createMapController() {
 		} else {
 			url.searchParams.delete('tags');
 		}
-
-		console.log('🔄 URL tags changed from:', oldTags, 'to:', newTags.join(','));
-		console.log('🌐 Navigating to:', url.pathname + url.search);
-
 		// Navigate to new URL to trigger data refetch
 		goto(url.pathname + url.search);
 	}
 
 	/**
 	 * Syncs URL parameters with current state after navigation is complete.
-	 * Should be called from afterNavigate hook in page component.
 	 */
 	function syncUrlParameters(serverPeriod: string) {
 		if (!browser) return;

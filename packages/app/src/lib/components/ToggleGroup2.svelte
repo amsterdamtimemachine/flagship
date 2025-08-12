@@ -40,7 +40,6 @@
 		}
 	});
 
-	// Check if an item is disabled
 	function isDisabled(itemValue: string): boolean {
 		return disabledItems.includes(itemValue);
 	}

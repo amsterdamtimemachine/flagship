@@ -24,10 +24,11 @@
 	// Tag combination state
 	let availableTagsForSelection = $state<string[]>([]);
 	
-	// Filter selectedTags to only include valid tags that exist in availableTags
-	let validSelectedTags = $derived(
-		selectedTags.filter(tag => availableTags.includes(tag))
-	);
+	// Use selectedTags from route data
+	let validSelectedTags = $derived.by(() => {
+		console.log('🔄 TagsSelector2 validSelectedTags derived - selectedTags prop:', selectedTags);
+		return selectedTags;
+	});
 	
 	let disabledTags = $derived.by(() => {
 		// All tags that are NOT available for current selection should be disabled
@@ -67,19 +68,33 @@
 	}
 	
 	// Validate tags before emitting to parent
-	function handleTagSelection(selected: string[]) {
+	async function handleTagSelection(selected: string[]) {
 		console.log('🔄 TagsSelector2 handleTagSelection called');
 		console.log('📥 Received selected:', selected);
-		console.log('📋 Available tags:', availableTags);
 		
-		// Filter to only valid tags that exist in availableTags
-		const validSelected = selected.filter(tag => availableTags.includes(tag));
+		// Use the same validation logic as route loader
+		if (selected.length > 0) {
+			try {
+				const effectiveRecordTypes = recordTypes.length > 0 ? recordTypes : allRecordTypes;
+				const response = await fetch(`/api/tag-combinations?recordTypes=${effectiveRecordTypes.join(',')}&selected=${selected.join(',')}&validateAll=true`);
+				
+				if (response.ok) {
+					const data = await response.json();
+					const validTags = data.validTags || [];
+					
+					console.log('✅ Valid tags after validation:', validTags);
+					console.log('❌ Invalid tags filtered out:', data.invalidTags || []);
+					
+					onTagsSelected(validTags);
+					return;
+				}
+			} catch (error) {
+				console.error('TagsSelector2 validation failed:', error);
+			}
+		}
 		
-		console.log('✅ Valid selected (after filter):', validSelected);
-		console.log('❌ Invalid tags filtered out:', selected.filter(tag => !availableTags.includes(tag)));
-		
-		onTagsSelected(validSelected);
-		console.log('📤 Emitted to parent:', validSelected);
+		// Fallback: pass selected tags as-is
+		onTagsSelected(selected);
 	}
 </script>
 
@@ -87,6 +102,7 @@
 	{#if availableTags.length === 0}
 		<div class="text-sm text-gray-500">No tags available</div>
 	{:else}
+		{#key availableTags}
 		<ToggleGroup2
 			items={availableTags}
 			selectedItems={validSelectedTags}
@@ -95,5 +111,6 @@
 			orientation="vertical"
 			type="multiple"
 		/>
+		{/key}
 	{/if}
 </div>

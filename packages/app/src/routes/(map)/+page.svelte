@@ -29,7 +29,10 @@
 	let heatmapTimeline = $derived(data?.heatmapTimeline?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
 	let currentRecordTypes = $derived(data?.currentRecordTypes || []);
-	let currentTags = $derived(data?.currentTags);
+	let currentTags = $derived.by(() => {
+		console.log('🔄 Page currentTags derived - data.currentTags:', data?.currentTags);
+		return data?.currentTags;
+	});
 	let histograms = $derived(data?.histogram?.histograms);
 
 	const controller = createMapController();	
@@ -158,20 +161,12 @@
 			}
 		}
 		controller.initialize(initialPeriod);
-		
-		// Set up cell selection callback
-		controller.onCellSelected = (cellId: string | null, bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number }) => {
-			// No additional logic needed - controller handles URL updates
-			// CellView will handle data fetching when rendered
-		};
-		
+			
 		// Sync URL parameters after router is ready
 		tick().then(() => {
 			controller.syncUrlParameters(initialPeriod);
 		});
 	});
-
-
 	
 	onNavigate(() => {
 		loadingState.startLoading();
@@ -187,20 +182,14 @@
 	}
 
 	function handleRecordTypeChange(recordTypes: string[]) {
-		controller.setRecordType(recordTypes);
+		controller.setRecordType(recordTypes, true);
 	
-		// WIP: this currently triggers 2nd goto page reload after setRecordType!
-		// reset tags Selection when record types change
-    //controller.setTags([]); 
+		// Reset tags selection when record types change
+		//controller.setTags([]); 
 	}
 
-	function handleTagsChange(tags: string[]) {
-		console.log('🔄 Page handleTagsChange called');
-		console.log('📥 Received tags from TagsSelector2:', tags);
-		console.log('📋 Available tag names:', availableTagNames);
-		
+	function handleTagsChange(tags: string[]) {	
 		controller.setTags(tags);
-		console.log('📤 Sent to MapController:', tags);
 	}
 
 	// Handle cell selection from map
