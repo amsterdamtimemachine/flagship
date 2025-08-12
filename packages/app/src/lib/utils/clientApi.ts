@@ -34,9 +34,15 @@ export async function fetchGeodataFromDatabase(
 	Object.entries(params).forEach(([key, value]) => {
 		if (value !== undefined) {
 			if (key === 'recordTypes' && Array.isArray(value)) {
-				url.searchParams.set('recordtype', value.join(','));
+				// Only add recordtype if array is not empty
+				if (value.length > 0) {
+					url.searchParams.set('recordtype', value.join(','));
+				}
 			} else if (key ==='tags' && Array.isArray(value)) {
-				url.searchParams.set('tags', value.join(','));
+				// Only add tags if array is not empty
+				if (value.length > 0) {
+					url.searchParams.set('tags', value.join(','));
+				}
 			} else {
 				url.searchParams.set(key, value.toString());
 			}

@@ -43,18 +43,22 @@
 			// Parse period to get start and end years
 			const [startYear, endYear] = period.split('_').map(y => parseInt(y));
 			
-			// Build params for API call
-			const params = {
-				min_lat: bounds?.minLat,
-				min_lon: bounds?.minLon,
-				max_lat: bounds?.maxLat,
-				max_lon: bounds?.maxLon,
+			// Build params for API call - only include bounds if available
+			const params: any = {
 				start_year: `${startYear}-01-01`,
 				end_year: `${endYear}-01-01`,
 				page,
 				recordTypes: recordTypes,
 				tags: tags,
 			};
+			
+			// Only add bounds if they exist
+			if (bounds) {
+				params.min_lat = bounds.minLat;
+				params.min_lon = bounds.minLon;
+				params.max_lat = bounds.maxLat;
+				params.max_lon = bounds.maxLon;
+			}
 						
 			const response = await fetchGeodataFromDatabase(params);
 			

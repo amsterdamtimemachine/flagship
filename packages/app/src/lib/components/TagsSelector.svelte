@@ -1,114 +1,108 @@
-<!-- src/lib/components/TagCascade.svelte -->
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import ToggleGroup from './ToggleGroup.svelte';
-	import ToggleGroup2 from './ToggleGroup2.svelte';
 	import { fetchTagCombinations } from '$utils/clientApi';
 	import type { RecordType } from '@atm/shared/types';
 	
 	interface Props {
-		recordTypes: RecordType[];
-		selectedTags: string[];
-		onTagsSelected: (tags: string[]) => void;
-		maxColumns?: number;
+		recordTypes: RecordType[]; // Currently selected record types
+		allRecordTypes: RecordType[]; // All available record types from metadata
+		availableTags: string[]; // All available tags from metadata
+		selectedTags: string[]; // Currently selected tags
+		onTagsSelected: (selected: string[]) => void;
 		class?: string;
 	}
 	
-	interface ColumnState {
-		level: number;
-		availableTags: Array<{ name: string; totalFeatures: number }>;
-	}
-	
 	let { 
-		recordTypes, 
-		selectedTags, 
+		recordTypes,
+		allRecordTypes,
+		availableTags,
+		selectedTags,
 		onTagsSelected,
-		maxColumns = 4,
 		class: className = ''
 	}: Props = $props();
 	
-	// Component state for displaying available tags (not selection state)
-	let columns = $state<ColumnState[]>([]);
+	// Tag combination state
+	let availableTagsForSelection = $state<string[]>([]);
 	
-	// Derived visible columns (only show columns that have data)
-	let visibleColumns = $derived(
-		columns.filter(col => col.availableTags.length > 0)
-	);
+	// Use selectedTags from route data
+	let validSelectedTags = $derived(selectedTags);
 	
+	let disabledTags = $derived.by(() => {
+		// All tags that are NOT available for current selection should be disabled
+		// But never disable currently selected tags
+		return availableTags.filter(tag => 
+			!availableTagsForSelection.includes(tag) && !validSelectedTags.includes(tag)
+		);
+	});
+	
+	// Effect to load available tag combinations when record types or current tags change
 	$effect(() => {
-		if (recordTypes) {
-			loadColumnsForSelection();
+		if (allRecordTypes.length > 0) {
+			loadAvailableTagCombinations();
+		} else {
+			// When no record types available, show all tags as available
+			availableTagsForSelection = availableTags;
 		}
 	});
 	
-	async function loadColumn(level: number, selectionPath: string[]) {
+	async function loadAvailableTagCombinations() {
 		try {
+			// Use the "show all" exception: if no current record types, use all record types
+			const effectiveRecordTypes = recordTypes.length > 0 ? recordTypes : allRecordTypes;
+			
 			const data = await fetchTagCombinations({
-				recordTypes,
-				selectedTags: selectionPath
+				recordTypes: effectiveRecordTypes,
+				selectedTags: validSelectedTags || []
 			});
 			
-			columns[level] = {
-				level,
-				availableTags: data.availableTags
-			};
+			availableTagsForSelection = data.availableTags.map(tag => tag.name);
 			
 		} catch (error) {
-			console.error(`Failed to load column ${level}:`, error);
-			columns[level] = {
-				level,
-				availableTags: [],
-				error: error instanceof Error ? error.message : 'Failed to load tags'
-			};
+			console.error('Failed to load available tag combinations:', error);
+			// On error, show all tags as available
+			availableTagsForSelection = availableTags;
 		}
 	}
 	
-	function loadColumnsForSelection() {
-		columns = [];
+	// Validate tags before emitting to parent
+	async function handleTagSelection(selected: string[]) {
 		
-		// Load first column (base tags)
-		loadColumn(0, []);
-		
-		// Load subsequent columns based on current selection
-		for (let i = 0; i < selectedTags.length && i < maxColumns - 1; i++) {
-			const selectionPath = selectedTags.slice(0, i + 1);
-			loadColumn(i + 1, selectionPath);
-		}
-	}
-	
-	function handleColumnSelection(level: number, selected: string) {
-		
-		// Clear columns beyond current level immediately to prevent stale UI
-		columns = columns.slice(0, level + 1);
-		
-		if (!selected) {
-			// Deselection - build new selection without this level
-			const newSelection = selectedTags.slice(0, level);
-			onTagsSelected(newSelection);
-			return;
+		// Use the same validation logic as route loader
+		if (selected.length > 0) {
+			try {
+				const effectiveRecordTypes = recordTypes.length > 0 ? recordTypes : allRecordTypes;
+				const response = await fetch(`/api/tag-combinations?recordTypes=${effectiveRecordTypes.join(',')}&selected=${selected.join(',')}&validateAll=true`);
+				
+				if (response.ok) {
+					const data = await response.json();
+					const validTags = data.validTags || [];
+					
+					onTagsSelected(validTags);
+					return;
+				}
+			} catch (error) {
+				console.error('TagsSelector validation failed:', error);
+			}
 		}
 		
-		// Build new selection including this choice
-		const newSelection = [...selectedTags.slice(0, level), selected];
-		onTagsSelected(newSelection);
+		// Fallback: pass selected tags as-is
+		onTagsSelected(selected);
 	}
 </script>
 
-<div class={`flex gap-4 ${className}`}>
-	{#each visibleColumns as column, index}
-		<div class="flex flex-col min-w-48">
-				<ToggleGroup
-					items={column.availableTags.map(tag => tag.name)}
-					selectedItems={selectedTags[index] ? [selectedTags[index]] : []}
-					onItemSelected={(selected) => handleColumnSelection(index, selected)}
-					orientation="vertical"
-					type="single"
-				/>
-		</div>
-	{/each}
-	
+<div class={className}>
+	{#if availableTags.length === 0}
+		<div class="text-sm text-gray-500">No tags available</div>
+	{:else}
+		{#key availableTags}
+		<ToggleGroup
+			items={availableTags}
+			selectedItems={validSelectedTags}
+			disabledItems={disabledTags}
+			onItemSelected={handleTagSelection}
+			orientation="vertical"
+			type="multiple"
+		/>
+		{/key}
+	{/if}
 </div>
-
-<style lang="postcss">
-	/* Add any specific styling for the cascade component */
-</style>

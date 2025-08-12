@@ -40,7 +40,7 @@ export function createMapController() {
 		// cell data are fetched in $components/FeaturesPanel.svelte
 	}
 
-	function setRecordType(newRecordTypes: string[], resetTags: boolean = false) {
+	function setRecordType(newRecordTypes: string[], options: { resetTags?: boolean } = {}) {
 		if (!browser) return;
 		
 		const url = new URL(window.location.href)		
@@ -51,7 +51,7 @@ export function createMapController() {
 			url.searchParams.delete('recordTypes');
 		}
 
-		if (resetTags) {
+		if (options.resetTags) {
 			console.log("resettting tags!");
 			url.searchParams.delete('tags');
 		}

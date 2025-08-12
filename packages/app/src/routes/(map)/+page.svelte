@@ -12,7 +12,6 @@
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
 	import TagsSelector from '$components/TagsSelector.svelte';
-	import TagsSelector2 from '$components/TagsSelector2.svelte';
 	import FeaturesPanel from '$components/FeaturesPanel.svelte';
 	import NavContainer from '$components/NavContainer.svelte';
 	import ErrorHandler from '$components/ErrorHandler.svelte';
@@ -29,10 +28,7 @@
 	let heatmapTimeline = $derived(data?.heatmapTimeline?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
 	let currentRecordTypes = $derived(data?.currentRecordTypes || []);
-	let currentTags = $derived.by(() => {
-		console.log('🔄 Page currentTags derived - data.currentTags:', data?.currentTags);
-		return data?.currentTags;
-	});
+	let currentTags = $derived(data?.currentTags);
 	let histograms = $derived(data?.histogram?.histograms);
 
 	const controller = createMapController();	
@@ -165,6 +161,22 @@
 		// Sync URL parameters after router is ready
 		tick().then(() => {
 			controller.syncUrlParameters(initialPeriod);
+			
+			// Handle cell bounds lookup from URL if cell parameter exists
+			const urlParams = new URLSearchParams(window.location.search);
+			const cellParam = urlParams.get('cell');
+			if (cellParam && heatmapBlueprint) {
+				const cell = heatmapBlueprint.find(c => c.cellId === cellParam);
+				if (cell?.bounds) {
+					// Update controller with bounds for the cell from URL
+					controller.selectCell(cellParam, {
+						minLat: cell.bounds.minLat,
+						maxLat: cell.bounds.maxLat,
+						minLon: cell.bounds.minLon,
+						maxLon: cell.bounds.maxLon
+					});
+				}
+			}
 		});
 	});
 	
@@ -182,10 +194,7 @@
 	}
 
 	function handleRecordTypeChange(recordTypes: string[]) {
-		controller.setRecordType(recordTypes, true);
-	
-		// Reset tags selection when record types change
-		//controller.setTags([]); 
+		controller.setRecordType(recordTypes, { resetTags: true });
 	}
 
 	function handleTagsChange(tags: string[]) {	
@@ -239,7 +248,7 @@
 
 
 				<h2> Themes </h2>
-				<TagsSelector2 
+				<TagsSelector 
 					recordTypes={currentRecordTypes || []}
 					allRecordTypes={recordTypes}
 					availableTags={availableTagNames}
