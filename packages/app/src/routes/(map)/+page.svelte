@@ -8,10 +8,12 @@
 	import { mergeHeatmapTimeline, mergeHeatmaps } from '$utils/heatmap';
 	import { mergeHistograms } from '$utils/histogram';
 	import { loadingState } from '$lib/state/loadingState.svelte';
+	import { QuestionMark } from 'phosphor-svelte';
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
 	import TagsSelector from '$components/TagsSelector.svelte';
+	import Tooltip from '$components/Tooltip.svelte';
 	import FeaturesPanel from '$components/FeaturesPanel.svelte';
 	import NavContainer from '$components/NavContainer.svelte';
 	import ErrorHandler from '$components/ErrorHandler.svelte';
@@ -244,6 +246,7 @@
 		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
 
 				<h2> Categories </h2>
+				<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
 				<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} />
 
 

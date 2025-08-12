@@ -1,7 +1,18 @@
 <script lang="ts">
 	import { createTooltip, melt } from '@melt-ui/svelte';
 	import { fade } from 'svelte/transition';
-	import type { Snippet } from 'svelte';
+	import type { Snippet, Component } from 'svelte';
+
+	// Type for Phosphor icon props based on official documentation
+	interface PhosphorIconProps {
+		color?: string;
+		size?: number | string;
+		weight?: 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
+		mirrored?: boolean;
+	}
+
+	// Type for Phosphor icon components
+	type PhosphorIcon = Component<PhosphorIconProps>;
 
 	interface Props {
 		text?: string;
@@ -10,18 +21,27 @@
 		closeDelay?: number;
 		disabled?: boolean;
 		class?: string;
-		children?: Snippet;
+		// Only allow choosing the icon - styling is predefined
+		icon: PhosphorIcon;
 		content?: Snippet;
 	}
+
+	// Hardcoded icon styling for consistency
+	const iconProps: PhosphorIconProps = {
+		size: 26,
+		weight: 'regular',
+		color: 'white',
+		mirrored: false
+	};
 
 	let { 
 		text,
 		placement = 'top',
-		openDelay = 500,
+		openDelay = 100,
 		closeDelay = 300,
 		disabled = false,
 		class: className,
-		children,
+		icon,
 		content: contentSnippet
 	}: Props = $props();
 
@@ -46,14 +66,14 @@
 	use:melt={disabled ? undefined : $trigger} 
 	class={className}
 >
-	{@render children?.()}
+	<svelte:component this={icon} {...iconProps} />
 </span>
 
 <!-- Tooltip content -->
 {#if $open && !disabled}
 	<div
 		use:melt={$tooltipContent}
-		transition:fade={{ duration: 150 }}
+		transition:fade={{ duration: 100 }}
 		class="tooltip-content z-50 max-w-xs rounded-lg bg-gray-900 text-white shadow-lg"
 	>
 		<div use:melt={$arrow} class="tooltip-arrow" />
