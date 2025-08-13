@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createTooltip, melt } from '@melt-ui/svelte';
 	import { fade } from 'svelte/transition';
-	import type { Snippet, Component } from 'svelte';
+	import type { Component } from 'svelte';
 
 	// Type for Phosphor icon props based on official documentation
 	interface PhosphorIconProps {
@@ -15,22 +15,20 @@
 	type PhosphorIcon = Component<PhosphorIconProps>;
 
 	interface Props {
-		text?: string;
+		text: string; // Required text for the tooltip
+		icon: PhosphorIcon; 
 		placement?: 'top' | 'bottom' | 'left' | 'right' | 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'left-start' | 'left-end' | 'right-start' | 'right-end';
 		openDelay?: number;
 		closeDelay?: number;
 		disabled?: boolean;
 		class?: string;
-		// Only allow choosing the icon - styling is predefined
-		icon: PhosphorIcon;
-		content?: Snippet;
 	}
 
 	// Hardcoded icon styling for consistency
 	const iconProps: PhosphorIconProps = {
 		size: 26,
 		weight: 'regular',
-		color: 'white',
+		color: 'black',
 		mirrored: false
 	};
 
@@ -41,12 +39,11 @@
 		closeDelay = 300,
 		disabled = false,
 		class: className,
-		icon,
-		content: contentSnippet
+		icon: Icon,
 	}: Props = $props();
 
 	const {
-		elements: { trigger, content: tooltipContent, arrow },
+		elements: { trigger, content, arrow },
 		states: { open },
 	} = createTooltip({
 		positioning: {
@@ -57,7 +54,6 @@
 		closeOnPointerDown: false,
 		forceVisible: true,
 		defaultOpen: false,
-		portal: 'body'
 	});
 </script>
 
@@ -66,23 +62,19 @@
 	use:melt={disabled ? undefined : $trigger} 
 	class={className}
 >
-	<svelte:component this={icon} {...iconProps} />
+	<Icon {...iconProps} />
 </span>
 
 <!-- Tooltip content -->
 {#if $open && !disabled}
 	<div
-		use:melt={$tooltipContent}
+		use:melt={$content}
 		transition:fade={{ duration: 100 }}
 		class="tooltip-content z-50 max-w-xs rounded-lg bg-gray-900 text-white shadow-lg"
 	>
-		<div use:melt={$arrow} class="tooltip-arrow" />
+		<div use:melt={$arrow} class="tooltip-arrow" ></div>
 		<div class="px-3 py-2 text-sm">
-			{#if contentSnippet}
-				{@render contentSnippet()}
-			{:else if text}
-				{text}
-			{/if}
+			{text}
 		</div>
 	</div>
 {/if}
