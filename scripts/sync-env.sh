@@ -25,8 +25,9 @@ echo "# Auto-synced from root .env - DO NOT EDIT DIRECTLY" > "$APP_ENV"
 echo "# Edit the root .env file instead" >> "$APP_ENV"
 echo "" >> "$APP_ENV"
 
+grep "^PUBLIC_FEATURES_API_URL=" "$ROOT_ENV" >> "$APP_ENV" 2>/dev/null || echo "PUBLIC_FEATURES_API_URL=" >> "$APP_ENV"
 grep "^PUBLIC_MAPTILER_API_KEY=" "$ROOT_ENV" >> "$APP_ENV" 2>/dev/null || echo "PUBLIC_MAPTILER_API_KEY=" >> "$APP_ENV"
-grep "^PRIVATE_VISUALIZATION_BINARY_PATH=" "$ROOT_ENV" >> "$APP_ENV" 2>/dev/null || echo "PRIVATE_VISUALIZATION_BINARY_PATH=../../data/visualization.bin" >> "$APP_ENV"
+grep "^PRIVATE_VISUALIZATION_BINARY_PATH=" "$ROOT_ENV" >> "$APP_ENV" 2>/dev/null || echo "PRIVATE_VISUALIZATION_BINARY_PATH=" >> "$APP_ENV"
 
 # Sync preprocessor variables
 echo "# Auto-synced from root .env - DO NOT EDIT DIRECTLY" > "$PREPROCESSOR_ENV"

@@ -1,11 +1,10 @@
-// src/lib/api.ts
+// src/lib/utils/externalApi.ts
 
-/* The app fetches most of the data from the sveltekit server. 
- * This module contains functions for the few exceptions when data are fetched from the client.
+/* The app fetches most data from SvelteKit API routes. 
+ * This module contains functions for fetching data directly from external APIs.
 */
 
-// import { error } from '@sveltejs/kit';
-// import { loadingState } from '$state/loadingState.svelte';
+import { PUBLIC_FEATURES_API_URL } from '$env/static/public';
 
 type FetchFunction = typeof fetch;
 
@@ -27,8 +26,11 @@ export async function fetchGeodataFromDatabase(
 	},
 	fetchFn: FetchFunction = fetch
 ): Promise<any> {
-	// Build the URL with parameters - switch between proxy and direct
-	const url = new URL('https://atmbackend.create.humanities.uva.nl/api/geodata');
+	// Build the URL with parameters using environment variable
+	const url = new URL(`${PUBLIC_FEATURES_API_URL}/geodata`);
+	
+	// Always add tag_operator=AND parameter
+	url.searchParams.set('tag_operator', 'AND');
 	
 	// Add all parameters to the URL
 	Object.entries(params).forEach(([key, value]) => {
@@ -65,38 +67,3 @@ export async function fetchGeodataFromDatabase(
 	}
 }
 
-/**
- * Fetch tag combinations for TagCascade component
- */
-export async function fetchTagCombinations(
-	params: {
-		recordTypes: string[];
-		selectedTags?: string[];
-	},
-	fetchFn: FetchFunction = fetch
-) {
-	try {
-		const query = new URLSearchParams();
-		query.set('recordTypes', params.recordTypes.join(','));
-		if (params.selectedTags && params.selectedTags.length > 0) {
-			query.set('selected', params.selectedTags.join(','));
-		}
-		
-		const response = await fetchFn(`/api/tag-combinations?${query}`);
-		
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-		}
-		
-		const data = await response.json();
-		
-		if (!data.success) {
-			throw new Error(data.message || 'API returned unsuccessful response');
-		}
-		
-		return data;
-	} catch (error) {
-		console.error('Failed to fetch tag combinations:', error);
-		throw error;
-	}
-}

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import ToggleGroup from './ToggleGroup.svelte';
-	import { fetchTagCombinations } from '$utils/clientApi';
 	import type { RecordType } from '@atm/shared/types';
 	
 	interface Props {
@@ -50,10 +49,24 @@
 			// Use the "show all" exception: if no current record types, use all record types
 			const effectiveRecordTypes = recordTypes.length > 0 ? recordTypes : allRecordTypes;
 			
-			const data = await fetchTagCombinations({
-				recordTypes: effectiveRecordTypes,
-				selectedTags: validSelectedTags || []
-			});
+			// Build query params
+			const query = new URLSearchParams();
+			query.set('recordTypes', effectiveRecordTypes.join(','));
+			if (validSelectedTags && validSelectedTags.length > 0) {
+				query.set('selected', validSelectedTags.join(','));
+			}
+			
+			const response = await fetch(`/api/tag-combinations?${query}`);
+			
+			if (!response.ok) {
+				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+			}
+			
+			const data = await response.json();
+			
+			if (!data.success) {
+				throw new Error(data.message || 'API returned unsuccessful response');
+			}
 			
 			availableTagsForSelection = data.availableTags.map(tag => tag.name);
 			
