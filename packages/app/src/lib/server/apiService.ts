@@ -379,13 +379,85 @@ export class VisualizationApiService {
   }
 
   /**
+   * Validate a tag combination against precomputed data
+   * Returns which tags are valid and which are invalid
+   */
+  async validateTagCombination(recordTypes?: RecordType[], selectedTags: string[] = []): Promise<{
+    validTags: string[];
+    invalidTags: string[];
+    success: boolean;
+    message?: string;
+  }> {
+    try {
+      await this.initialize();
+
+      // Default to all recordTypes if none provided
+      if (!recordTypes || recordTypes.length === 0) {
+        const metadata = this.binaryHandler.getMetadata();
+        recordTypes = metadata.recordTypes;
+      }
+
+      console.log(`🔍 Validating tag combination: ${selectedTags.join(', ')} for recordTypes: ${recordTypes.join(', ')}`);
+
+      // Single tags are always valid (they exist as individual tags)
+      if (selectedTags.length <= 1) {
+        return {
+          validTags: selectedTags,
+          invalidTags: [],
+          success: true
+        };
+      }
+
+      // Check if this exact combination exists in precomputed data
+      const comboKey = selectedTags.sort().join('+');
+      const histograms = await this.binaryHandler.readHistograms();
+      
+      let combinationExists = false;
+      
+      // Check if combination exists for any of the specified record types
+      for (const recordType of recordTypes) {
+        const recordTypeData = histograms[recordType];
+        if (recordTypeData?.tags[comboKey]) {
+          combinationExists = true;
+          console.log(`✅ Combination "${comboKey}" exists for recordType: ${recordType}`);
+          break;
+        }
+      }
+
+      if (combinationExists) {
+        return {
+          validTags: selectedTags,
+          invalidTags: [],
+          success: true
+        };
+      } else {
+        console.log(`❌ Combination "${comboKey}" does not exist in precomputed data`);
+        
+        return {
+          validTags: [],
+          invalidTags: selectedTags,
+          success: true
+        };
+      }
+
+    } catch (error) {
+      console.error(`❌ Failed to validate tag combination:`, error);
+      return {
+        validTags: [],
+        invalidTags: selectedTags,
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * Get tag combinations that extend the current selection
    * Returns tags that can be added to form valid combinations
    */
   async getTagCombinations(recordTypes?: RecordType[], selectedTags: string[] = []): Promise<{
     availableTags: Array<{ name: string; totalFeatures: number }>;
     currentSelection: string[];
-    maxDepth: number;
     recordTypes: RecordType[];
     success: boolean;
     message?: string;
@@ -458,15 +530,11 @@ export class VisualizationApiService {
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
-      // Determine max depth (currently limited by maxTagCombinations = 2)
-      const maxDepth = 2;
-
       console.log(`✅ Found ${availableTags.length} available next tags for current selection`);
 
       return {
         availableTags,
         currentSelection: selectedTags,
-        maxDepth,
         recordTypes,
         success: true
       };
@@ -476,7 +544,6 @@ export class VisualizationApiService {
       return {
         availableTags: [],
         currentSelection: selectedTags,
-        maxDepth: 2,
         recordTypes: recordTypes || [],
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error'

@@ -7,7 +7,6 @@ import { getApiService } from '$lib/server/apiServiceSingleton';
 interface TagCombinationsResponse {
   availableTags: Array<{ name: string; totalFeatures: number }>;
   currentSelection: string[];
-  maxDepth: number;
   recordTypes: RecordType[];
   success: boolean;
   message?: string;
@@ -42,21 +41,8 @@ export const GET: RequestHandler = async ({ url }) => {
 
     // Handle validation mode
     if (validateAllParam === 'true' && selectedTags.length > 0) {
-      // Validation mode: check which of the selectedTags are valid
-      const validTags: string[] = [];
-      const invalidTags: string[] = [];
-      
-      // Test each tag incrementally
-      for (const tag of selectedTags) {
-        const testTags = [...validTags, tag];
-        const testResponse = await apiService.getTagCombinations(recordTypes, testTags);
-        
-        if (testResponse.success && testResponse.availableTags.length > 0) {
-          validTags.push(tag);
-        } else {
-          invalidTags.push(tag);
-        }
-      }
+      // Use direct validation against precomputed combinations
+      const validationResult = await apiService.validateTagCombination(recordTypes, selectedTags);
       
       // Set appropriate cache headers
       const headers = {
@@ -64,16 +50,15 @@ export const GET: RequestHandler = async ({ url }) => {
         'Access-Control-Allow-Origin': '*'
       };
       
-      console.log(`✅ Tag validation complete - valid: ${validTags.join(', ')}, invalid: ${invalidTags.join(', ')}`);
+      console.log(`✅ Tag validation complete - valid: ${validationResult.validTags.join(', ')}, invalid: ${validationResult.invalidTags.join(', ')}`);
       
       return json<TagCombinationsResponse>({
         availableTags: [],
-        currentSelection: validTags,
-        maxDepth: 0,
+        currentSelection: validationResult.validTags,
         recordTypes: recordTypes || [],
         success: true,
-        validTags,
-        invalidTags
+        validTags: validationResult.validTags,
+        invalidTags: validationResult.invalidTags
       }, { headers });
     }
     

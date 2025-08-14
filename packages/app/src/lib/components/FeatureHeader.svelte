@@ -48,16 +48,11 @@
 	<!-- Tags -->
 	{#if feature.tags && feature.tags.length > 0}
 		<div class="flex flex-wrap gap-1">
-			{#each feature.tags.slice(0, 3) as tag}
+			{#each feature.tags as tag}
 				<span class="text-xs px-1 py-0.5 bg-gray-100 text-gray-700 rounded">
 					{tag}
 				</span>
 			{/each}
-			{#if feature.tags.length > 3}
-				<span class="text-xs text-gray-500">
-					+{feature.tags.length - 3} more
-				</span>
-			{/if}
 		</div>
 	{/if}
 </div>

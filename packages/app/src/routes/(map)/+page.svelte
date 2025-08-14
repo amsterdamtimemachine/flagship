@@ -40,7 +40,7 @@
 	let showCellModal = $derived(controller.showCellModal);
 	
 	// Navigation state
-	let navExpanded = $state(false);
+	let navExpanded = $state(true);
 	
 	
 	// Combine server errors with controller errors for ErrorHandler
