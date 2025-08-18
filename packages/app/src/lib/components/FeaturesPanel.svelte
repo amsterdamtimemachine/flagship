@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import FeaturesGrid from '$components/FeaturesGrid.svelte';
+	import Pagination from '$components/Pagination.svelte';
 	import { fetchGeodataFromDatabase } from '$utils/externalApi';
 	import { formatDate } from '$utils/utils';
 	import { loadingState } from '$lib/state/loadingState.svelte';
@@ -24,17 +25,15 @@
 	// Cell data state
 	let allFeatures = $state<any[]>([]);
 	let currentPage = $state(1);
-	let totalPages = $state(1);
 	let totalCount = $state(0);
-	let hasMorePages = $derived(currentPage < totalPages);
+	let pageSize = $state(100); // From API response
 	let loading = $state(false);
-	let loadingMore = $state(false);
 	let initialLoading = $state(true);
 	let errors = $state<AppError[]>([]);
 	let errorData = $derived(createPageErrorData(errors));
 	
 	async function loadCellData(page: number = 1) {
-		// Only trigger global loading state when explicitly requested
+		loading = true;
 		loadingState.startLoading();
 		
 		try {
@@ -60,19 +59,11 @@
 						
 			const response = await fetchGeodataFromDatabase(params);
 			
-			if (page === 1) {
-				// Initial load - replace all features
-				allFeatures = response.data || [];
-				currentPage = response.page || 1;
-				totalPages = response.total_pages || 1;
-				totalCount = response.total || 0;
-			} else {
-				// Load more - append to existing features
-				allFeatures = [...allFeatures, ...(response.data || [])];
-				currentPage = response.page || currentPage + 1;
-				totalPages = response.total_pages || totalPages;
-				totalCount = response.total || totalCount;
-			}
+			// Always replace features for pagination (no more appending)
+			allFeatures = response.data || [];
+			currentPage = response.page || 1;
+			totalCount = response.total || 0;
+			pageSize = response.page_size || 100;
 			
 			// Clear previous errors on successful load
 			errors = [];
@@ -86,28 +77,22 @@
 				{ cellId, period, page, recordTypes, tags }
 			)];
 		} finally {
-			// Stop global loading state when explicitly requested
-				loadingState.stopLoading();
+			loading = false;
+			loadingState.stopLoading();
 		}
 	}
 	
-	async function loadMore() {
-		if (loadingMore || !hasMorePages) return;
-		loadingMore = true;
-		
-		try {
-			await loadCellData(currentPage + 1); 
-		} finally {
-			loadingMore = false;
-		}
+	function handlePageChange(newPage: number) {
+		if (loading) return; // Prevent multiple concurrent requests
+		loadCellData(newPage);
 	}
 	
 	$effect(() => {
 		// Reset state when cellId or period changes
 		allFeatures = [];
 		currentPage = 1;
-		totalPages = 1;
 		totalCount = 0;
+		pageSize = 100;
 		errors = [];
 		initialLoading = true;
 		
@@ -185,25 +170,15 @@
 	{#if allFeatures.length === 0}
 		<div class="text-gray-500">No features found for this cell and period</div>
 	{:else}
-		<div>
-			<span class="font-bold">Features</span>
-			{allFeatures.length}
-			{#if totalCount > 0}
-				/ {totalCount}
-			{/if}
-			{#if hasMorePages}
-				<span class="text-sm text-gray-600">(Page {currentPage} of {totalPages})</span>
-			{/if}
-		</div>
 		<FeaturesGrid features={allFeatures} />
-		{#if hasMorePages}
-			<button
-				onclick={loadMore}
-				disabled={loadingMore}
-				class="px-2 py-1 text-sm text-black border border-solid border-black"
-			>
-				{loadingMore ? 'Loading...' : 'Load More'}
-			</button>
+		{#if totalCount > pageSize}
+			<Pagination 
+				totalItems={totalCount}
+				currentPage={currentPage}
+				itemsPerPage={pageSize}
+				onPageChange={handlePageChange}
+				loading={loading}
+			/>
 		{/if}
 	{/if}
 {/if}
