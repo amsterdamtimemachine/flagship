@@ -39,7 +39,7 @@
 <div
 	id="table-of-contents-container"
 	class={mergeCss(
-		'absolute left-0 top-0 w-[300px] h-full xl:w-[290px] 2xl:w-[400px] border-r border-light-gray bg-white shadow-[5px_0px_20px_5px_rgba(0,0,0,0.07)]',
+		'absolute left-0 top-0 w-[300px] h-full xl:w-[290px] 2xl:w-[400px] border-r border-gray-300 bg-white shadow-[5px_0px_20px_5px_rgba(0,0,0,0.07)]',
 		className
 	)}
 	style="transform: translateX({$navPosition}%);"
@@ -48,7 +48,7 @@
 	<NavToggle
 		onclick={toggleToc}
 		isNavExpanded={isExpanded}
-		class="absolute right-[-30px] top-[50vh]"
+		class="absolute right-[-45px] w-[45px] h-[45px] top-[50%] border border-gray-300 hover:bg-gray-100"
 	/>
 	<div class="w-full h-full p-4 space-y-4" inert={!isExpanded}>
 	<h1> Amsterdam Time Machine </h1>

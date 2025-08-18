@@ -67,7 +67,7 @@
 				aria-hidden="true"
 			>
 				{#if $value && $value.includes(itemValue) || (type === 'single' && $value === itemValue)}
-					<Check size={16} weight="bold" />
+					<Check size={32} weight="bold" />
 				{/if}
 			</span>
 			<span 

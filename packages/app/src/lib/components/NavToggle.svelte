@@ -13,7 +13,7 @@
 
 <button
 	type="button"
-	class={mergeCss('p-2 pr-0 focus:outline-none', className)}
+	class={mergeCss('focus:outline-none flex justify-center items-center bg-white rounded-r-sm', className)}
 	aria-label={isNavExpanded ? 'Close navigation menu' : 'Open navigation menu'}
 	onclick={onclick}
 >

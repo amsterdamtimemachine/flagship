@@ -2,7 +2,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { onNavigate, afterNavigate } from '$app/navigation';
-	import debounce from 'lodash.debounce';	
 	import { createMapController } from '$state/MapController.svelte';
 	import { createPageErrorData } from '$utils/error';
 	import { mergeHeatmapTimeline, mergeHeatmaps } from '$utils/heatmap';
@@ -133,10 +132,6 @@
 		
 		return null;
 	});
-	
-	const debouncedPeriodChange = debounce((period: string) => {
-		controller.setPeriod(period);
-	}, 300);
 
 	onMount(() => {
 		// Initialize controller with period from URL or first available time period
@@ -182,17 +177,8 @@
 		});
 	});
 	
-	onNavigate(() => {
-		loadingState.startLoading();
-	});
-
-	afterNavigate(() => {
-		loadingState.stopLoading();
-	});
-
-	// Handle period change from slider
 	function handlePeriodChange(period: string) {
-		debouncedPeriodChange(period);
+		controller.setPeriod(period);
 	}
 
 	function handleRecordTypeChange(recordTypes: string[]) {
@@ -243,14 +229,18 @@
 			/>
 		{/if}
 
-		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
-
-				<h2> Categories </h2>
-				<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
+		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">	
+				<div class="flex">
+					<h2 class="pr-1"> Categories </h2>
+					<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
+				</div>
 				<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} />
 
+				<div class="flex">
+					<h2 class="pr-1"> Themes </h2>
+					<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
+				</div>
 
-				<h2> Themes </h2>
 				<TagsSelector 
 					recordTypes={currentRecordTypes || []}
 					allRecordTypes={recordTypes}
