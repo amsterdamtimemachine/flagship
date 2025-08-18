@@ -28,7 +28,7 @@
 			</div>
 		</div>
 	{:else}
-		<div class="relative w-full">
+		<div class="relative w-full overflow-hidden">
 			{#if imageLoading}
 				<div class="w-full h-32 bg-gray-100 animate-pulse flex items-center justify-center">
 					<div class="text-gray-400 text-sm">Loading...</div>
@@ -37,7 +37,7 @@
 			<img
 				src={thumbnail}
 				alt={alt}
-				class="w-full h-auto object-cover rounded"
+				class="w-full h-auto object-contain rounded max-w-full"
 				class:hidden={imageLoading}
 				on:load={handleImageLoad}
 				on:error={handleImageError}

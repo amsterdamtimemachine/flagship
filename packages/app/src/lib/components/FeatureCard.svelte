@@ -38,7 +38,7 @@
 	const specificProps = getFeatureSpecificProps();
 </script>
 
-<div class="w-full border-2 border-solid border-gray-200 p-2 bg-white">
+<div class="w-full border-2 border-solid border-gray-200 p-2 bg-white min-w-0">
 	<!-- Common header for all feature types -->
 	<FeatureHeader feature={commonProps} />	
 	<!-- Feature-specific content -->

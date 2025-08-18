@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import FeaturesLayout from '$components/FeaturesLayout.svelte';
+	import FeaturesGrid from '$components/FeaturesGrid.svelte';
 	import { fetchGeodataFromDatabase } from '$utils/externalApi';
 	import { formatDate } from '$utils/utils';
 	import { loadingState } from '$lib/state/loadingState.svelte';
@@ -33,11 +33,9 @@
 	let errors = $state<AppError[]>([]);
 	let errorData = $derived(createPageErrorData(errors));
 	
-	async function loadCellData(page: number = 1, triggerGlobalLoading: boolean = true) {
+	async function loadCellData(page: number = 1) {
 		// Only trigger global loading state when explicitly requested
-		if (triggerGlobalLoading) {
-			loadingState.startLoading();
-		}
+		loadingState.startLoading();
 		
 		try {
 			// Parse period to get start and end years
@@ -61,20 +59,6 @@
 			}
 						
 			const response = await fetchGeodataFromDatabase(params);
-			
-		//	console.log('📊 CellView API response:', {
-		//		cellId,
-		//		recordTypes,
-		//		page,
-		//		totalReturned: response.data?.length || 0,
-		//		totalCount: response.total || 0,
-		//		responseMetadata: {
-		//			page: response.page,
-		//			pageSize: response.page_size,
-		//			totalPages: response.total_pages,
-		//			returned: response.returned
-		//		}
-		//	});
 			
 			if (page === 1) {
 				// Initial load - replace all features
@@ -103,9 +87,7 @@
 			)];
 		} finally {
 			// Stop global loading state when explicitly requested
-			if (triggerGlobalLoading) {
 				loadingState.stopLoading();
-			}
 		}
 	}
 	
@@ -114,13 +96,12 @@
 		loadingMore = true;
 		
 		try {
-			await loadCellData(currentPage + 1, true); // true = trigger global loading
+			await loadCellData(currentPage + 1); 
 		} finally {
 			loadingMore = false;
 		}
 	}
 	
-	// Watch for prop changes and reload data when cellId or period changes
 	$effect(() => {
 		// Reset state when cellId or period changes
 		allFeatures = [];
@@ -214,7 +195,7 @@
 				<span class="text-sm text-gray-600">(Page {currentPage} of {totalPages})</span>
 			{/if}
 		</div>
-		<FeaturesLayout features={allFeatures} />
+		<FeaturesGrid features={allFeatures} />
 		{#if hasMorePages}
 			<button
 				onclick={loadMore}
