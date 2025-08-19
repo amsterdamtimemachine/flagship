@@ -24,67 +24,63 @@ function clearColumns(columns: HTMLElement[]): void {
 }
 
 /**
- * Distribute items across columns using weighted round-robin
+ * Get the current height of a column by measuring its content
+ */
+function getColumnHeight(column: HTMLElement): number {
+  let totalHeight = 0;
+  for (let i = 0; i < column.children.length; i++) {
+    const child = column.children[i] as HTMLElement;
+    totalHeight += child.offsetHeight;
+    
+    // Add gap between items (matching CSS gap: 1rem = 16px)
+    if (i < column.children.length - 1) {
+      totalHeight += 16;
+    }
+  }
+  return totalHeight;
+}
+
+/**
+ * Find the column with the shortest total height
+ */
+function getShortestColumnIndex(columns: HTMLElement[]): number {
+  let shortestIndex = 0;
+  let shortestHeight = getColumnHeight(columns[0]);
+  
+  for (let i = 1; i < columns.length; i++) {
+    const height = getColumnHeight(columns[i]);
+    if (height < shortestHeight) {
+      shortestIndex = i;
+      shortestHeight = height;
+    }
+  }
+  
+  return shortestIndex;
+}
+
+/**
+ * Distribute items across columns using height-based placement (shortest column first)
  */
 function distributeItems(items: HTMLElement[], columns: HTMLElement[]): void {
-  console.log('🎯 Starting distribution:', { itemCount: items.length, columnCount: columns.length });
-  
-  // Track weight distribution per column
-  const columnWeights = columns.map(() => ({ light: 0, medium: 0, heavy: 0 }));
   
   items.forEach((item, index) => {
-    // Get weight from data attribute (set by the component)
-    const weight = item.dataset.weight as 'light' | 'medium' | 'heavy' || 'light';
+    // Find the shortest column BEFORE placing the item
+    const shortestColumnIndex = getShortestColumnIndex(columns);
+    const targetColumn = columns[shortestColumnIndex];
     
-    if (index < 5) { // Log first 5 items
-      console.log(`📦 Item ${index}: weight=${weight}, element=`, item);
-    }
-    
-    // Find ALL columns with the minimum count of this weight type
-    const weightCounts = columnWeights.map(weights => weights[weight]);
-    const minWeightCount = Math.min(...weightCounts);
-    const candidateColumns = weightCounts
-      .map((count, index) => ({ index, weightCount: count }))
-      .filter(col => col.weightCount === minWeightCount);
-    
-    let targetColumnIndex: number;
-    
-    if (candidateColumns.length === 1) {
-      // Only one column has minimum weight - use it
-      targetColumnIndex = candidateColumns[0].index;
-    } else {
-      // Multiple columns tied - pick the one with fewest total items
-      const totalCounts = candidateColumns.map(col => {
-        const weights = columnWeights[col.index];
-        return weights.light + weights.medium + weights.heavy;
-      });
-      const minTotalCount = Math.min(...totalCounts);
-      
-      // Find all columns with minimum total count
-      const finalCandidates = candidateColumns.filter((_, i) => totalCounts[i] === minTotalCount);
-      
-      // If still tied, pick the first one (but now it's fair since we considered all options)
-      targetColumnIndex = finalCandidates[0].index;
-    }
-    
-    // Place item in target column and update weight tracking
-    const targetColumn = columns[targetColumnIndex];
     if (targetColumn) {
+      // Place item in shortest column
       targetColumn.appendChild(item);
-      columnWeights[targetColumnIndex][weight]++;
       
-      if (index < 5) { // Log first 5 placements
-        console.log(`✅ Item ${index} placed in column ${targetColumnIndex}`);
+      // Force a layout to get accurate measurements
+      item.offsetHeight; // Force reflow
+      
+      if (index < 5) { // Log first 5 items
+        const columnHeight = getColumnHeight(targetColumn);
       }
     } else {
-      console.error(`❌ No target column found for index ${targetColumnIndex}`);
+      console.error(`❌ No target column found for index ${shortestColumnIndex}`);
     }
-  });
-  
-  // Log final distribution
-  console.log('🏁 Distribution complete:', columnWeights);
-  columns.forEach((col, idx) => {
-    console.log(`📊 Column ${idx}: ${col.children.length} items`);
   });
 }
 
@@ -133,12 +129,9 @@ export function createMasonry(
       
       // Distribute items using round-robin
       const targetColumns = columns.slice(0, currentColumnCount);
-      console.log('🎯 Target columns:', targetColumns.length);
       distributeItems(items, targetColumns);
       
       lastColumnCount = currentColumnCount;
-    } else {
-      console.log('⏭️ Skipping layout - no changes needed');
     }
   }
 

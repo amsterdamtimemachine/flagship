@@ -1,27 +1,31 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import FeatureCard from '$components/FeatureCard.svelte';
-	import { createMasonry, type MasonryInstance } from '$utils/masonry';
+	import { createMasonryMemoized, type MasonryMemoizedInstance } from '$utils/masonryMemoized';
 	import type { RawFeature } from '@atm/shared/types';
 	
 	type Props = {
 		features: RawFeature[];
 		columns?: number;
+		layoutMemory?: Map<string, number>;
 	}
-	let { features, columns }: Props = $props();
+	let { features, columns, layoutMemory }: Props = $props();
 	
 	// Use CSS-only responsive columns if no explicit columns prop provided
 	const useResponsiveColumns = columns === undefined;
 	
 	let masonryContainer: HTMLElement;
-	let masonry: MasonryInstance | null = null;
+	let masonry: MasonryMemoizedInstance | null = null;
 	
 	onMount(() => {
 		if (masonryContainer) {
 			try {
-				masonry = createMasonry(masonryContainer, { debounceDelay: 150 });
+				masonry = createMasonryMemoized(masonryContainer, { 
+					debounceDelay: 150,
+					layoutMemory: layoutMemory || new Map()
+				});
 			} catch (error) {
-				console.error('Failed to initialize masonry layout:', error);
+				console.error('Failed to initialize memoized masonry layout:', error);
 			}
 		}
 	});
@@ -34,7 +38,7 @@
 	$effect(() => {
 		// This effect tracks 'features' changes
 		if (masonry && features.length > 0) {
-			console.log("🔄 Features changed, re-laying out:", features.length);
+			console.log("🔄 Features changed, re-laying out with memory:", features.length);
 			setTimeout(() => masonry?.layout(true), 10);
 		}
 	});
@@ -55,7 +59,7 @@
 				<div class="masonry-column"></div>
 			{/each}
 			{#each features as feature, index (index)}
-				<div class="masonry-item">
+				<div class="masonry-item" data-feature-id={feature.id}>
 					<FeatureCard {feature}/>
 				</div>
 			{/each}
