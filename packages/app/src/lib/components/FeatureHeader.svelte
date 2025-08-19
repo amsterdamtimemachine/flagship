@@ -1,58 +1,27 @@
 <script lang="ts">
 	import type { RawFeature } from '@atm/shared/types';
+	import { mergeCss } from '$utils/utils';
+	import { formatTimePeriod, formatDatasetTitle } from '$utils/format';
 
 	type Props = {
 		feature: RawFeature;
+		className?: string;
 	};
 
-	let { feature }: Props = $props();
-
-	// Format time period for display
-	const formatTimePeriod = (per: [number, number]) => {
-		const [start, end] = per;
-		if (start === end) return start.toString();
-		return `${start}-${end}`;
-	};
+	let { feature, class: className }: Props = $props();
 </script>
 
-<div class="p-3 border-b border-gray-200">
-	<!-- Title -->
-	<h3 class="font-semibold text-sm text-gray-900 mb-1 line-clamp-2">
-		{feature.tit}
-	</h3>
-	
+<div class={mergeCss("border-b border-gray-300", className)}>
 	<!-- Dataset and Record Type -->
-	<div class="flex items-center gap-2 mb-2">
-		<span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+	<div class="flex w-full justify-between items-center">
+		<span class="text-xs text-black">
 			{feature.recordType}
 		</span>
-		<span class="text-xs text-gray-600">
-			{feature.ds}
-		</span>
+		<span class="text-xs text-black">
+			{formatTimePeriod(feature.per)}
+		</span>	
+		<a href={feature.url} target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 hover:text-blue-800 underline">
+			{formatDatasetTitle(feature.ds)}
+		</a>
 	</div>
-	
-	<!-- Time Period -->
-	<div class="text-xs text-gray-600 mb-2">
-		📅 {formatTimePeriod(feature.per)}
-	</div>
-	
-	<!-- Source URL -->
-	{#if feature.url}
-		<div class="mb-2">
-			<a href={feature.url} target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 hover:text-blue-800 underline">
-				source
-			</a>
-		</div>
-	{/if}
-	
-	<!-- Tags -->
-	{#if feature.tags && feature.tags.length > 0}
-		<div class="flex flex-wrap gap-1">
-			{#each feature.tags as tag}
-				<span class="text-xs px-1 py-0.5 bg-gray-100 text-gray-700 rounded">
-					{tag}
-				</span>
-			{/each}
-		</div>
-	{/if}
 </div>
