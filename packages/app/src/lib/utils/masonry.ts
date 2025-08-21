@@ -1,13 +1,28 @@
-// masonry.ts - Functional masonry layout utility
+// masonryMemoized.ts - Memory-aware masonry layout utility
 import debounce from 'lodash.debounce';
 
-export interface MasonryOptions {
+export interface MasonryMemoizedOptions {
   debounceDelay?: number;
+  layoutMemory?: Map<string, number>; // featureId -> columnIndex
 }
 
-export interface MasonryInstance {
+export interface MasonryMemoizedInstance {
   layout: (forceLayout?: boolean) => void;
+  clearMemory: () => void;
   destroy: () => void;
+}
+
+/**
+ * Extract feature URL from masonry item element (used as unique identifier)
+ */
+function getFeatureId(item: HTMLElement): string | null {
+  // Look for data-feature-url attribute on the masonry-item
+  const featureUrl = item.getAttribute('data-feature-url');
+  if (featureUrl) return featureUrl;
+  
+  // Fallback: look for feature URL in child FeatureCard
+  const featureCard = item.querySelector('[data-feature-url]');
+  return featureCard?.getAttribute('data-feature-url') || null;
 }
 
 /**
@@ -59,28 +74,75 @@ function getShortestColumnIndex(columns: HTMLElement[]): number {
 }
 
 /**
- * Distribute items across columns using height-based placement (shortest column first)
+ * Memory-aware distribution: check memory first, fallback to height-based placement
  */
-function distributeItems(items: HTMLElement[], columns: HTMLElement[]): void {
+function distributeItemsWithMemory(
+  items: HTMLElement[], 
+  columns: HTMLElement[], 
+  layoutMemory: Map<string, number>
+): void {
+  console.log('🧠 Starting memory-aware distribution:', { 
+    itemCount: items.length, 
+    columnCount: columns.length,
+    memorySize: layoutMemory.size 
+  });
+  
+  let memoryHits = 0;
+  let newPlacements = 0;
   
   items.forEach((item, index) => {
-    // Find the shortest column BEFORE placing the item
-    const shortestColumnIndex = getShortestColumnIndex(columns);
-    const targetColumn = columns[shortestColumnIndex];
+    const featureId = getFeatureId(item);
     
-    if (targetColumn) {
-      // Place item in shortest column
-      targetColumn.appendChild(item);
+    if (featureId && layoutMemory.has(featureId)) {
+      // Try to use remembered placement
+      const rememberedColumnIndex = layoutMemory.get(featureId)!;
       
-      // Force a layout to get accurate measurements
-      item.offsetHeight; // Force reflow
-      
-      if (index < 5) { // Log first 5 items
-        const columnHeight = getColumnHeight(targetColumn);
+      // Validate remembered column still exists
+      if (rememberedColumnIndex < columns.length) {
+        const rememberedColumn = columns[rememberedColumnIndex];
+        rememberedColumn.appendChild(item);
+        memoryHits++;
+        
+        if (index < 3) {
+          console.log(`💾 Item ${index} (${featureId}): placed in remembered column ${rememberedColumnIndex}`);
+        }
+      } else {
+        // Remembered column doesn't exist anymore, use height-based + update memory
+        const shortestColumnIndex = getShortestColumnIndex(columns);
+        columns[shortestColumnIndex].appendChild(item);
+        layoutMemory.set(featureId, shortestColumnIndex);
+        newPlacements++;
+        
+        if (index < 3) {
+          console.log(`🔄 Item ${index} (${featureId}): remembered column ${rememberedColumnIndex} invalid, placed in column ${shortestColumnIndex}`);
+        }
       }
     } else {
-      console.error(`❌ No target column found for index ${shortestColumnIndex}`);
+      // New feature or no ID - use height-based placement + store in memory
+      const shortestColumnIndex = getShortestColumnIndex(columns);
+      columns[shortestColumnIndex].appendChild(item);
+      
+      if (featureId) {
+        layoutMemory.set(featureId, shortestColumnIndex);
+      }
+      newPlacements++;
+      
+      if (index < 3) {
+        console.log(`✨ Item ${index} (${featureId || 'no-id'}): new placement in column ${shortestColumnIndex}`);
+      }
     }
+    
+    // Force layout for accurate measurements
+    item.offsetHeight;
+  });
+  
+  console.log(`🏁 Memory-aware distribution complete - Memory hits: ${memoryHits}, New placements: ${newPlacements}`);
+  
+  // Log final distribution
+  const finalHeights = columns.map(getColumnHeight);
+  console.log('📊 Final column heights:', finalHeights);
+  columns.forEach((col, idx) => {
+    console.log(`📊 Column ${idx}: ${col.children.length} items, ${finalHeights[idx]}px height`);
   });
 }
 
@@ -95,13 +157,13 @@ function getColumnCount(container: HTMLElement): number {
 }
 
 /**
- * Create a functional masonry layout
+ * Create a memory-aware masonry layout
  */
-export function createMasonry(
+export function createMasonryMemoized(
   container: HTMLElement,
-  options: MasonryOptions = {}
-): MasonryInstance {
-  const { debounceDelay = 100 } = options;
+  options: MasonryMemoizedOptions = {}
+): MasonryMemoizedInstance {
+  const { debounceDelay = 100, layoutMemory = new Map() } = options;
   
   // Get columns once
   const columns = Array.from(container.querySelectorAll('.masonry-column')) as HTMLElement[];
@@ -127,12 +189,22 @@ export function createMasonry(
       // Get all masonry items (including those already moved into columns)
       const items = Array.from(container.querySelectorAll('.masonry-item')) as HTMLElement[];
       
-      // Distribute items using round-robin
+      // Distribute items using memory-aware algorithm
       const targetColumns = columns.slice(0, currentColumnCount);
-      distributeItems(items, targetColumns);
+      distributeItemsWithMemory(items, targetColumns, layoutMemory);
       
       lastColumnCount = currentColumnCount;
+    } else {
+      console.log('⏭️ Skipping layout - no changes needed');
     }
+  }
+
+  /**
+   * Clear layout memory
+   */
+  function clearMemory(): void {
+    console.log('🧹 Clearing masonry layout memory');
+    layoutMemory.clear();
   }
 
   // Create debounced resize handler
@@ -154,10 +226,10 @@ export function createMasonry(
 
   return {
     layout,
+    clearMemory,
     destroy: () => {
       unbindResize();
       clearColumns(columns);
     }
   };
 }
-

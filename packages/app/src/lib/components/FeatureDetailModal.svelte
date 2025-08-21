@@ -30,7 +30,6 @@
 	
 	// Get current selected feature
 	let selectedFeature = $derived(featureViewerState.selectedFeature);
-	$inspect(selectedFeature);
 	
 	// Open dialog when feature is selected
 	$effect(() => {
