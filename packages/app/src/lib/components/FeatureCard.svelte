@@ -7,11 +7,11 @@
 
 	type Props = {
 		feature: Feature;
+		expanded?: boolean;
 	};
 
-	let { feature }: Props = $props();
+	let { feature, expanded = false }: Props = $props();
 
-	// Extract generic RawFeature properties
 	const commonProps: RawFeature = {
 		ds: feature.ds,
 		geom: feature.geom,
@@ -37,25 +37,32 @@
 	};
 
 	const specificProps = getFeatureSpecificProps();
+	
+	// Debug logging
+	console.log('FeatureCard feature object:', feature);
+	console.log('FeatureCard specificProps:', specificProps);
+	console.log('FeatureCard expanded:', expanded);
 </script>
 
-<div class="w-full border rounded-sm border-gray-300 bg-white min-w-0">
-	<FeatureHeader class="p-2" feature={commonProps} />	
-	<h3 class="p-2 my-1 font-semibold text-sm text-black line-clamp-2">
+<div class="w-full {expanded ? '' : 'border rounded-sm border-gray-300 bg-white min-w-0'}">
+	<FeatureHeader class="{expanded ? 'mb-4' : 'p-2'}" feature={commonProps} />	
+	<h3 class="{expanded ? 'text-xl font-semibold text-gray-900 mb-4' : 'p-2 my-1 font-semibold text-sm text-black line-clamp-2'}">
 		{commonProps.tit}
 	</h3>
 	<!-- Feature-specific content -->
 	{#if feature.recordType === 'image'}
-		<FeatureCardImage {...specificProps} />
+		<FeatureCardImage {...specificProps} expanded={expanded} />
 	{:else if feature.recordType === 'text'}
-		<FeatureCardText {...specificProps} /> 
+		<FeatureCardText {...specificProps} expanded={expanded} /> 
 	{:else if feature.recordType === 'person'}
 		<!-- Person feature has same properties as text so we're using the text card -->
-		<!-- <FeatureCardText {...specificProps} /> -->
+		<FeatureCardText {...specificProps} expanded={expanded} />
 	{:else}
 		<div class="p-2 text-gray-500 text-sm">
 			Unknown feature type: {feature.recordType}
 		</div>
 	{/if}
-	<FeatureFooter feature={commonProps} />
+	{#if !expanded}
+		<FeatureFooter feature={feature} />
+	{/if}
 </div>

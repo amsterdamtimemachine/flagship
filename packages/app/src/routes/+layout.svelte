@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import Toaster from '$components/Toaster.svelte';
 	import LoadingBar from '$components/LoadingBar.svelte';
+	import FeatureDetailModal from '$components/FeatureDetailModal.svelte';
 	import '../app.pcss';
 
 	let {
@@ -14,5 +15,6 @@
 	<main class="relative">
 		<LoadingBar class="z-50 fixed top-0 "/>
 		<Toaster />
+		<FeatureDetailModal />
 		{@render children?.()}
 	</main>

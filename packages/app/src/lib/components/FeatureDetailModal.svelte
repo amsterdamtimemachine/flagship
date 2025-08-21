@@ -1,30 +1,14 @@
 <script lang="ts">
 	import { createDialog, melt, type CreateDialogProps } from '@melt-ui/svelte';
 	import { fade } from 'svelte/transition';
-	import { featureViewerState } from '$lib/state/featureState';
+	import { featureViewerState } from '$lib/state/featureState.svelte';
 	import { X } from 'phosphor-svelte';
 	import type { Feature } from '@atm/shared/types';
-	import FeatureHeader from '$components/FeatureHeader.svelte';
-	import FeatureFooter from '$components/FeatureFooter.svelte';
-	import FeatureCardImage from '$components/FeatureCardImage.svelte';
-	import FeatureCardText from '$components/FeatureCardText.svelte';
+	import FeatureCard from '$components/FeatureCard.svelte';
 	
 	let innerWidth = 0;
 	let innerHeight = 0;
 	
-	// Type-specific props extraction (same as FeatureCard)
-	const getFeatureSpecificProps = (feature: Feature) => {
-		switch (feature.recordType) {
-			case 'image':
-				return { thumbnail: feature.thumbnail, alt: feature.alt };
-			case 'text':
-				return { text: feature.text };
-			case 'person':
-				return {};
-			default:
-				return {};
-		}
-	};
 	
 	const handleOpenChange: CreateDialogProps['onOpenChange'] = ({ next }) => {
 		if (next === false && featureViewerState.selectedFeature) {
@@ -44,6 +28,10 @@
 		onOpenChange: handleOpenChange
 	});
 	
+	// Get current selected feature
+	let selectedFeature = $derived(featureViewerState.selectedFeature);
+	$inspect(selectedFeature);
+	
 	// Open dialog when feature is selected
 	$effect(() => {
 		if (featureViewerState.selectedFeature) {
@@ -52,9 +40,6 @@
 			open.set(false);
 		}
 	});
-	
-	// Get current selected feature
-	$: selectedFeature = featureViewerState.selectedFeature;
 </script>
 
 <svelte:window bind:innerWidth bind:innerHeight />
@@ -91,29 +76,36 @@
 			
 			<!-- Scrollable content area -->
 			<div class="overflow-y-auto flex-1 p-6">
-				<!-- Feature Header -->
-				<FeatureHeader class="mb-4" feature={selectedFeature} />
+				<!-- Use FeatureCard in expanded mode -->
+				<FeatureCard feature={selectedFeature} expanded={true} />
 				
-				<h3 class="text-xl font-semibold text-gray-900 mb-4">
-					{selectedFeature.tit}
-				</h3>
-				
-				<!-- Feature-specific expanded content -->
-				{#if selectedFeature.recordType === 'image'}
-					<FeatureCardImage {...getFeatureSpecificProps(selectedFeature)} expanded={true} />
-				{:else if selectedFeature.recordType === 'text'}
-					<FeatureCardText {...getFeatureSpecificProps(selectedFeature)} expanded={true} />
-				{:else if selectedFeature.recordType === 'person'}
-					<!-- Person feature uses text component -->
-					<FeatureCardText {...getFeatureSpecificProps(selectedFeature)} expanded={true} />
-				{:else}
-					<div class="p-4 text-gray-500 text-center">
-						Unknown feature type: {selectedFeature.recordType}
-					</div>
-				{/if}
-				
-				<!-- Feature Footer -->
-				<FeatureFooter class="mt-6" feature={selectedFeature} />
+				<!-- Footer with tags and source (no expand button) -->
+				<div class="border-t border-gray-300 p-2 mt-6">
+					<!-- Tags -->
+					{#if selectedFeature.tags && selectedFeature.tags.length > 0}
+						<div class="flex flex-wrap gap-2 mb-2">
+							{#each selectedFeature.tags as tag}
+								<span class="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+									{tag}
+								</span>
+							{/each}
+						</div>
+					{/if}
+					
+					<!-- Source link only -->
+					{#if selectedFeature.url}
+						<div class="flex justify-start">
+							<a 
+								href={selectedFeature.url} 
+								target="_blank" 
+								rel="noopener noreferrer"
+								class="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+							>
+								View Original Source →
+							</a>
+						</div>
+					{/if}
+				</div>
 			</div>
 		</div>
 	</div>

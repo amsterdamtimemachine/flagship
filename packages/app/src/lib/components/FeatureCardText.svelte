@@ -32,7 +32,7 @@
 				</div>
 				<button 
 					class="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
-					on:click={() => showFullText = true}
+					onclick={() => showFullText = true}
 				>
 					Show more
 				</button>
@@ -43,7 +43,7 @@
 				{#if needsTruncation}
 					<button 
 						class="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
-						on:click={() => showFullText = false}
+						onclick={() => showFullText = false}
 					>
 						Show less
 					</button>
