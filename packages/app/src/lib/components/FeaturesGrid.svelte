@@ -48,9 +48,8 @@
 	{#if features.length === 0}
 		<div class="text-gray-500 p-4">No features to display</div>
 	{:else}
-		<div class="mb-2 text-sm text-gray-600">Showing {features.length} features</div>
 		<div 
-			class="masonry-layout" 
+			class="masonry-layout p-4" 
 			class:responsive={useResponsiveColumns}
 			bind:this={masonryContainer} 
 			style:--column-count={useResponsiveColumns ? null : columns}

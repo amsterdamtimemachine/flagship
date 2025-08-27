@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import FeaturesGrid from '$components/FeaturesGrid.svelte';
 	import Pagination from '$components/Pagination.svelte';
+	import PaginationCounter from '$components/PaginationCounter.svelte';
 	import { fetchGeodataFromDatabase } from '$utils/externalApi';
 	import { formatDate } from '$utils/utils';
 	import { loadingState } from '$lib/state/loadingState.svelte';
@@ -102,8 +103,8 @@
 	
 	// Detect context changes and clear memory when needed
 	$effect(() => {
-		// Create context key from data-defining props
-		const newContext = `${cellId}_${period}_${recordTypes.join(',')}_${tags.join(',')}`;
+		// Create context key from always-available props
+		const newContext = `${cellId}_${period}`;
 		
 		if (currentContext !== newContext) {
 			console.log('🔄 Context changed:', { from: currentContext, to: newContext });
@@ -137,66 +138,18 @@
 
 <ErrorHandler errorData={errorData} />
 
-{#if initialLoading}
-	<div class="w-full flex justify-between">
-		<div>
-			<h2>
-				<span>
-					<span class="font-bold">Cell</span>
-					{cellId}
-				</span>
-				<span class="block">
-					<span class="font-bold">Period</span>
-					{formatDate(period)}
-				</span>
-				{#if bounds}
-					<span class="block text-sm text-gray-600">
-						Lat: {bounds.minLat.toFixed(4)} - {bounds.maxLat.toFixed(4)}<br/>
-						Lon: {bounds.minLon.toFixed(4)} - {bounds.maxLon.toFixed(4)}
-					</span>
-				{/if}
-			</h2>
-		</div>
-		<button
-			onclick={closeModal}
-			class="px-2 py-1 text-sm text-black border border-solid border-black"
-		>
-			close
-		</button>
+<!-- Data Header -->
+<div class="sticky top-0 z-10 bg-white mb-4 pb-2 border-b flex items-center justify-between">
+	<div class="text-sm text-gray-700">
+		cell: {cellId} | period: {period}
 	</div>
-	<div class="text-gray-500">Loading cell data...</div>
-{:else}
-	<div class="w-full flex justify-between">
-		<div>
-			<h2>
-				<span>
-					<span class="font-bold">Cell</span>
-					{cellId}
-				</span>
-				<span class="block">
-					<span class="font-bold">Period</span>
-					{formatDate(period)}
-				</span>
-				{#if bounds}
-					<span class="block text-sm text-gray-600">
-						Lat: {bounds.minLat.toFixed(4)} - {bounds.maxLat.toFixed(4)}<br/>
-						Lon: {bounds.minLon.toFixed(4)} - {bounds.maxLon.toFixed(4)}
-					</span>
-				{/if}
-			</h2>
-		</div>
-		<button
-			onclick={closeModal}
-			class="px-2 py-1 text-sm text-black border border-solid border-black"
-		>
-			close
-		</button>
-	</div>
-	{#if allFeatures.length === 0}
-		<div class="text-gray-500">No features found for this cell and period</div>
-	{:else}
-		<FeaturesGrid features={allFeatures} layoutMemory={layoutMemory} />
-		{#if totalCount > pageSize}
+	<div class="flex items-center gap-4">
+		{#if !initialLoading && totalCount > pageSize}
+			<PaginationCounter 
+				totalItems={totalCount}
+				currentPage={currentPage}
+				itemsPerPage={pageSize}
+			/>
 			<Pagination 
 				totalItems={totalCount}
 				currentPage={currentPage}
@@ -205,5 +158,21 @@
 				loading={loading}
 			/>
 		{/if}
+		<button
+			onclick={closeModal}
+			class="px-2 py-1 text-sm text-black border border-solid border-black"
+		>
+			close
+		</button>
+	</div>
+</div>
+
+<div class="bg-gray-100 min-h-[200px]">
+	{#if initialLoading}
+		<div class="text-gray-500 p-4">Loading cell data...</div>
+	{:else if allFeatures.length === 0}
+		<div class="text-gray-500 p-4">No features found for this cell and period</div>
+	{:else}
+		<FeaturesGrid features={allFeatures} layoutMemory={layoutMemory} />
 	{/if}
-{/if}
+</div>

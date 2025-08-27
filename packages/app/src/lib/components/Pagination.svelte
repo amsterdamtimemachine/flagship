@@ -39,16 +39,12 @@
 </script>
 
 <nav
-	class="flex flex-col items-center gap-4 {className || ''}"
+	class="flex items-center gap-2 {className || ''}"
 	class:opacity-50={loading}
 	class:pointer-events-none={loading}
 	aria-label="pagination"
 	use:melt={$root}
 >
-	<p class="text-center text-gray-700 text-sm">
-		Showing items {$range.start} - {$range.end} of {totalItems}
-	</p>
-	<div class="flex items-center gap-2">
 		<button
 			class="grid h-8 items-center rounded-md bg-white px-3 text-sm text-gray-700 border border-gray-300
 			hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 data-[selected]:bg-gray-900
@@ -71,16 +67,12 @@
 				</button>
 			{/if}
 		{/each}
-		<button
-			class="grid h-8 items-center rounded-md bg-white px-3 text-sm text-gray-700 border border-gray-300
-			hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 data-[selected]:bg-gray-900
-			data-[selected]:text-white transition-colors"
-			use:melt={$nextButton}
-		>
-			→
-		</button>
-	</div>
-	{#if loading}
-		<div class="text-sm text-gray-500">Loading...</div>
-	{/if}
+	<button
+		class="grid h-8 items-center rounded-md bg-white px-3 text-sm text-gray-700 border border-gray-300
+		hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 data-[selected]:bg-gray-900
+		data-[selected]:text-white transition-colors"
+		use:melt={$nextButton}
+	>
+		→
+	</button>
 </nav>
