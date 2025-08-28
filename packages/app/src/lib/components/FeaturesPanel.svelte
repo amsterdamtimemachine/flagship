@@ -3,7 +3,9 @@
 	import { onMount } from 'svelte';
 	import FeaturesGrid from '$components/FeaturesGrid.svelte';
 	import Pagination from '$components/Pagination.svelte';
-	import PaginationCounter from '$components/PaginationCounter.svelte';
+	import FeaturesCount from '$components/FeaturesCount.svelte';
+	import ButtonIcon from '$components/ButtonIcon.svelte';
+	import { X } from 'phosphor-svelte';
 	import { fetchGeodataFromDatabase } from '$utils/externalApi';
 	import { formatDate } from '$utils/utils';
 	import { loadingState } from '$lib/state/loadingState.svelte';
@@ -140,31 +142,30 @@
 
 <!-- Data Header -->
 <div class="sticky top-0 z-10 bg-white mb-4 pb-2 border-b flex items-center justify-between">
-	<div class="text-sm text-gray-700">
-		cell: {cellId} | period: {period}
-	</div>
 	<div class="flex items-center gap-4">
-		{#if !initialLoading && totalCount > pageSize}
-			<PaginationCounter 
-				totalItems={totalCount}
+		{#if !initialLoading && totalCount > 0}
+			<FeaturesCount 
+				totalFeatures={totalCount}
 				currentPage={currentPage}
-				itemsPerPage={pageSize}
+				featuresPerPage={pageSize}
 			/>
-			<Pagination 
-				totalItems={totalCount}
-				currentPage={currentPage}
-				itemsPerPage={pageSize}
-				onPageChange={handlePageChange}
-				loading={loading}
-			/>
+			{#if totalCount > pageSize}
+				<Pagination 
+					totalItems={totalCount}
+					currentPage={currentPage}
+					itemsPerPage={pageSize}
+					onPageChange={handlePageChange}
+					loading={loading}
+				/>
+			{/if}
 		{/if}
-		<button
-			onclick={closeModal}
-			class="px-2 py-1 text-sm text-black border border-solid border-black"
-		>
-			close
-		</button>
 	</div>
+	<ButtonIcon 
+		icon={X}
+		onclick={closeModal}
+		class="h-8 w-8 p-1"
+		size={16}
+	/>
 </div>
 
 <div class="bg-gray-100 min-h-[200px]">
