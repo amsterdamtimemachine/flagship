@@ -24,7 +24,7 @@
 		</div>
 	</div>
 {:else}
-	<div class="flex-1 p-3">
+	<div class="flex-1">
 		<div class="text-sm text-gray-700 leading-relaxed">
 			{#if needsTruncation && !showFullText}
 				<div>

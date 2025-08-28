@@ -23,7 +23,7 @@
 	};
 </script>
 
-<div class="{expanded ? 'mb-6' : 'flex-1 p-2'}">
+<div class="flex-1">
 	{#if imageError}
 		<div class="w-full {expanded ? 'h-64' : 'h-32'} bg-gray-100 flex items-center justify-center text-gray-500 text-sm">
 			<div class="text-center">

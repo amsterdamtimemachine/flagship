@@ -12,27 +12,27 @@
 	type PhosphorIcon = Component<PhosphorIconProps>;
 
 	interface Props {
-		onclick?: () => void;
+		href: string;
+		target?: string;
+		rel?: string;
 		class?: string;
-		disabled?: boolean;
 		icon?: PhosphorIcon;
 		size?: number;
 		weight?: 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
 		color?: string;
 		children?: Snippet;
-		'aria-label'?: string;
 	}
 
 	let { 
-		onclick, 
+		href,
+		target,
+		rel,
 		class: className, 
-		disabled = false,
 		icon: Icon,
-		size = 18,
-		weight = 'bold',
+		size = 16,
+		weight = 'regular',
 		color = 'currentColor',
-		children,
-		'aria-label': ariaLabel
+		children
 	}: Props = $props();
 
 	const iconProps: PhosphorIconProps = {
@@ -42,19 +42,20 @@
 		mirrored: false
 	};
 
-	const baseClasses = 'flex justify-center items-center bg-white rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm';
-	const paddingClasses = Icon ? 'p-1' : 'px-3 py-2';
+	const baseClasses = 'inline-flex items-center text-sm text-blue-600 hover:text-blue-800 underline';
+	const gapClass = Icon && children ? 'gap-1' : '';
 </script>
 
-<button
-	{onclick}
-	{disabled}
-	class={mergeCss(`${baseClasses} ${paddingClasses}`, className)}
-	aria-label={ariaLabel}
+<a
+	{href}
+	{target}
+	{rel}
+	class={mergeCss(`${baseClasses} ${gapClass}`, className)}
 >
-	{#if Icon}
-		<Icon {...iconProps} />
-	{:else if children}
+	{#if children}
 		{@render children()}
 	{/if}
-</button>
+	{#if Icon}
+		<Icon {...iconProps} />
+	{/if}
+</a>

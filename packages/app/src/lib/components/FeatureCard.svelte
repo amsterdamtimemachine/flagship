@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Feature, RawFeature, ImageFeature, TextFeature } from '@atm/shared/types';
-	import FeatureHeader from '$components/FeatureHeader.svelte';
-	import FeatureFooter from '$components/FeatureFooter.svelte';
+	import FeatureCardHeader from '$components/FeatureCardHeader.svelte';
+	import FeatureCardFooter from '$components/FeatureCardFooter.svelte';
 	import FeatureCardImage from '$components/FeatureCardImage.svelte';
 	import FeatureCardText from '$components/FeatureCardText.svelte';
 
@@ -45,24 +45,26 @@
 </script>
 
 <div class="w-full {expanded ? '' : 'border rounded-sm border-gray-300 bg-white min-w-0'}">
-	<FeatureHeader class="{expanded ? 'mb-4' : 'p-2'}" feature={commonProps} />	
-	<h3 class="{expanded ? 'text-xl font-semibold text-gray-900 mb-4' : 'p-2 my-1 font-semibold text-sm text-black line-clamp-2'}">
-		{commonProps.tit}
-	</h3>
-	<!-- Feature-specific content -->
-	{#if feature.recordType === 'image'}
-		<FeatureCardImage {...specificProps} expanded={expanded} />
-	{:else if feature.recordType === 'text'}
-		<FeatureCardText {...specificProps} expanded={expanded} /> 
-	{:else if feature.recordType === 'person'}
-		<!-- Person feature has same properties as text so we're using the text card -->
-		<FeatureCardText {...specificProps} expanded={expanded} />
-	{:else}
-		<div class="p-2 text-gray-500 text-sm">
-			Unknown feature type: {feature.recordType}
-		</div>
-	{/if}
+	<FeatureCardHeader class="{expanded ? 'mb-4' : 'p-2'}" feature={commonProps} />	
+	<div class="p-2">
+		<h3 class="{expanded ? 'text-l font-semibold text-gray-900' : 'font-semibold text-sm text-black line-clamp-2 mb-1'}">
+			{commonProps.tit}
+		</h3>
+		<!-- Feature-specific content -->
+		{#if feature.recordType === 'image'}
+			<FeatureCardImage {...specificProps} expanded={expanded} />
+		{:else if feature.recordType === 'text'}
+			<FeatureCardText {...specificProps} expanded={expanded} /> 
+		{:else if feature.recordType === 'person'}
+			<!-- Person feature has same properties as text so we're using the text card -->
+			<FeatureCardText {...specificProps} expanded={expanded} />
+		{:else}
+			<div class="p-2 text-gray-500 text-sm">
+				Unknown feature type: {feature.recordType}
+			</div>
+		{/if}
+	</div>
 	{#if !expanded}
-		<FeatureFooter feature={feature} />
+		<FeatureCardFooter feature={feature} />
 	{/if}
 </div>

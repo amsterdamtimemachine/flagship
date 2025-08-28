@@ -1,7 +1,11 @@
 <script lang="ts">
 	import type { RawFeature, Feature } from '@atm/shared/types';
 	import { featureViewerState } from '$lib/state/featureState.svelte';
-	import { ArrowsOut } from 'phosphor-svelte';
+	import { ArrowsOut, ArrowSquareOut } from 'phosphor-svelte';
+	import {  formatDatasetTitle  } from '$utils/format';
+	import { mergeCss } from '$utils/utils';
+	import Button from '$components/Button.svelte';
+	import Link from '$components/Link.svelte';
 
 	type Props = {
 		feature: Feature;
@@ -15,46 +19,43 @@
 	}
 </script>
 
-<div class="border-t border-gray-300 p-2 {className || ''}">
+<div class={className}>
 	<!-- Tags -->
 	{#if feature.tags && feature.tags.length > 0}
-		<div class="flex flex-wrap gap-1 mb-2">
-			{#each feature.tags.slice(0, 3) as tag}
+		<div class="flex flex-wrap p-2 gap-1">
+			{#each feature.tags.slice(0, 2) as tag}
 				<span class="text-xs px-1 py-0.5 bg-gray-100 text-gray-700 rounded">
 					{tag}
 				</span>
 			{/each}
-			{#if feature.tags.length > 3}
+			{#if feature.tags.length > 2}
 				<span class="text-xs px-1 py-0.5 bg-gray-200 text-gray-600 rounded">
-					+{feature.tags.length - 3}
+					+{feature.tags.length - 2}
 				</span>
 			{/if}
 		</div>
 	{/if}
 	
 	<!-- Actions -->
-	<div class="flex justify-between items-center">
+	<div class="px-2 py-1 flex justify-between items-center border-t border-gray-300 ">
 		{#if feature.url}
-			<a 
+			<Link 
 				href={feature.url} 
 				target="_blank" 
-				rel="noopener noreferrer"
-				class="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+				rel="noopener noreferrer" 
+				class="text-xs"
 			>
-				Source →
-			</a>
-		{:else}
-			<div></div>
+				{formatDatasetTitle(feature.ds)}
+			</Link>
 		{/if}
 		
-		<button
+		<Button
 			onclick={handleExpandClick}
-			class="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-800 
-			       hover:bg-gray-100 rounded transition-colors"
+			icon={ArrowsOut}
+			class="p-1"
 			aria-label="View feature details"
 		>
-			<ArrowsOut size={12} />
 			Expand
-		</button>
+		</Button>
 	</div>
 </div>

@@ -4,8 +4,9 @@
 	import FeaturesGrid from '$components/FeaturesGrid.svelte';
 	import Pagination from '$components/Pagination.svelte';
 	import FeaturesCount from '$components/FeaturesCount.svelte';
-	import ButtonIcon from '$components/ButtonIcon.svelte';
-	import { X } from 'phosphor-svelte';
+	import Button from '$components/Button.svelte';
+	import Tooltip from '$components/Tooltip.svelte';
+	import { X, QuestionMark } from 'phosphor-svelte';
 	import { fetchGeodataFromDatabase } from '$utils/externalApi';
 	import { formatDate } from '$utils/utils';
 	import { loadingState } from '$lib/state/loadingState.svelte';
@@ -140,7 +141,14 @@
 <ErrorHandler errorData={errorData} />
 
 <!-- Data Header -->
-<div class="sticky top-0 z-10 bg-white mb-4 pb-2 border-b flex items-center justify-between">
+<div class="sticky py-2 px-3 top-0 z-10 bg-white border-b border-gray-300 flex items-center justify-between shadow-[0px_5px_20px_5px_rgba(0,0,0,0.07)]">
+	<Button 
+		icon={X}
+		onclick={closeModal}
+		class="h-[32px] w-[32px]"
+		size={18}
+		aria-label="Close features panel"
+	/>
 	<div class="flex items-center gap-4">
 		{#if !initialLoading && totalCount > 0}
 			<FeaturesCount 
@@ -159,15 +167,10 @@
 			{/if}
 		{/if}
 	</div>
-	<ButtonIcon 
-		icon={X}
-		onclick={closeModal}
-		class="h-8 w-8 p-1"
-		size={16}
-	/>
+	<Tooltip icon={QuestionMark} text="" />
 </div>
 
-<div class="bg-gray-100">
+<div class="bg-gray-200">
 	{#if !initialLoading && !loading}
 		{#if allFeatures.length > 0}
 			<FeaturesGrid features={allFeatures} layoutMemory={layoutMemory} />

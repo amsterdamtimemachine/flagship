@@ -1,5 +1,6 @@
 <script lang="ts">
-	import NavToggle from '$components/NavToggle.svelte';
+	import Button from '$components/Button.svelte';
+	import { List, X } from 'phosphor-svelte';
 	import { cubicOut } from 'svelte/easing';
 	import { tweened } from 'svelte/motion';
 	import { mergeCss } from '$utils/utils';
@@ -45,10 +46,12 @@
 	style="transform: translateX({$navPosition}%);"
 	aria-hidden={!isExpanded}
 >
-	<NavToggle
+	<Button
 		onclick={toggleToc}
-		isNavExpanded={isExpanded}
-		class="absolute right-[-45px] w-[45px] h-[45px] top-[50%] border border-gray-300 hover:bg-gray-100"
+		icon={isExpanded ? X : List}
+		class="absolute right-[-32px] top-[50%] h-[32px] w-[32px] rounded-l-none"
+		size={18}
+		aria-label={isExpanded ? 'Close navigation menu' : 'Open navigation menu'}
 	/>
 	<div class="w-full h-full p-4 space-y-4" inert={!isExpanded}>
 	<h1> Amsterdam Time Machine </h1>

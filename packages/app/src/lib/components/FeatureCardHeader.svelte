@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { RawFeature } from '@atm/shared/types';
 	import { mergeCss } from '$utils/utils';
-	import { formatTimePeriod, formatDatasetTitle } from '$utils/format';
+	import { formatTimePeriod} from '$utils/format';
 
 	type Props = {
 		feature: RawFeature;
@@ -20,8 +20,5 @@
 		<span class="text-xs text-black">
 			{formatTimePeriod(feature.per)}
 		</span>	
-		<a href={feature.url} target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 hover:text-blue-800 underline">
-			{formatDatasetTitle(feature.ds)}
-		</a>
 	</div>
 </div>
