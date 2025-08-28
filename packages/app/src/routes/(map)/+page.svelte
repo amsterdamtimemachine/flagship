@@ -251,7 +251,7 @@
 		</NavContainer>
 
 		{#if showCellModal && selectedCellId}
-			<div class="z-40 absolute p-4 top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300">
+			<div class="z-40 absolute top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-200">
 				<FeaturesPanel 
 					cellId={selectedCellId} 
 					period={currentPeriod} 

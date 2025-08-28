@@ -132,7 +132,6 @@
 	
 	function closeModal() {
 		if (onClose) {
-			// Use the passed close handler
 			onClose();
 		}
 	}
@@ -168,12 +167,14 @@
 	/>
 </div>
 
-<div class="bg-gray-100 min-h-[200px]">
-	{#if initialLoading}
-		<div class="text-gray-500 p-4">Loading cell data...</div>
-	{:else if allFeatures.length === 0}
-		<div class="text-gray-500 p-4">No features found for this cell and period</div>
-	{:else}
+<div class="bg-gray-100">
+	{#if !initialLoading && !loading}
+		{#if allFeatures.length > 0}
+			<FeaturesGrid features={allFeatures} layoutMemory={layoutMemory} />
+		{:else}
+			<div class="text-gray-500 p-4">No features found for this cell and period</div>
+		{/if}
+	{:else if allFeatures.length > 0}
 		<FeaturesGrid features={allFeatures} layoutMemory={layoutMemory} />
 	{/if}
 </div>
