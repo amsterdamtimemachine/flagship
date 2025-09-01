@@ -28,21 +28,6 @@
 		tags: feature.tags
 	};
 
-	// Type-specific props extraction
-	const getFeatureSpecificProps = () => {
-		switch (feature.recordType) {
-			case 'image':
-				return { thumbnail: feature.thumbnail, alt: feature.alt };
-			case 'text':
-				return { text: feature.text }; // currently text has no non-generic properties
-			case 'person':
-				return { text: feature.text }; // currently person has no non-generic properties
-			default:
-				return {};
-		}
-	};
-
-	const specificProps = getFeatureSpecificProps();
 </script>
 
 <div class="w-full border rounded-sm border-gray-300 bg-white min-w-0">
@@ -56,12 +41,10 @@
 			{commonProps.tit}
 		</h3>
 		<!-- Feature-specific content -->
-		{#if feature.recordType === 'image'}
-			<FeatureCardImage {...specificProps} {expanded} onExpand={handleExpand} />
-		{:else if feature.recordType === 'text'}
-			<FeatureCardText {...specificProps} {expanded} />
-		{:else if feature.recordType === 'person'}
-			<FeatureCardText {...specificProps} {expanded} />
+		{#if feature.recordType === 'image' && 'thumbnail' in feature}
+			<FeatureCardImage thumbnail={feature.thumbnail} alt={feature.alt} {expanded} onExpand={handleExpand} />
+		{:else if (feature.recordType === 'text' || feature.recordType === 'person') && 'text' in feature}
+			<FeatureCardText text={feature.text} {expanded} />
 		{:else}
 			<div class="{expanded ? 'px-2' : ''} text-gray-500 text-sm">
 				Unknown feature type: {feature.recordType}

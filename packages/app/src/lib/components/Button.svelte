@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { mergeCss } from '$utils/utils';
-	import { melt, type MeltElement } from '@melt-ui/svelte';
-	import type { PhosphorIcon } from '@atm/shared/types';
+	import { melt, type AnyMeltElement } from '@melt-ui/svelte';
+	import type { PhosphorIcon, PhosphorIconProps } from '@atm/shared/types';
 
 	interface Props {
 		onclick?: () => void;
@@ -14,7 +14,7 @@
 		color?: string;
 		children?: Snippet;
 		'aria-label'?: string;
-		meltAction?: MeltElement<HTMLButtonElement>;
+		meltAction?: any; // Melt UI action - type varies by context
 	}
 
 	let {

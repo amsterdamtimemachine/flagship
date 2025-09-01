@@ -4,13 +4,8 @@
 	const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { onMount, onDestroy } from 'svelte';
-	import maplibre, {
-		type Map,
-		type FeatureCollection,
-		type Feature,
-		type Polygon,
-		type GeoJSONProperties
-	} from 'maplibre-gl';
+	import maplibre, { type Map as MapLibreMap } from 'maplibre-gl';
+	import type { FeatureCollection, Feature, Polygon, GeoJSONProperties } from 'geojson';
 	import type { Heatmap, HeatmapDimensions, HeatmapBlueprintCell } from '@atm/shared/types';
 	import { mergeCss } from '$utils/utils';
 
@@ -26,7 +21,7 @@
 		heatmapBlueprint: HeatmapBlueprintCell[];
 		dimensions: HeatmapDimensions;
 		selectedCellId: string | null;
-		className?: string;
+		class?: string;
 		handleCellClick?: (cellId: string | null) => void;
 		handleMapLoaded?: () => void;
 	}
@@ -41,8 +36,8 @@
 		handleMapLoaded
 	}: MapProps = $props();
 
-	let map: Map | undefined = $state();
-	let mapContainer: HTMLElement = $state();
+	let map: MapLibreMap | undefined = $state();
+	let mapContainer: HTMLElement;
 	let isMapLoaded = $state(false);
 
 	const cellIdMap = $derived.by(() => {

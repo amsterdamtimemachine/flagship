@@ -2,10 +2,10 @@
 	import { onMount, onDestroy } from 'svelte';
 	import FeatureCard from '$components/FeatureCard.svelte';
 	import { createMasonryMemoized, type MasonryMemoizedInstance } from '$utils/masonry';
-	import type { RawFeature } from '@atm/shared/types';
+	import type { Feature } from '@atm/shared/types';
 
 	type Props = {
-		features: RawFeature[];
+		features: Feature[];
 		columns?: number;
 		layoutMemory?: Map<string, number>;
 	};

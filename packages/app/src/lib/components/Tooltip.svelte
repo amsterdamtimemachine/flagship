@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createTooltip, melt } from '@melt-ui/svelte';
 	import { fade } from 'svelte/transition';
-	import type { PhosphorIcon } from '@atm/shared/types';
+	import type { PhosphorIcon, PhosphorIconProps } from '@atm/shared/types';
 
 	interface Props {
 		text: string; // Required text for the tooltip
@@ -59,12 +59,18 @@
 </script>
 
 <!-- Trigger element -->
-<span
-	use:melt={disabled ? undefined : $trigger}
-	class="inline-flex items-center justify-center w-6 h-6 bg-black rounded-full cursor-pointer hover:bg-gray-800 transition-colors {className}"
->
-	<Icon {...iconProps} />
-</span>
+{#if disabled}
+	<span class="inline-flex items-center justify-center w-6 h-6 bg-gray-300 rounded-full cursor-not-allowed {className}">
+		<Icon {...iconProps} />
+	</span>
+{:else}
+	<span
+		use:melt={$trigger}
+		class="inline-flex items-center justify-center w-6 h-6 bg-black rounded-full cursor-pointer hover:bg-gray-800 transition-colors {className}"
+	>
+		<Icon {...iconProps} />
+	</span>
+{/if}
 
 <!-- Tooltip content -->
 {#if $open && !disabled}

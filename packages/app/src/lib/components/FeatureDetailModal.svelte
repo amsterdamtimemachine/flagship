@@ -7,9 +7,6 @@
 	import FeatureCard from '$components/FeatureCard.svelte';
 	import Button from '$components/Button.svelte';
 
-	let innerWidth = 0;
-	let innerHeight = 0;
-
 	const handleOpenChange: CreateDialogProps['onOpenChange'] = ({ next }) => {
 		if (next === false && featureViewerState.selectedFeature) {
 			featureViewerState.closeFeature();
@@ -41,7 +38,6 @@
 	});
 </script>
 
-<svelte:window bind:innerWidth bind:innerHeight />
 
 {#if $open && selectedFeature}
 	<div use:melt={$portalled}>

@@ -2,13 +2,12 @@
 
 import type { Component } from 'svelte';
 
-// Phosphor icon props based on their official API
 export interface PhosphorIconProps {
   size?: number;
   weight?: 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
   color?: string;
   mirrored?: boolean;
-  [key: `data-${string}`]: any; // Support data attributes
+  [key: `data-${string}`]: any; 
 }
 
 // Phosphor icon component type
