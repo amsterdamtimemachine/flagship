@@ -53,7 +53,7 @@
 <div class="w-full border rounded-sm border-gray-300 bg-white min-w-0">
 	<FeatureCardHeader class="p-2" feature={commonProps} />	
 	<div class="{expanded ? '' : 'p-2'}">
-		<h3 class="{expanded ? 'font-semibold text-sm text-black mb-1 px-2' : 'font-semibold text-sm text-black line-clamp-2 mb-1'}">
+		<h3 class="{expanded ? 'font-semibold text-xl text-black my-3 px-2' : 'font-semibold text-sm text-black line-clamp-2 mb-1'}">
 			{commonProps.tit}
 		</h3>
 		<!-- Feature-specific content -->
@@ -75,7 +75,7 @@
 			tags={feature.tags || []} 
 			expanded={expanded}
 			maxVisible={expanded ? undefined : 2}
-			class="{expanded ? 'mt-2 px-2' : 'mt-2'}"
+			class="{expanded ? 'py-2 px-2' : 'pt-2'}"
 		/>
 	</div>
 	<FeatureCardFooter feature={feature} onExpand={handleExpand} expanded={expanded} />

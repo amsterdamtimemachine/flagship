@@ -3,7 +3,7 @@
 
 	interface Props {
 		class?: string;
-		variant?: 'default' | 'count' | 'selected';
+		variant?: 'default' | 'selected';
 		disabled?: boolean;
 		children: import('svelte').Snippet;
 	}
@@ -20,8 +20,6 @@
 	let variantClasses = '';
 	if (disabled) {
 		variantClasses = 'bg-gray-100 text-gray-400';
-	} else if (variant === 'count') {
-		variantClasses = 'bg-gray-200 text-gray-600';
 	} else if (variant === 'selected') {
 		variantClasses = 'bg-blue-100 text-blue-800';
 	} else {

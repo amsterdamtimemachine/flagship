@@ -27,7 +27,7 @@
 			<Tag>{tag}</Tag>
 		{/each}
 		{#if showOverflow}
-			<Tag variant="count">+{hiddenCount}</Tag>
+			<Tag>+{hiddenCount}</Tag>
 		{/if}
 	</div>
 {/if}

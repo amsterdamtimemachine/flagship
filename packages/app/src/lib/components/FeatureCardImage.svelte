@@ -33,12 +33,7 @@
 			</div>
 		</div>
 	{:else}
-		<div class="relative w-full">
-			{#if imageLoading}
-				<div class="w-full {expanded ? 'h-64' : 'h-32'} bg-gray-100 animate-pulse flex items-center justify-center">
-					<div class="text-gray-400 text-sm">Loading...</div>
-				</div>
-			{/if}
+		<div class="relative w-full bg-gray-300">
 			<img
 				src={thumbnail}
 				alt={alt}

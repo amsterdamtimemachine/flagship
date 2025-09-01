@@ -1,3 +1,26 @@
+<!--
+	ToggleGroupComposable - A composable wrapper around Melt UI's toggle group
+
+	This component handles the complexity of integrating Melt UI's toggle group with 
+	custom rendering via Svelte 5 snippets. The architecture requires:
+
+	1. DATA: Pass items array to initialize Melt UI state management
+	2. RENDERING: Use children snippet to customize how each item renders
+	3. CONSTRAINTS: Melt UI requires use:melt on HTML buttons (not components)
+	
+	The apparent "redundancy" of passing items AND rendering them via snippet is
+	necessary because:
+	- Melt UI needs the complete data array for state/accessibility management
+	- We need rendering flexibility without losing toggle functionality
+	- Can't use pure composition due to Svelte's use: directive limitations
+
+	Usage:
+	<ToggleGroupComposable items={tags} selectedItems={selected}>
+		{#snippet children(item, isSelected, isDisabled)}
+			<Tag variant={isSelected ? 'selected' : 'default'}>{item}</Tag>
+		{/snippet}
+	</ToggleGroupComposable>
+-->
 <script lang="ts">
 	import { createToggleGroup, melt } from '@melt-ui/svelte';
 	import { Check } from 'phosphor-svelte';

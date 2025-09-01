@@ -16,7 +16,7 @@
 	let { feature, class: className, onExpand, expanded = false }: Props = $props();
 </script>
 
-<div class={mergeCss('px-2 py-1 flex justify-between items-center border-t border-gray-300', className)}>
+<div class={mergeCss(expanded ? 'py-2' : 'py-1', 'px-2 flex justify-between items-center border-t border-gray-300', className)}>
 		{#if feature.url}
 			<Link 
 				href={feature.url} 
@@ -32,7 +32,6 @@
 			<Button
 				onclick={onExpand}
 				icon={ArrowsOut}
-				class="p-1"
 				aria-label="View feature details"
 			>
 				Expand

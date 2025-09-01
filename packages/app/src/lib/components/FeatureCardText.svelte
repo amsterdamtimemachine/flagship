@@ -15,13 +15,10 @@
 </script>
 
 {#if expanded}
-	<div class="mb-6">
-		<h4 class="text-lg font-medium text-gray-900 mb-3">Description</h4>
-		<div class="prose prose-gray max-w-none">
-			<p class="text-gray-700 leading-relaxed whitespace-pre-wrap">
+	<div class="">
+			<p class="p-2 text-gray-700 leading-relaxed whitespace-pre-wrap">
 				{text}
 			</p>
-		</div>
 	</div>
 {:else}
 	<div class="flex-1">

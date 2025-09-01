@@ -165,13 +165,12 @@
 	<Button 
 		icon={X}
 		onclick={closeModal}
-		class="h-[32px] w-[32px]"
 		size={18}
 		aria-label="Close features panel"
 	/>
 </div>
 
-<div class="h-full bg-gray-300">
+<div class="min-h-full bg-gray-300">
 	{#if !initialLoading && !loading}
 		{#if allFeatures.length > 0}
 			<FeaturesGrid features={allFeatures} layoutMemory={layoutMemory} />

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet, Component } from 'svelte';
 	import { mergeCss } from '$utils/utils';
+	import { melt, type MeltElement } from '@melt-ui/svelte';
 
 	interface PhosphorIconProps {
 		color?: string;
@@ -21,6 +22,7 @@
 		color?: string;
 		children?: Snippet;
 		'aria-label'?: string;
+		meltAction?: MeltElement<HTMLButtonElement>;
 	}
 
 	let { 
@@ -32,7 +34,8 @@
 		weight = 'bold',
 		color = 'currentColor',
 		children,
-		'aria-label': ariaLabel
+		'aria-label': ariaLabel,
+		meltAction
 	}: Props = $props();
 
 	const iconProps: PhosphorIconProps = {
@@ -42,19 +45,35 @@
 		mirrored: false
 	};
 
-	const baseClasses = 'flex justify-center items-center bg-white rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm';
+	const baseClasses = 'h-[32px] w-[32px] flex justify-center items-center bg-white rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm';
 	const paddingClasses = Icon ? 'p-1' : 'px-3 py-2';
 </script>
 
-<button
-	{onclick}
-	{disabled}
-	class={mergeCss(`${baseClasses} ${paddingClasses}`, className)}
-	aria-label={ariaLabel}
->
-	{#if Icon}
-		<Icon {...iconProps} />
-	{:else if children}
-		{@render children()}
-	{/if}
-</button>
+{#if meltAction}
+	<button
+		{onclick}
+		{disabled}
+		class={mergeCss(`${baseClasses} ${paddingClasses}`, className)}
+		aria-label={ariaLabel}
+		use:melt={meltAction}
+	>
+		{#if Icon}
+			<Icon {...iconProps} />
+		{:else if children}
+			{@render children()}
+		{/if}
+	</button>
+{:else}
+	<button
+		{onclick}
+		{disabled}
+		class={mergeCss(`${baseClasses} ${paddingClasses}`, className)}
+		aria-label={ariaLabel}
+	>
+		{#if Icon}
+			<Icon {...iconProps} />
+		{:else if children}
+			{@render children()}
+		{/if}
+	</button>
+{/if}

@@ -5,6 +5,7 @@
 	import { X } from 'phosphor-svelte';
 	import type { Feature } from '@atm/shared/types';
 	import FeatureCard from '$components/FeatureCard.svelte';
+	import Button from '$components/Button.svelte';
 	
 	let innerWidth = 0;
 	let innerHeight = 0;
@@ -51,15 +52,13 @@
 			class="fixed inset-0 z-50 bg-black/85 flex items-center justify-center"
 			transition:fade={{ duration: 150 }}
 		>
-			<button
-				use:melt={$close}
-				class="absolute flex items-center justify-center w-[45px] h-[45px] rounded-full
-				       border border-gray-300 right-4 top-4 px-2 py-1 bg-white hover:bg-gray-100
-				       transition-colors z-10"
+			<Button
+				icon={X}
+				size={18}
+				meltAction={$close}
+				class="absolute right-3 top-3"
 				aria-label="Close feature detail viewer"
-			>
-				<X size={30} />
-			</button>
+			/>
 		</div>
 		
 		<!-- Modal Content -->
@@ -68,7 +67,7 @@
 			class="fixed left-1/2 top-1/2 z-50 w-[90vw] max-w-4xl max-h-[90vh] 
 			       -translate-x-1/2 -translate-y-1/2 bg-white rounded-sm shadow-xl
 			       overflow-hidden flex flex-col"
-			transition:fade={{ duration: 150 }}
+			transition:fade={{ duration: 100 }}
 		>
 			<!-- Hidden title for accessibility -->
 			<h2 use:melt={$title} class="sr-only">Feature Detail Viewer</h2>
