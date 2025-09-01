@@ -1,9 +1,11 @@
 <script lang="ts">
 	import type { Feature, RawFeature, ImageFeature, TextFeature } from '@atm/shared/types';
+	import { featureViewerState } from '$lib/state/featureState.svelte';
 	import FeatureCardHeader from '$components/FeatureCardHeader.svelte';
 	import FeatureCardFooter from '$components/FeatureCardFooter.svelte';
 	import FeatureCardImage from '$components/FeatureCardImage.svelte';
 	import FeatureCardText from '$components/FeatureCardText.svelte';
+	import TagList from '$components/TagList.svelte';
 
 	type Props = {
 		feature: Feature;
@@ -11,6 +13,10 @@
 	};
 
 	let { feature, expanded = false }: Props = $props();
+
+	function handleExpand() {
+		featureViewerState.openFeature(feature);
+	}
 
 	const commonProps: RawFeature = {
 		ds: feature.ds,
@@ -44,27 +50,33 @@
 	console.log('FeatureCard expanded:', expanded);
 </script>
 
-<div class="w-full {expanded ? '' : 'border rounded-sm border-gray-300 bg-white min-w-0'}">
-	<FeatureCardHeader class="{expanded ? 'mb-4' : 'p-2'}" feature={commonProps} />	
-	<div class="p-2">
-		<h3 class="{expanded ? 'text-l font-semibold text-gray-900' : 'font-semibold text-sm text-black line-clamp-2 mb-1'}">
+<div class="w-full border rounded-sm border-gray-300 bg-white min-w-0">
+	<FeatureCardHeader class="p-2" feature={commonProps} />	
+	<div class="{expanded ? '' : 'p-2'}">
+		<h3 class="{expanded ? 'font-semibold text-sm text-black mb-1 px-2' : 'font-semibold text-sm text-black line-clamp-2 mb-1'}">
 			{commonProps.tit}
 		</h3>
 		<!-- Feature-specific content -->
 		{#if feature.recordType === 'image'}
-			<FeatureCardImage {...specificProps} expanded={expanded} />
+			<FeatureCardImage {...specificProps} expanded={expanded} onExpand={handleExpand} />
 		{:else if feature.recordType === 'text'}
 			<FeatureCardText {...specificProps} expanded={expanded} /> 
 		{:else if feature.recordType === 'person'}
 			<!-- Person feature has same properties as text so we're using the text card -->
 			<FeatureCardText {...specificProps} expanded={expanded} />
 		{:else}
-			<div class="p-2 text-gray-500 text-sm">
+			<div class="{expanded ? 'px-2' : ''} text-gray-500 text-sm">
 				Unknown feature type: {feature.recordType}
 			</div>
 		{/if}
+		
+		<!-- Tags -->
+		<TagList 
+			tags={feature.tags || []} 
+			expanded={expanded}
+			maxVisible={expanded ? undefined : 2}
+			class="{expanded ? 'mt-2 px-2' : 'mt-2'}"
+		/>
 	</div>
-	{#if !expanded}
-		<FeatureCardFooter feature={feature} />
-	{/if}
+	<FeatureCardFooter feature={feature} onExpand={handleExpand} expanded={expanded} />
 </div>

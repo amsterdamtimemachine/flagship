@@ -77,34 +77,6 @@
 			<div class="overflow-y-auto flex-1 p-6">
 				<!-- Use FeatureCard in expanded mode -->
 				<FeatureCard feature={selectedFeature} expanded={true} />
-				
-				<!-- Footer with tags and source (no expand button) -->
-				<div class="border-t border-gray-300 p-2 mt-6">
-					<!-- Tags -->
-					{#if selectedFeature.tags && selectedFeature.tags.length > 0}
-						<div class="flex flex-wrap gap-2 mb-2">
-							{#each selectedFeature.tags as tag}
-								<span class="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
-									{tag}
-								</span>
-							{/each}
-						</div>
-					{/if}
-					
-					<!-- Source link only -->
-					{#if selectedFeature.url}
-						<div class="flex justify-start">
-							<a 
-								href={selectedFeature.url} 
-								target="_blank" 
-								rel="noopener noreferrer"
-								class="text-sm text-blue-600 hover:text-blue-800 hover:underline"
-							>
-								View Original Source →
-							</a>
-						</div>
-					{/if}
-				</div>
 			</div>
 		</div>
 	</div>

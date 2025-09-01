@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { RawFeature, Feature } from '@atm/shared/types';
-	import { featureViewerState } from '$lib/state/featureState.svelte';
-	import { ArrowsOut, ArrowSquareOut } from 'phosphor-svelte';
+	import { ArrowsOut, ArrowSquareOut, X } from 'phosphor-svelte';
 	import {  formatDatasetTitle  } from '$utils/format';
 	import { mergeCss } from '$utils/utils';
 	import Button from '$components/Button.svelte';
@@ -10,34 +9,14 @@
 	type Props = {
 		feature: Feature;
 		class?: string;
+		onExpand: () => void;
+		expanded?: boolean;
 	};
 
-	let { feature, class: className }: Props = $props();
-	
-	function handleExpandClick() {
-		featureViewerState.openFeature(feature as Feature);
-	}
+	let { feature, class: className, onExpand, expanded = false }: Props = $props();
 </script>
 
-<div class={className}>
-	<!-- Tags -->
-	{#if feature.tags && feature.tags.length > 0}
-		<div class="flex flex-wrap p-2 gap-1">
-			{#each feature.tags.slice(0, 2) as tag}
-				<span class="text-xs px-1 py-0.5 bg-gray-100 text-gray-700 rounded">
-					{tag}
-				</span>
-			{/each}
-			{#if feature.tags.length > 2}
-				<span class="text-xs px-1 py-0.5 bg-gray-200 text-gray-600 rounded">
-					+{feature.tags.length - 2}
-				</span>
-			{/if}
-		</div>
-	{/if}
-	
-	<!-- Actions -->
-	<div class="px-2 py-1 flex justify-between items-center border-t border-gray-300 ">
+<div class={mergeCss('px-2 py-1 flex justify-between items-center border-t border-gray-300', className)}>
 		{#if feature.url}
 			<Link 
 				href={feature.url} 
@@ -45,17 +24,18 @@
 				rel="noopener noreferrer" 
 				class="text-xs"
 			>
-				{formatDatasetTitle(feature.ds)}
+				{formatDatasetTitle(feature.ds)} →
 			</Link>
 		{/if}
 		
-		<Button
-			onclick={handleExpandClick}
-			icon={ArrowsOut}
-			class="p-1"
-			aria-label="View feature details"
-		>
-			Expand
-		</Button>
-	</div>
+		{#if !expanded}
+			<Button
+				onclick={onExpand}
+				icon={ArrowsOut}
+				class="p-1"
+				aria-label="View feature details"
+			>
+				Expand
+			</Button>
+		{/if}
 </div>

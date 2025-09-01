@@ -3,9 +3,10 @@
 		thumbnail: string;
 		alt?: string;
 		expanded?: boolean;
+		onExpand?: () => void;
 	};
 
-	let { thumbnail, alt, expanded = false }: Props = $props();
+	let { thumbnail, alt, expanded = false, onExpand }: Props = $props();
 
 	let imageError = $state(false);
 	let imageLoading = $state(true);
@@ -41,10 +42,11 @@
 			<img
 				src={thumbnail}
 				alt={alt}
-				class="w-full h-auto {expanded ? 'object-contain max-h-[70vh]' : 'object-cover'} rounded"
+				class="w-full h-auto {expanded ? 'object-contain max-h-[70vh]' : 'object-cover'} rounded {!expanded && onExpand ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}"
 				class:hidden={imageLoading}
-				on:load={handleImageLoad}
-				on:error={handleImageError}
+				onload={handleImageLoad}
+				onerror={handleImageError}
+				onclick={!expanded && onExpand ? onExpand : undefined}
 			/>
 		</div>
 	{/if}
