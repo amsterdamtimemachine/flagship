@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ToggleGroupComposable from './ToggleGroupComposable.svelte';
+	import ToggleGroup from './ToggleGroup.svelte';
 	import Tag from './Tag.svelte';
 	import type { RecordType } from '@atm/shared/types';
 
@@ -109,7 +109,7 @@
 		<div class="text-sm text-gray-500">No tags available</div>
 	{:else}
 		{#key availableTags}
-			<ToggleGroupComposable
+			<ToggleGroup
 				items={availableTags}
 				selectedItems={validSelectedTags}
 				disabledItems={disabledTags}
@@ -122,7 +122,7 @@
 						{item}
 					</Tag>
 				{/snippet}
-			</ToggleGroupComposable>
+			</ToggleGroup>
 		{/key}
 	{/if}
 </div>

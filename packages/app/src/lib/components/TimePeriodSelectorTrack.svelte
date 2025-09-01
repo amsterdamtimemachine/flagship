@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { HistogramBin } from '@atm/shared/types';
+	import { mergeCss } from '$utils/utils';
 
 	interface Props {
 		bins: HistogramBin[];
@@ -26,8 +27,8 @@
 
 <div
 	bind:this={trackElement}
-	class="absolute inset-x-0 cursor-pointer"
-	style="top: 0; height: {timelineHeight}px;"
+	class="absolute top-0 inset-x-0 cursor-pointer"
+	style="height: {timelineHeight}px;"
 	onclick={handleTrackClick}
 	role="slider"
 	tabindex="0"

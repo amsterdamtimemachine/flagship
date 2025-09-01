@@ -244,7 +244,13 @@
 				items={recordTypes}
 				selectedItems={currentRecordTypes}
 				onItemSelected={handleRecordTypeChange}
-			/>
+			>
+				{#snippet children(item, isSelected, isDisabled)}
+					<span class="transition-colors select-none {isDisabled ? 'text-gray-400' : 'text-gray-700'}">
+						{item}
+					</span>
+				{/snippet}
+			</ToggleGroup>
 
 			<div class="flex">
 				<h2 class="pr-1">Themes</h2>
@@ -262,7 +268,7 @@
 
 		{#if showCellModal && selectedCellId}
 			<div
-				class="z-40 absolute top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300 shadow-[-5px_0px_20px_5px_rgba(0,0,0,0.07)]"
+				class="z-30 absolute top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300 shadow-[-5px_0px_20px_5px_rgba(0,0,0,0.07)]"
 			>
 				<FeaturesPanel
 					cellId={selectedCellId}
