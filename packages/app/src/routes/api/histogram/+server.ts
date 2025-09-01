@@ -48,14 +48,14 @@ export const GET: RequestHandler = async ({ url }) => {
 		if (response.success) {
 			const recordTypeCount = Object.keys(response.histograms).length;
 			console.log(`✅ Histogram API success - raw data for ${recordTypeCount} recordTypes`);
-			return json<HistogramApiResponse>(response, { headers });
+			return json(response, { headers });
 		} else {
 			console.error(`❌ Histogram API error: ${response.message}`);
-			return error(500, { message: response.message || 'Failed to load histogram data' });
+			throw error(500, { code: 'HISTOGRAM_LOAD_ERROR', message: response.message || 'Failed to load histogram data' });
 		}
 	} catch (err) {
 		console.error('❌ Histogram API unexpected error:', err);
-		return error(500, { message: err instanceof Error ? err.message : 'Internal server error' });
+		throw error(500, { code: 'INTERNAL_ERROR', message: err instanceof Error ? err.message : 'Internal server error' });
 	}
 };
 

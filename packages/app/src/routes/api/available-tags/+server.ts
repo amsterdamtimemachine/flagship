@@ -45,11 +45,11 @@ export const GET: RequestHandler = async ({ url }) => {
 			return json(response, { headers });
 		} else {
 			console.error(`❌ Available tags API error: ${response.message}`);
-			throw error(500, response.message || 'Failed to load available tags');
+			throw error(500, { code: 'TAGS_LOAD_ERROR', message: response.message || 'Failed to load available tags' });
 		}
 	} catch (err) {
 		console.error('❌ Available tags API unexpected error:', err);
-		throw error(500, err instanceof Error ? err.message : 'Internal server error');
+		throw error(500, { code: 'INTERNAL_ERROR', message: err instanceof Error ? err.message : 'Internal server error' });
 	}
 };
 

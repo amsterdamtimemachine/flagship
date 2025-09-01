@@ -5,7 +5,7 @@
 
 	type Props = {
 		feature: RawFeature;
-		className?: string;
+		class?: string;
 	};
 
 	let { feature, class: className }: Props = $props();

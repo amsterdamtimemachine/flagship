@@ -59,7 +59,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				`✅ Tag validation complete - valid: ${validationResult.validTags.join(', ')}, invalid: ${validationResult.invalidTags.join(', ')}`
 			);
 
-			return json<TagCombinationsResponse>(
+			return json(
 				{
 					availableTags: [],
 					currentSelection: validationResult.validTags,
@@ -87,14 +87,14 @@ export const GET: RequestHandler = async ({ url }) => {
 			console.log(
 				`✅ Tag combinations API success - ${tagCount} available next tags with ${totalFeatures} total features`
 			);
-			return json<TagCombinationsResponse>(response, { headers });
+			return json(response, { headers });
 		} else {
 			console.error(`❌ Tag combinations API error: ${response.message}`);
-			return error(500, { message: response.message || 'Failed to load tag combinations' });
+			throw error(500, { code: 'TAG_COMBINATIONS_LOAD_ERROR', message: response.message || 'Failed to load tag combinations' });
 		}
 	} catch (err) {
 		console.error('❌ Tag combinations API unexpected error:', err);
-		return error(500, { message: err instanceof Error ? err.message : 'Internal server error' });
+		throw error(500, { code: 'INTERNAL_ERROR', message: err instanceof Error ? err.message : 'Internal server error' });
 	}
 };
 

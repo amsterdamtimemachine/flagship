@@ -20,7 +20,7 @@ export const GET: RequestHandler = async () => {
 			`✅ Metadata API success - ${metadata.timeSlices.length} time slices, ${metadata.recordTypes.length} record types`
 		);
 
-		return json<MetadataApiResponse>(
+		return json(
 			{
 				...metadata,
 				success: true

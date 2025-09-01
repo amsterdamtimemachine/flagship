@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { PageErrorData } from '$lib/types/errors';
+	import type { PageErrorData, AppError } from '$lib/types/error';
 	import { addToast } from '$components/Toaster.svelte';
 
 	interface Props {
@@ -12,7 +12,7 @@
 
 	onMount(() => {
 		handlePageErrors(errorData);
-		errorData.errors.forEach((error) => {
+		errorData.errors.forEach((error: AppError) => {
 			processedErrorIds.add(error.id);
 		});
 	});
@@ -21,10 +21,10 @@
 		if (!errorData.hasErrors) return;
 
 		// Only process new errors that haven't been shown yet
-		const newErrors = errorData.errors.filter((error) => !processedErrorIds.has(error.id));
+		const newErrors = errorData.errors.filter((error: AppError) => !processedErrorIds.has(error.id));
 
 		if (newErrors.length > 0) {
-			newErrors.forEach((error) => {
+			newErrors.forEach((error: AppError) => {
 				addToast({
 					data: {
 						title: error.title,
@@ -40,7 +40,7 @@
 	function handlePageErrors(errorData: PageErrorData) {
 		if (!errorData.hasErrors) return;
 
-		errorData.errors.forEach((error) => {
+		errorData.errors.forEach((error: AppError) => {
 			addToast({
 				data: {
 					title: error.title,

@@ -38,19 +38,32 @@
 		</div>
 	{:else}
 		<div class="relative w-full bg-gray-300">
-			<img
-				src={thumbnail}
-				{alt}
-				class="w-full h-auto {expanded
-					? 'object-contain max-h-[70vh]'
-					: 'object-cover'} rounded {!expanded && onExpand
-					? 'cursor-pointer hover:opacity-80 transition-opacity'
-					: ''}"
-				class:hidden={imageLoading}
-				onload={handleImageLoad}
-				onerror={handleImageError}
-				onclick={!expanded && onExpand ? onExpand : undefined}
-			/>
+			{#if !expanded && onExpand}
+				<button
+					type="button"
+					class="w-full block cursor-pointer hover:opacity-80 transition-opacity"
+					onclick={onExpand}
+					aria-label="Expand image"
+				>
+					<img
+						src={thumbnail}
+						{alt}
+						class="w-full h-auto object-cover rounded"
+						class:hidden={imageLoading}
+						onload={handleImageLoad}
+						onerror={handleImageError}
+					/>
+				</button>
+			{:else}
+				<img
+					src={thumbnail}
+					{alt}
+					class="w-full h-auto {expanded ? 'object-contain max-h-[70vh]' : 'object-cover'} rounded"
+					class:hidden={imageLoading}
+					onload={handleImageLoad}
+					onerror={handleImageError}
+				/>
+			{/if}
 		</div>
 	{/if}
 </div>
