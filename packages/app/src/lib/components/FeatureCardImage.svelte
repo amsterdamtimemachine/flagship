@@ -10,7 +10,7 @@
 
 	let imageError = $state(false);
 	let imageLoading = $state(true);
-	
+
 	// Debug logging
 	console.log('FeatureCardImage props:', { thumbnail, alt, expanded });
 
@@ -26,7 +26,11 @@
 
 <div class="flex-1">
 	{#if imageError}
-		<div class="w-full {expanded ? 'h-64' : 'h-32'} bg-gray-100 flex items-center justify-center text-gray-500 text-sm">
+		<div
+			class="w-full {expanded
+				? 'h-64'
+				: 'h-32'} bg-gray-100 flex items-center justify-center text-gray-500 text-sm"
+		>
 			<div class="text-center">
 				<div class="mb-1">🖼️</div>
 				<div>Image unavailable</div>
@@ -36,8 +40,12 @@
 		<div class="relative w-full bg-gray-300">
 			<img
 				src={thumbnail}
-				alt={alt}
-				class="w-full h-auto {expanded ? 'object-contain max-h-[70vh]' : 'object-cover'} rounded {!expanded && onExpand ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}"
+				{alt}
+				class="w-full h-auto {expanded
+					? 'object-contain max-h-[70vh]'
+					: 'object-cover'} rounded {!expanded && onExpand
+					? 'cursor-pointer hover:opacity-80 transition-opacity'
+					: ''}"
 				class:hidden={imageLoading}
 				onload={handleImageLoad}
 				onerror={handleImageError}

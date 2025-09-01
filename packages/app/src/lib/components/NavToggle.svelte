@@ -13,9 +13,12 @@
 
 <button
 	type="button"
-	class={mergeCss('focus:outline-none flex justify-center items-center bg-white rounded-r-sm border border-gray-300 hover:bg-gray-100', className)}
+	class={mergeCss(
+		'focus:outline-none flex justify-center items-center bg-white rounded-r-sm border border-gray-300 hover:bg-gray-100',
+		className
+	)}
 	aria-label={isNavExpanded ? 'Close navigation menu' : 'Open navigation menu'}
-	onclick={onclick}
+	{onclick}
 >
 	{#if isNavExpanded}
 		<X weight="bold" size={24} />

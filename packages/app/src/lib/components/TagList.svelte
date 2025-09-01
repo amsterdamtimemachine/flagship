@@ -9,12 +9,7 @@
 		expanded?: boolean;
 	}
 
-	let { 
-		tags,
-		class: className,
-		maxVisible = 2,
-		expanded = false
-	}: Props = $props();
+	let { tags, class: className, maxVisible = 2, expanded = false }: Props = $props();
 
 	const visibleTags = expanded ? tags : tags.slice(0, maxVisible);
 	const hiddenCount = tags.length - maxVisible;

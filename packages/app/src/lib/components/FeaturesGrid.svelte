@@ -3,24 +3,24 @@
 	import FeatureCard from '$components/FeatureCard.svelte';
 	import { createMasonryMemoized, type MasonryMemoizedInstance } from '$utils/masonry';
 	import type { RawFeature } from '@atm/shared/types';
-	
+
 	type Props = {
 		features: RawFeature[];
 		columns?: number;
 		layoutMemory?: Map<string, number>;
-	}
+	};
 	let { features, columns, layoutMemory }: Props = $props();
-	
+
 	// Use CSS-only responsive columns if no explicit columns prop provided
 	const useResponsiveColumns = columns === undefined;
-	
+
 	let masonryContainer: HTMLElement;
 	let masonry: MasonryMemoizedInstance | null = null;
-	
+
 	onMount(() => {
 		if (masonryContainer) {
 			try {
-				masonry = createMasonryMemoized(masonryContainer, { 
+				masonry = createMasonryMemoized(masonryContainer, {
 					debounceDelay: 150,
 					layoutMemory: layoutMemory || new Map()
 				});
@@ -29,16 +29,16 @@
 			}
 		}
 	});
-	
+
 	onDestroy(() => {
 		masonry?.destroy();
 	});
-	
+
 	// Re-layout when features change
 	$effect(() => {
 		// This effect tracks 'features' changes
 		if (masonry && features.length > 0) {
-			console.log("🔄 Features changed, re-laying out with memory:", features.length);
+			console.log('🔄 Features changed, re-laying out with memory:', features.length);
 			setTimeout(() => masonry?.layout(true), 10);
 		}
 	});
@@ -48,18 +48,18 @@
 	{#if features.length === 0}
 		<div class="text-gray-500 p-4">No features to display</div>
 	{:else}
-		<div 
-			class="masonry-layout p-4" 
+		<div
+			class="masonry-layout p-4"
 			class:responsive={useResponsiveColumns}
-			bind:this={masonryContainer} 
+			bind:this={masonryContainer}
 			style:--column-count={useResponsiveColumns ? null : columns}
 		>
-			{#each Array(useResponsiveColumns ? 3 : (columns || 3)) as _, columnIndex}
+			{#each Array(useResponsiveColumns ? 3 : columns || 3) as _, columnIndex}
 				<div class="masonry-column"></div>
 			{/each}
 			{#each features as feature, index (index)}
 				<div class="masonry-item" data-feature-url={feature.url}>
-					<FeatureCard {feature}/>
+					<FeatureCard {feature} />
 				</div>
 			{/each}
 		</div>

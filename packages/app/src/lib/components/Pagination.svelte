@@ -2,7 +2,7 @@
 	import { createPagination, melt } from '@melt-ui/svelte';
 	import { CaretLeft, CaretRight } from 'phosphor-svelte';
 	import Button from '$components/Button.svelte';
-	
+
 	interface Props {
 		totalItems: number;
 		currentPage: number;
@@ -12,17 +12,17 @@
 		siblingCount?: number;
 		class?: string;
 	}
-	
-	let { 
-		totalItems, 
-		currentPage, 
-		itemsPerPage, 
+
+	let {
+		totalItems,
+		currentPage,
+		itemsPerPage,
 		onPageChange,
 		loading = false,
 		siblingCount = 1,
 		class: className
 	}: Props = $props();
-	
+
 	const {
 		elements: { root, pageTrigger, prevButton, nextButton },
 		states: { pages, range }
@@ -47,26 +47,26 @@
 	aria-label="pagination"
 	use:melt={$root}
 >
-		<Button
-			icon={CaretLeft}
-			size={16}
-			class="h-[32px] w-[32px] data-[selected]:bg-gray-900 data-[selected]:text-white transition-colors"
-			meltAction={$prevButton}
-			aria-label="Previous page"
-		/>
-		{#each $pages as page (page.key)}
-			{#if page.type === 'ellipsis'}
-				<span class="px-2 text-gray-500">...</span>
-			{:else}
-				<Button
-					class="h-[32px] min-w-[32px] data-[selected]:bg-gray-900 data-[selected]:text-white transition-colors"
-					meltAction={$pageTrigger(page)}
-					aria-label="Go to page {page.value}"
-				>
-					{page.value}
-				</Button>
-			{/if}
-		{/each}
+	<Button
+		icon={CaretLeft}
+		size={16}
+		class="h-[32px] w-[32px] data-[selected]:bg-gray-900 data-[selected]:text-white transition-colors"
+		meltAction={$prevButton}
+		aria-label="Previous page"
+	/>
+	{#each $pages as page (page.key)}
+		{#if page.type === 'ellipsis'}
+			<span class="px-2 text-gray-500">...</span>
+		{:else}
+			<Button
+				class="h-[32px] min-w-[32px] data-[selected]:bg-gray-900 data-[selected]:text-white transition-colors"
+				meltAction={$pageTrigger(page)}
+				aria-label="Go to page {page.value}"
+			>
+				{page.value}
+			</Button>
+		{/if}
+	{/each}
 	<Button
 		icon={CaretRight}
 		size={16}

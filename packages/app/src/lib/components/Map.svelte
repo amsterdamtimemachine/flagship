@@ -50,17 +50,14 @@
 		if (!heatmapBlueprint || !dimensions) {
 			return idMap;
 		}
-		
+
 		heatmapBlueprint.forEach((cell) => {
 			const index = cell.row * dimensions.colsAmount + cell.col;
 			idMap.set(index, cell.cellId);
 		});
-		
-		
+
 		return idMap;
 	});
-
-
 
 	let activeCells = $derived.by(() => {
 		if (!isMapLoaded || !map || !heatmap || !heatmap.countArray || !cellIdMap.size) {
@@ -194,11 +191,11 @@
 		map = new maplibre.Map({
 			container: mapContainer,
 			style: STYLE_URL,
-		//	maxBounds: [
-		//		[west, south],
-		//		[east, north]
-		//	],
-			center: [4.895645, 52.372219], 
+			//	maxBounds: [
+			//		[west, south],
+			//		[east, north]
+			//	],
+			center: [4.895645, 52.372219],
 			minZoom: 10,
 			maxZoom: 14,
 			zoom: 13,
@@ -212,7 +209,7 @@
 		map.on('load', () => {
 			// Heatmap geometry
 			const geojsonData = generateHeatmapCells(heatmapBlueprint);
-			
+
 			map.addSource('heatmap', {
 				type: 'geojson',
 				data: geojsonData,
@@ -284,9 +281,9 @@
 					}
 				}
 			});
-			
+
 			isMapLoaded = true;
-			
+
 			if (handleMapLoaded) {
 				handleMapLoaded();
 			}

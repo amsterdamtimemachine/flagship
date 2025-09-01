@@ -8,15 +8,10 @@
 		children: import('svelte').Snippet;
 	}
 
-	let { 
-		class: className,
-		variant = 'default',
-		disabled = false,
-		children
-	}: Props = $props();
+	let { class: className, variant = 'default', disabled = false, children }: Props = $props();
 
 	const baseClasses = 'text-xs px-1 py-0.5 rounded transition-colors select-none';
-	
+
 	let variantClasses = '';
 	if (disabled) {
 		variantClasses = 'bg-gray-100 text-gray-400';

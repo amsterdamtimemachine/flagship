@@ -6,7 +6,7 @@ export interface AppError {
 	title: string;
 	description: string;
 	timestamp: Date;
-	context?: Record<string, any>; 
+	context?: Record<string, any>;
 }
 
 export interface PageErrorData {

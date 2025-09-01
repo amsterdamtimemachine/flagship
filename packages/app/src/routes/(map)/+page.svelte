@@ -16,7 +16,7 @@
 	import FeaturesPanel from '$components/FeaturesPanel.svelte';
 	import NavContainer from '$components/NavContainer.svelte';
 	import ErrorHandler from '$components/ErrorHandler.svelte';
-	
+
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -25,45 +25,50 @@
 	let dimensions = $derived(data?.metadata?.heatmapDimensions);
 	let recordTypes = $derived(data?.metadata?.recordTypes || []);
 	let tags = $derived(data?.metadata?.tags);
-	let availableTagNames = $derived(data?.availableTags?.tags?.map(tag => tag.name) || data?.metadata?.tags || []);
+	let availableTagNames = $derived(
+		data?.availableTags?.tags?.map((tag) => tag.name) || data?.metadata?.tags || []
+	);
 	let heatmapTimeline = $derived(data?.heatmapTimeline?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
 	let currentRecordTypes = $derived(data?.currentRecordTypes || []);
 	let currentTags = $derived(data?.currentTags);
 	let histograms = $derived(data?.histogram?.histograms);
 
-	const controller = createMapController();	
+	const controller = createMapController();
 	let currentPeriod = $derived(controller.currentPeriod);
 	let selectedCellId = $derived(controller.selectedCellId);
 	let selectedCellBounds = $derived(controller.selectedCellBounds);
 	let showCellModal = $derived(controller.showCellModal);
-	
+
 	// Navigation state
 	let navExpanded = $state(true);
-	
-	
+
 	// Combine server errors with controller errors for ErrorHandler
 	let allErrors = $derived.by(() => {
 		const serverErrors = data.errorData?.errors || [];
 		const controllerErrors = controller.errors || [];
 		return createPageErrorData([...serverErrors, ...controllerErrors]);
 	});
-	
+
 	let mergedHeatmapTimeline = $derived.by(() => {
 		if (heatmapTimeline && currentRecordTypes && recordTypes) {
 			// Empty selection = show all recordTypes (default behavior)
-			const effectiveRecordTypes = currentRecordTypes.length > 0 
-				? currentRecordTypes 
-				: recordTypes;
-			
+			const effectiveRecordTypes = currentRecordTypes.length > 0 ? currentRecordTypes : recordTypes;
+
 			const timelineData = heatmapTimeline?.heatmapTimeline || heatmapTimeline;
-			
-			const needsMerging = effectiveRecordTypes.length > 1 || (currentTags && currentTags.length > 0);
-			
+
+			const needsMerging =
+				effectiveRecordTypes.length > 1 || (currentTags && currentTags.length > 0);
+
 			if (needsMerging) {
 				// Merge entire timeline for smooth navigation
 				const selectedTags = currentTags && currentTags.length > 0 ? currentTags : undefined;
-				return mergeHeatmapTimeline(timelineData, effectiveRecordTypes, selectedTags, heatmapBlueprint);
+				return mergeHeatmapTimeline(
+					timelineData,
+					effectiveRecordTypes,
+					selectedTags,
+					heatmapBlueprint
+				);
 			} else {
 				// Single recordType, no tags - use original timeline
 				return timelineData;
@@ -75,22 +80,21 @@
 	let mergedHistogram = $derived.by(() => {
 		if (histograms && currentRecordTypes && recordTypes) {
 			// Empty selection = show all recordTypes (default behavior)
-			const effectiveRecordTypes = currentRecordTypes.length > 0 
-				? currentRecordTypes 
-				: recordTypes;
-			
+			const effectiveRecordTypes = currentRecordTypes.length > 0 ? currentRecordTypes : recordTypes;
+
 			// Determine selected tags if any
 			const selectedTags = currentTags && currentTags.length > 0 ? currentTags : undefined;
-			
+
 			// Collect histograms to merge
 			const histogramsToMerge = [];
-			
+
 			for (const recordType of effectiveRecordTypes) {
 				const recordTypeData = histograms[recordType];
 				if (recordTypeData) {
 					if (selectedTags && selectedTags.length > 0) {
 						// Use tag combination or individual tag histogram
-						const tagKey = selectedTags.length > 1 ? selectedTags.sort().join('+') : selectedTags[0];
+						const tagKey =
+							selectedTags.length > 1 ? selectedTags.sort().join('+') : selectedTags[0];
 						if (recordTypeData.tags[tagKey]) {
 							histogramsToMerge.push(recordTypeData.tags[tagKey]);
 						}
@@ -100,11 +104,11 @@
 					}
 				}
 			}
-			
+
 			if (histogramsToMerge.length === 0) {
 				return null;
 			}
-			
+
 			// Merge histograms on client side
 			return mergeHistograms(histogramsToMerge);
 		}
@@ -119,7 +123,7 @@
 				return timeSliceData[mergedKey]?.base || null;
 			}
 		}
-		
+
 		// Return empty heatmap when no data exists for this period
 		// This keeps the map visible with all cells at 0 density
 		if (heatmapBlueprint && dimensions) {
@@ -129,7 +133,7 @@
 				densityArray: new Array(gridSize).fill(0)
 			};
 		}
-		
+
 		return null;
 	});
 
@@ -138,14 +142,16 @@
 		const urlParams = new URLSearchParams(window.location.search);
 		const periodFromUrl = urlParams.get('period');
 		const firstPeriod = mergedHistogram?.bins?.[0]?.timeSlice?.key;
-		
-		
+
 		// Use period from URL if valid, otherwise fall back to first period
 		let initialPeriod = firstPeriod || '';
-		if (periodFromUrl && mergedHistogram?.bins?.some(bin => bin.timeSlice.key === periodFromUrl)) {
+		if (
+			periodFromUrl &&
+			mergedHistogram?.bins?.some((bin) => bin.timeSlice.key === periodFromUrl)
+		) {
 			initialPeriod = periodFromUrl;
 		}
-		
+
 		// Fallback to first heatmap period if histogram doesn't have data
 		if (!initialPeriod && mergedHeatmapTimeline) {
 			const heatmapPeriods = Object.keys(mergedHeatmapTimeline);
@@ -154,16 +160,16 @@
 			}
 		}
 		controller.initialize(initialPeriod);
-			
+
 		// Sync URL parameters after router is ready
 		tick().then(() => {
 			controller.syncUrlParameters(initialPeriod);
-			
+
 			// Handle cell bounds lookup from URL if cell parameter exists
 			const urlParams = new URLSearchParams(window.location.search);
 			const cellParam = urlParams.get('cell');
 			if (cellParam && heatmapBlueprint) {
-				const cell = heatmapBlueprint.find(c => c.cellId === cellParam);
+				const cell = heatmapBlueprint.find((c) => c.cellId === cellParam);
 				if (cell?.bounds) {
 					// Update controller with bounds for the cell from URL
 					controller.selectCell(cellParam, {
@@ -176,7 +182,7 @@
 			}
 		});
 	});
-	
+
 	function handlePeriodChange(period: string) {
 		controller.setPeriod(period);
 	}
@@ -185,7 +191,7 @@
 		controller.setRecordType(recordTypes, { resetTags: true });
 	}
 
-	function handleTagsChange(tags: string[]) {	
+	function handleTagsChange(tags: string[]) {
 		controller.setTags(tags);
 	}
 
@@ -193,7 +199,7 @@
 	function handleCellClick(cellId: string | null) {
 		if (cellId && heatmapBlueprint) {
 			// Find the cell bounds from the blueprint
-			const cell = heatmapBlueprint.find(c => c.cellId === cellId);
+			const cell = heatmapBlueprint.find((c) => c.cellId === cellId);
 			if (cell?.bounds) {
 				controller.selectCell(cellId, {
 					minLat: cell.bounds.minLat,
@@ -225,40 +231,46 @@
 				{heatmapBlueprint}
 				{dimensions}
 				{selectedCellId}
-				handleCellClick={handleCellClick}
+				{handleCellClick}
 			/>
 		{/if}
 
-		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">	
-				<div class="flex">
-					<h2 class="pr-1"> Categories </h2>
-					<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
-				</div>
-				<ToggleGroup items={recordTypes} selectedItems={currentRecordTypes} onItemSelected={handleRecordTypeChange} />
+		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
+			<div class="flex">
+				<h2 class="pr-1">Categories</h2>
+				<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
+			</div>
+			<ToggleGroup
+				items={recordTypes}
+				selectedItems={currentRecordTypes}
+				onItemSelected={handleRecordTypeChange}
+			/>
 
-				<div class="flex">
-					<h2 class="pr-1"> Themes </h2>
-					<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
-				</div>
+			<div class="flex">
+				<h2 class="pr-1">Themes</h2>
+				<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
+			</div>
 
-				<TagsSelector 
-					recordTypes={currentRecordTypes || []}
-					allRecordTypes={recordTypes}
-					availableTags={availableTagNames}
-					selectedTags={currentTags || []} 
-					onTagsSelected={handleTagsChange} 
-				/>
+			<TagsSelector
+				recordTypes={currentRecordTypes || []}
+				allRecordTypes={recordTypes}
+				availableTags={availableTagNames}
+				selectedTags={currentTags || []}
+				onTagsSelected={handleTagsChange}
+			/>
 		</NavContainer>
 
 		{#if showCellModal && selectedCellId}
-			<div class="z-40 absolute top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300 shadow-[-5px_0px_20px_5px_rgba(0,0,0,0.07)]">
-				<FeaturesPanel 
-					cellId={selectedCellId} 
-					period={currentPeriod} 
+			<div
+				class="z-40 absolute top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300 shadow-[-5px_0px_20px_5px_rgba(0,0,0,0.07)]"
+			>
+				<FeaturesPanel
+					cellId={selectedCellId}
+					period={currentPeriod}
 					bounds={selectedCellBounds}
 					recordTypes={currentRecordTypes}
 					tags={currentTags}
-					onClose={handleFeaturesPanelClose} 
+					onClose={handleFeaturesPanelClose}
 				/>
 			</div>
 		{/if}
@@ -266,10 +278,9 @@
 
 	{#if mergedHistogram}
 		<TimePeriodSelector
-			period={currentPeriod} 
-			histogram={mergedHistogram} 
-			onPeriodChange={handlePeriodChange} 
+			period={currentPeriod}
+			histogram={mergedHistogram}
+			onPeriodChange={handlePeriodChange}
 		/>
 	{/if}
 </div>
-

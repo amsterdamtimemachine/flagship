@@ -34,7 +34,7 @@
 
 	function createDisplayPeriods(bins: any[]): string[] {
 		if (!bins.length) return [];
-		
+
 		const result = bins.map((bin) => {
 			return bin.timeSlice.startYear.toString();
 		});
@@ -69,12 +69,12 @@
 
 	function handleMouseMove(event: MouseEvent) {
 		if (!isDragging || !trackElement) return;
-		
+
 		const rect = trackElement.getBoundingClientRect();
 		const dragX = event.clientX - rect.left;
 		const percentage = Math.max(0, Math.min(1, dragX / rect.width));
 		const newIndex = Math.round(percentage * (timePeriods.length - 1));
-		
+
 		handleIndexChange(newIndex);
 	}
 
@@ -84,7 +84,7 @@
 
 	function handleKeyDown(event: KeyboardEvent) {
 		let newIndex = currentIndex;
-		
+
 		switch (event.key) {
 			case 'ArrowLeft':
 			case 'ArrowDown':
@@ -103,7 +103,7 @@
 			default:
 				return;
 		}
-		
+
 		event.preventDefault();
 		handleIndexChange(newIndex);
 	}
@@ -116,29 +116,26 @@
 	<div class="w-full px-4 pb-1 pt-4">
 		<div class="w-full relative h-[60px]" bind:this={trackElement}>
 			<!-- Chart Layer: Histogram bars and grid -->
-			<TimePeriodSelectorChart 
-				bins={histogram.bins} 
-				maxCount={histogram.maxCount} 
-				{timelineHeight} 
+			<TimePeriodSelectorChart
+				bins={histogram.bins}
+				maxCount={histogram.maxCount}
+				{timelineHeight}
 			/>
-			
+
 			<!-- Labels Layer: Year labels -->
-			<TimePeriodSelectorLabels 
-				{displayPeriods} 
-				{timelineHeight} 
-			/>
-			
+			<TimePeriodSelectorLabels {displayPeriods} {timelineHeight} />
+
 			<!-- Interactive Layer: Clickable track -->
-			<TimePeriodSelectorTrack 
+			<TimePeriodSelectorTrack
 				bins={histogram.bins}
 				{currentIndex}
 				onIndexChange={handleIndexChange}
 				{timelineHeight}
 				onKeyDown={handleKeyDown}
 			/>
-			
+
 			<!-- Thumb Layer: Draggable indicator -->
-			<TimePeriodSelectorThumb 
+			<TimePeriodSelectorThumb
 				{currentIndex}
 				totalBins={histogram.bins.length}
 				{isDragging}

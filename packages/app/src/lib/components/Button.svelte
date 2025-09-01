@@ -25,9 +25,9 @@
 		meltAction?: MeltElement<HTMLButtonElement>;
 	}
 
-	let { 
-		onclick, 
-		class: className, 
+	let {
+		onclick,
+		class: className,
 		disabled = false,
 		icon: Icon,
 		size = 18,
@@ -45,7 +45,8 @@
 		mirrored: false
 	};
 
-	const baseClasses = 'h-[32px] w-[32px] flex justify-center items-center bg-white rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm';
+	const baseClasses =
+		'h-[32px] w-[32px] flex justify-center items-center bg-white rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm';
 	const paddingClasses = Icon ? 'p-1' : 'px-3 py-2';
 </script>
 

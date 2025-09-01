@@ -23,11 +23,11 @@
 		children?: Snippet;
 	}
 
-	let { 
+	let {
 		href,
 		target,
 		rel,
-		class: className, 
+		class: className,
 		icon: Icon,
 		size = 16,
 		weight = 'regular',
@@ -42,16 +42,12 @@
 		mirrored: false
 	};
 
-	const baseClasses = 'inline-flex items-center text-sm text-blue-600 hover:text-blue-800 underline';
+	const baseClasses =
+		'inline-flex items-center text-sm text-blue-600 hover:text-blue-800 underline';
 	const gapClass = Icon && children ? 'gap-1' : '';
 </script>
 
-<a
-	{href}
-	{target}
-	{rel}
-	class={mergeCss(`${baseClasses} ${gapClass}`, className)}
->
+<a {href} {target} {rel} class={mergeCss(`${baseClasses} ${gapClass}`, className)}>
 	{#if children}
 		{@render children()}
 	{/if}

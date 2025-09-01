@@ -16,7 +16,7 @@
 		if (totalBins <= 1) return 0;
 		return (currentIndex / totalBins) * 100;
 	});
-	
+
 	const thumbWidth = $derived(() => {
 		if (totalBins <= 1) return 100;
 		return 100 / totalBins;

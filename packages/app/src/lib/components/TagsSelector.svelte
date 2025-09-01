@@ -2,7 +2,7 @@
 	import ToggleGroupComposable from './ToggleGroupComposable.svelte';
 	import Tag from './Tag.svelte';
 	import type { RecordType } from '@atm/shared/types';
-	
+
 	interface Props {
 		recordTypes: RecordType[]; // Currently selected record types
 		allRecordTypes: RecordType[]; // All available record types from metadata
@@ -11,8 +11,8 @@
 		onTagsSelected: (selected: string[]) => void;
 		class?: string;
 	}
-	
-	let { 
+
+	let {
 		recordTypes,
 		allRecordTypes,
 		availableTags,
@@ -20,21 +20,21 @@
 		onTagsSelected,
 		class: className = ''
 	}: Props = $props();
-	
+
 	// Tag combination state
 	let availableTagsForSelection = $state<string[]>([]);
-	
+
 	// Use selectedTags from route data
 	let validSelectedTags = $derived(selectedTags);
-	
+
 	let disabledTags = $derived.by(() => {
 		// All tags that are NOT available for current selection should be disabled
 		// But never disable currently selected tags
-		return availableTags.filter(tag => 
-			!availableTagsForSelection.includes(tag) && !validSelectedTags.includes(tag)
+		return availableTags.filter(
+			(tag) => !availableTagsForSelection.includes(tag) && !validSelectedTags.includes(tag)
 		);
 	});
-	
+
 	// Effect to load available tag combinations when record types or current tags change
 	$effect(() => {
 		if (allRecordTypes.length > 0) {
@@ -44,53 +44,53 @@
 			availableTagsForSelection = availableTags;
 		}
 	});
-	
+
 	async function loadAvailableTagCombinations() {
 		try {
 			// Use the "show all" exception: if no current record types, use all record types
 			const effectiveRecordTypes = recordTypes.length > 0 ? recordTypes : allRecordTypes;
-			
+
 			// Build query params
 			const query = new URLSearchParams();
 			query.set('recordTypes', effectiveRecordTypes.join(','));
 			if (validSelectedTags && validSelectedTags.length > 0) {
 				query.set('selected', validSelectedTags.join(','));
 			}
-			
+
 			const response = await fetch(`/api/tag-combinations?${query}`);
-			
+
 			if (!response.ok) {
 				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 			}
-			
+
 			const data = await response.json();
-			
+
 			if (!data.success) {
 				throw new Error(data.message || 'API returned unsuccessful response');
 			}
-			
-			availableTagsForSelection = data.availableTags.map(tag => tag.name);
-			
+
+			availableTagsForSelection = data.availableTags.map((tag) => tag.name);
 		} catch (error) {
 			console.error('Failed to load available tag combinations:', error);
 			// On error, show all tags as available
 			availableTagsForSelection = availableTags;
 		}
 	}
-	
+
 	// Validate tags before emitting to parent
 	async function handleTagSelection(selected: string[]) {
-		
 		// Use the same validation logic as route loader
 		if (selected.length > 0) {
 			try {
 				const effectiveRecordTypes = recordTypes.length > 0 ? recordTypes : allRecordTypes;
-				const response = await fetch(`/api/tag-combinations?recordTypes=${effectiveRecordTypes.join(',')}&selected=${selected.join(',')}&validateAll=true`);
-				
+				const response = await fetch(
+					`/api/tag-combinations?recordTypes=${effectiveRecordTypes.join(',')}&selected=${selected.join(',')}&validateAll=true`
+				);
+
 				if (response.ok) {
 					const data = await response.json();
 					const validTags = data.validTags || [];
-					
+
 					onTagsSelected(validTags);
 					return;
 				}
@@ -98,7 +98,7 @@
 				console.error('TagsSelector validation failed:', error);
 			}
 		}
-		
+
 		// Fallback: pass selected tags as-is
 		onTagsSelected(selected);
 	}
@@ -109,23 +109,20 @@
 		<div class="text-sm text-gray-500">No tags available</div>
 	{:else}
 		{#key availableTags}
-		<ToggleGroupComposable
-			items={availableTags}
-			selectedItems={validSelectedTags}
-			disabledItems={disabledTags}
-			onItemSelected={handleTagSelection}
-			orientation="vertical"
-			type="multiple"
-		>
-			{#snippet children(item, isSelected, isDisabled)}
-				<Tag 
-					variant={isSelected ? 'selected' : 'default'} 
-					disabled={isDisabled}
-				>
-					{item}
-				</Tag>
-			{/snippet}
-		</ToggleGroupComposable>
+			<ToggleGroupComposable
+				items={availableTags}
+				selectedItems={validSelectedTags}
+				disabledItems={disabledTags}
+				onItemSelected={handleTagSelection}
+				orientation="vertical"
+				type="multiple"
+			>
+				{#snippet children(item, isSelected, isDisabled)}
+					<Tag variant={isSelected ? 'selected' : 'default'} disabled={isDisabled}>
+						{item}
+					</Tag>
+				{/snippet}
+			</ToggleGroupComposable>
 		{/key}
 	{/if}
 </div>

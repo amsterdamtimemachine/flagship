@@ -16,8 +16,20 @@
 
 	interface Props {
 		text: string; // Required text for the tooltip
-		icon: PhosphorIcon; 
-		placement?: 'top' | 'bottom' | 'left' | 'right' | 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'left-start' | 'left-end' | 'right-start' | 'right-end';
+		icon: PhosphorIcon;
+		placement?:
+			| 'top'
+			| 'bottom'
+			| 'left'
+			| 'right'
+			| 'top-start'
+			| 'top-end'
+			| 'bottom-start'
+			| 'bottom-end'
+			| 'left-start'
+			| 'left-end'
+			| 'right-start'
+			| 'right-end';
 		openDelay?: number;
 		closeDelay?: number;
 		disabled?: boolean;
@@ -32,34 +44,34 @@
 		mirrored: false
 	};
 
-	let { 
+	let {
 		text,
 		placement = 'top',
 		openDelay = 100,
 		closeDelay = 300,
 		disabled = false,
 		class: className,
-		icon: Icon,
+		icon: Icon
 	}: Props = $props();
 
 	const {
 		elements: { trigger, content, arrow },
-		states: { open },
+		states: { open }
 	} = createTooltip({
 		positioning: {
-			placement,
+			placement
 		},
 		openDelay,
 		closeDelay,
 		closeOnPointerDown: false,
 		forceVisible: true,
-		defaultOpen: false,
+		defaultOpen: false
 	});
 </script>
 
 <!-- Trigger element -->
-<span 
-	use:melt={disabled ? undefined : $trigger} 
+<span
+	use:melt={disabled ? undefined : $trigger}
 	class="inline-flex items-center justify-center w-6 h-6 bg-black rounded-full cursor-pointer hover:bg-gray-800 transition-colors {className}"
 >
 	<Icon {...iconProps} />
@@ -72,7 +84,7 @@
 		transition:fade={{ duration: 100 }}
 		class="tooltip-content z-50 max-w-xs rounded-lg bg-gray-900 text-white shadow-lg"
 	>
-		<div use:melt={$arrow} class="tooltip-arrow" ></div>
+		<div use:melt={$arrow} class="tooltip-arrow"></div>
 		<div class="px-3 py-2 text-sm">
 			{text}
 		</div>

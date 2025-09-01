@@ -32,9 +32,9 @@
 	const getFeatureSpecificProps = () => {
 		switch (feature.recordType) {
 			case 'image':
-				return { thumbnail: feature.thumbnail, alt: feature.alt};
+				return { thumbnail: feature.thumbnail, alt: feature.alt };
 			case 'text':
-				return { text: feature.text}; // currently text has no non-generic properties
+				return { text: feature.text }; // currently text has no non-generic properties
 			case 'person':
 				return { text: feature.text }; // currently person has no non-generic properties
 			default:
@@ -46,31 +46,35 @@
 </script>
 
 <div class="w-full border rounded-sm border-gray-300 bg-white min-w-0">
-	<FeatureCardHeader class="p-2" feature={commonProps} />	
-	<div class="{expanded ? '' : 'p-2'}">
-		<h3 class="{expanded ? 'font-semibold text-xl text-black my-3 px-2' : 'font-semibold text-sm text-black line-clamp-2 mb-1'}">
+	<FeatureCardHeader class="p-2" feature={commonProps} />
+	<div class={expanded ? '' : 'p-2'}>
+		<h3
+			class={expanded
+				? 'font-semibold text-xl text-black my-3 px-2'
+				: 'font-semibold text-sm text-black line-clamp-2 mb-1'}
+		>
 			{commonProps.tit}
 		</h3>
 		<!-- Feature-specific content -->
 		{#if feature.recordType === 'image'}
-			<FeatureCardImage {...specificProps} expanded={expanded} onExpand={handleExpand} />
+			<FeatureCardImage {...specificProps} {expanded} onExpand={handleExpand} />
 		{:else if feature.recordType === 'text'}
-			<FeatureCardText {...specificProps} expanded={expanded} /> 
+			<FeatureCardText {...specificProps} {expanded} />
 		{:else if feature.recordType === 'person'}
-			<FeatureCardText {...specificProps} expanded={expanded} />
+			<FeatureCardText {...specificProps} {expanded} />
 		{:else}
 			<div class="{expanded ? 'px-2' : ''} text-gray-500 text-sm">
 				Unknown feature type: {feature.recordType}
 			</div>
 		{/if}
-		
+
 		<!-- Tags -->
-		<TagList 
-			tags={feature.tags || []} 
-			expanded={expanded}
+		<TagList
+			tags={feature.tags || []}
+			{expanded}
 			maxVisible={expanded ? undefined : 2}
-			class="{expanded ? 'py-2 px-2' : 'pt-2'}"
+			class={expanded ? 'py-2 px-2' : 'pt-2'}
 		/>
 	</div>
-	<FeatureCardFooter feature={feature} onExpand={handleExpand} expanded={expanded} />
+	<FeatureCardFooter {feature} onExpand={handleExpand} {expanded} />
 </div>

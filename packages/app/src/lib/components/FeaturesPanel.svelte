@@ -14,18 +14,18 @@
 	import ErrorHandler from '$components/ErrorHandler.svelte';
 	import type { RecordType } from '@atm/shared/types';
 	import type { AppError } from '$types/error';
-	
+
 	interface Props {
 		cellId: string;
 		period: string;
 		bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number };
 		recordTypes: RecordType[];
 		tags: string[];
-		onClose?: () => void; 
+		onClose?: () => void;
 	}
-	
+
 	let { cellId, period, bounds, recordTypes, tags, onClose }: Props = $props();
-	
+
 	// Cell data state
 	let allFeatures = $state<any[]>([]);
 	let currentPage = $state(1);
@@ -35,11 +35,11 @@
 	let initialLoading = $state(true);
 	let errors = $state<AppError[]>([]);
 	let errorData = $derived(createPageErrorData(errors));
-	
+
 	// Layout memory for stable masonry across pagination
 	let layoutMemory = new Map<string, number>(); // featureId -> columnIndex
 	let currentContext = $state(''); // Track current data context
-	
+
 	/**
 	 * Clear layout memory when data context changes
 	 */
@@ -47,25 +47,25 @@
 		console.log('🧹 Clearing layout memory - context changed');
 		layoutMemory.clear();
 	}
-	
+
 	async function loadCellData(page: number = 1) {
 		loading = true;
 		loadingState.startLoading();
-		console.log("fetching cell data");
-		
+		console.log('fetching cell data');
+
 		try {
 			// Parse period to get start and end years
-			const [startYear, endYear] = period.split('_').map(y => parseInt(y));
-			
+			const [startYear, endYear] = period.split('_').map((y) => parseInt(y));
+
 			// Build params for API call - only include bounds if available
 			const params: any = {
 				start_year: `${startYear}-01-01`,
 				end_year: `${endYear}-01-01`,
 				page,
 				recordTypes: recordTypes,
-				tags: tags,
+				tags: tags
 			};
-			
+
 			// Only add bounds if they exist
 			if (bounds) {
 				params.min_lat = bounds.minLat;
@@ -73,49 +73,50 @@
 				params.max_lat = bounds.maxLat;
 				params.max_lon = bounds.maxLon;
 			}
-						
+
 			const response = await fetchGeodataFromDatabase(params);
-			
+
 			// Always replace features for pagination (no more appending)
 			allFeatures = response.data || [];
 			currentPage = response.page || 1;
 			totalCount = response.total || 0;
 			pageSize = response.page_size || 100;
-			
+
 			// Clear previous errors on successful load
 			errors = [];
-			
 		} catch (err) {
 			console.error('Error loading cell data:', err);
-			errors = [createError(
-				'error',
-				'Cell Data Load Failed',
-				err instanceof Error ? err.message : 'Failed to load cell data',
-				{ cellId, period, page, recordTypes, tags }
-			)];
+			errors = [
+				createError(
+					'error',
+					'Cell Data Load Failed',
+					err instanceof Error ? err.message : 'Failed to load cell data',
+					{ cellId, period, page, recordTypes, tags }
+				)
+			];
 		} finally {
 			loading = false;
 			loadingState.stopLoading();
 		}
 	}
-	
+
 	function handlePageChange(newPage: number) {
 		if (loading) return; // Prevent multiple concurrent requests
 		loadCellData(newPage);
 	}
-	
+
 	// Detect context changes and clear memory when needed
 	$effect(() => {
 		// Create context key from always-available props
 		const newContext = `${cellId}_${period}`;
-		
+
 		if (currentContext !== newContext) {
 			console.log('🔄 Context changed:', { from: currentContext, to: newContext });
 			clearLayoutMemory();
 			currentContext = newContext;
 		}
 	});
-	
+
 	$effect(() => {
 		// Reset state when cellId or period changes
 		allFeatures = [];
@@ -124,13 +125,13 @@
 		pageSize = 100;
 		errors = [];
 		initialLoading = true;
-		
+
 		// Load new data
 		loadCellData(1).finally(() => {
 			initialLoading = false;
 		});
 	});
-	
+
 	function closeModal() {
 		if (onClose) {
 			onClose();
@@ -138,46 +139,38 @@
 	}
 </script>
 
-<ErrorHandler errorData={errorData} />
+<ErrorHandler {errorData} />
 
 <!-- Data Header -->
-<div class="sticky py-2 px-3 top-0 z-10 bg-white border-b border-gray-300 flex items-center justify-between shadow-[0px_5px_20px_5px_rgba(0,0,0,0.07)]">
-
+<div
+	class="sticky py-2 px-3 top-0 z-10 bg-white border-b border-gray-300 flex items-center justify-between shadow-[0px_5px_20px_5px_rgba(0,0,0,0.07)]"
+>
 	<Tooltip icon={QuestionMark} text="" />
 	<div class="flex items-center gap-4">
 		{#if !initialLoading && totalCount > 0}
-			<FeaturesCount 
-				totalFeatures={totalCount}
-				currentPage={currentPage}
-				featuresPerPage={pageSize}
-			/>
+			<FeaturesCount totalFeatures={totalCount} {currentPage} featuresPerPage={pageSize} />
 			{#if totalCount > pageSize}
-				<Pagination 
+				<Pagination
 					totalItems={totalCount}
-					currentPage={currentPage}
+					{currentPage}
 					itemsPerPage={pageSize}
 					onPageChange={handlePageChange}
-					loading={loading}
+					{loading}
 				/>
 			{/if}
 		{/if}
 	</div>
-	<Button 
-		icon={X}
-		onclick={closeModal}
-		size={18}
-		aria-label="Close features panel"
-	/>
+	<Button icon={X} onclick={closeModal} size={18} aria-label="Close features panel" />
 </div>
 
 <div class="min-h-full bg-gray-300">
 	{#if !initialLoading && !loading}
 		{#if allFeatures.length > 0}
-			<FeaturesGrid features={allFeatures} layoutMemory={layoutMemory} />
+			<FeaturesGrid features={allFeatures} {layoutMemory} />
 		{:else}
 			<div class="text-gray-500 p-4">No features found for this cell and period</div>
 		{/if}
 	{:else if allFeatures.length > 0}
-		<FeaturesGrid features={allFeatures} layoutMemory={layoutMemory} />
+		<FeaturesGrid features={allFeatures} {layoutMemory} />
 	{/if}
 </div>

@@ -1,5 +1,4 @@
 <script lang="ts">
-
 	type Props = {
 		text: string;
 		expanded?: boolean;
@@ -15,9 +14,9 @@
 
 {#if expanded}
 	<div class="">
-			<p class="p-2 text-gray-700 leading-relaxed whitespace-pre-wrap">
-				{text}
-			</p>
+		<p class="p-2 text-gray-700 leading-relaxed whitespace-pre-wrap">
+			{text}
+		</p>
 	</div>
 {:else}
 	<div class="flex-1">
@@ -26,9 +25,9 @@
 				<div>
 					{truncatedText}
 				</div>
-				<button 
+				<button
 					class="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
-					onclick={() => showFullText = true}
+					onclick={() => (showFullText = true)}
 				>
 					Show more
 				</button>
@@ -37,9 +36,9 @@
 					{text}
 				</div>
 				{#if needsTruncation}
-					<button 
+					<button
 						class="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
-						onclick={() => showFullText = false}
+						onclick={() => (showFullText = false)}
 					>
 						Show less
 					</button>

@@ -14,12 +14,12 @@
 
 	function handleTrackClick(event: MouseEvent) {
 		if (!trackElement) return;
-		
+
 		const rect = trackElement.getBoundingClientRect();
 		const clickX = event.clientX - rect.left;
 		const percentage = clickX / rect.width;
 		const newIndex = Math.round(percentage * (bins.length - 1));
-		
+
 		onIndexChange(Math.max(0, Math.min(bins.length - 1, newIndex)));
 	}
 </script>

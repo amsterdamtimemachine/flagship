@@ -13,9 +13,9 @@
 		class?: string;
 	}
 
-	let { 
-		items, 
-		selectedItems = [], 
+	let {
+		items,
+		selectedItems = [],
 		disabledItems = [],
 		orientation = 'vertical',
 		type = 'multiple',
@@ -32,11 +32,11 @@
 		type,
 		defaultValue: type === 'single' ? selectedItems[0] : selectedItems,
 		orientation: orientation,
-		onValueChange: ({curr, next}) => {
-		  if(onItemSelected) {
-		    onItemSelected(next);
-		  }
-		  return next 
+		onValueChange: ({ curr, next }) => {
+			if (onItemSelected) {
+				onItemSelected(next);
+			}
+			return next;
 		}
 	});
 
@@ -47,7 +47,10 @@
 
 <div
 	use:melt={$root}
-	class={mergeCss("flex items-start data-[orientation='vertical']:flex-col data-[orientation='horizontal']:flex-row gap-1", className)}
+	class={mergeCss(
+		"flex items-start data-[orientation='vertical']:flex-col data-[orientation='horizontal']:flex-row gap-1",
+		className
+	)}
 	aria-label="Toggle selection"
 	role={type === 'single' ? 'radiogroup' : 'group'}
 >
@@ -57,20 +60,21 @@
 			use:melt={$item({ value: itemValue, disabled: isDisabled(itemValue) })}
 			aria-label="Toggle {itemValue}"
 			role={type === 'single' ? 'radio' : 'checkbox'}
-			aria-checked={$value && $value.includes(itemValue) || (type === 'single' && $value === itemValue)}
+			aria-checked={($value && $value.includes(itemValue)) ||
+				(type === 'single' && $value === itemValue)}
 		>
-			<span 
+			<span
 				class="w-5 h-5 border-2 border-gray-300 rounded flex items-center justify-center bg-white text-blue-600 transition-colors data-[state='on']:border-blue-600 data-[state='on']:bg-blue-600 data-[state='on']:text-white"
 				class:border-gray-200={isDisabled(itemValue)}
 				class:bg-gray-100={isDisabled(itemValue)}
 				class:text-gray-400={isDisabled(itemValue)}
 				aria-hidden="true"
 			>
-				{#if $value && $value.includes(itemValue) || (type === 'single' && $value === itemValue)}
+				{#if ($value && $value.includes(itemValue)) || (type === 'single' && $value === itemValue)}
 					<Check size={32} weight="bold" />
 				{/if}
 			</span>
-			<span 
+			<span
 				class="text-sm text-gray-700 transition-colors select-none"
 				class:text-gray-400={isDisabled(itemValue)}
 				aria-hidden="true"

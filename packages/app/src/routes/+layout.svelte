@@ -12,9 +12,9 @@
 	} = $props();
 </script>
 
-	<main class="relative">
-		<LoadingBar class="z-50 fixed top-0 "/>
-		<Toaster />
-		<FeatureDetailModal />
-		{@render children?.()}
-	</main>
+<main class="relative">
+	<LoadingBar class="z-50 fixed top-0 " />
+	<Toaster />
+	<FeatureDetailModal />
+	{@render children?.()}
+</main>

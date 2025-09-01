@@ -6,7 +6,7 @@
 	}
 
 	let { totalFeatures, currentPage, featuresPerPage }: Props = $props();
-	
+
 	const totalPages = $derived(Math.ceil(totalFeatures / featuresPerPage));
 	const showingStart = $derived((currentPage - 1) * featuresPerPage + 1);
 	const showingEnd = $derived(Math.min(currentPage * featuresPerPage, totalFeatures));
