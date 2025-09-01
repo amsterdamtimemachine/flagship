@@ -36,18 +36,13 @@
 			case 'text':
 				return { text: feature.text}; // currently text has no non-generic properties
 			case 'person':
-				return { }; // currently person has no non-generic properties
+				return { text: feature.text }; // currently person has no non-generic properties
 			default:
 				return {};
 		}
 	};
 
 	const specificProps = getFeatureSpecificProps();
-	
-	// Debug logging
-	console.log('FeatureCard feature object:', feature);
-	console.log('FeatureCard specificProps:', specificProps);
-	console.log('FeatureCard expanded:', expanded);
 </script>
 
 <div class="w-full border rounded-sm border-gray-300 bg-white min-w-0">
@@ -62,7 +57,6 @@
 		{:else if feature.recordType === 'text'}
 			<FeatureCardText {...specificProps} expanded={expanded} /> 
 		{:else if feature.recordType === 'person'}
-			<!-- Person feature has same properties as text so we're using the text card -->
 			<FeatureCardText {...specificProps} expanded={expanded} />
 		{:else}
 			<div class="{expanded ? 'px-2' : ''} text-gray-500 text-sm">
