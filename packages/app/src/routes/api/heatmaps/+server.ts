@@ -50,14 +50,14 @@ export const GET: RequestHandler = async ({ url }) => {
 			console.log(
 				`✅ Heatmaps API success - ${timeSliceCount} time periods at resolution ${response.resolution}`
 			);
-			return json<HeatmapTimelineApiResponse>(response, { headers });
+			return json(response, { headers });
 		} else {
 			console.error(`❌ Heatmaps API error: ${response.message}`);
-			return error(500, { message: response.message || 'Failed to load heatmap data' });
+			throw error(500, response.message || 'Failed to load heatmap data');
 		}
 	} catch (err) {
 		console.error('❌ Heatmaps API unexpected error:', err);
-		return error(500, { message: err instanceof Error ? err.message : 'Internal server error' });
+		throw error(500, err instanceof Error ? err.message : 'Internal server error');
 	}
 };
 

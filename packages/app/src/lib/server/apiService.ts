@@ -88,13 +88,16 @@ export class VisualizationApiService {
 			await this.initialize();
 
 			// Default to all recordTypes if none provided
+			let effectiveRecordTypes: RecordType[];
 			if (!recordTypes || recordTypes.length === 0) {
 				const metadata = this.binaryHandler.getMetadata();
-				recordTypes = metadata.recordTypes;
-				console.log(`📊 No recordTypes specified, defaulting to all: ${recordTypes.join(', ')}`);
+				effectiveRecordTypes = metadata.recordTypes;
+				console.log(`📊 No recordTypes specified, defaulting to all: ${effectiveRecordTypes.join(', ')}`);
+			} else {
+				effectiveRecordTypes = recordTypes;
 			}
 
-			console.log(`📊 Fetching histogram data for recordTypes: ${recordTypes.join(', ')}`);
+			console.log(`📊 Fetching histogram data for recordTypes: ${effectiveRecordTypes.join(', ')}`);
 			if (tags && tags.length > 0) {
 				console.log(`🏷️ With tags: ${tags.join(', ')}`);
 			}
@@ -102,7 +105,7 @@ export class VisualizationApiService {
 			const histograms = await this.binaryHandler.readHistograms();
 
 			// Validate all recordTypes exist
-			const missingTypes = recordTypes.filter((type) => !histograms[type]);
+			const missingTypes = effectiveRecordTypes.filter((type) => !histograms[type]);
 			if (missingTypes.length > 0) {
 				throw new Error(`RecordTypes "${missingTypes.join(', ')}" not found in histograms data`);
 			}
@@ -110,7 +113,7 @@ export class VisualizationApiService {
 			// Return raw histogram data for client-side merging
 			const histogramData: { [key: string]: any } = {};
 
-			for (const recordType of recordTypes) {
+			for (const recordType of effectiveRecordTypes) {
 				if (!tags || tags.length === 0) {
 					// Include base histogram
 					histogramData[recordType] = {
@@ -176,13 +179,13 @@ export class VisualizationApiService {
 				}
 			}
 
-			console.log(`📊 Returning raw histogram data for ${recordTypes.length} recordTypes`);
+			console.log(`📊 Returning raw histogram data for ${effectiveRecordTypes.length} recordTypes`);
 
 			const processingTime = Date.now() - startTime;
 
 			return {
 				histograms: this.binaryHandler.prepareForJsonResponse(histogramData),
-				recordTypes,
+				recordTypes: effectiveRecordTypes,
 				tags,
 				success: true,
 				processingTime
@@ -193,7 +196,7 @@ export class VisualizationApiService {
 
 			return {
 				histograms: {},
-				recordTypes,
+				recordTypes: recordTypes || [],
 				tags,
 				success: false,
 				message: error instanceof Error ? error.message : 'Unknown error',
@@ -217,13 +220,16 @@ export class VisualizationApiService {
 			await this.initialize();
 
 			// Default to all recordTypes if none provided
+			let effectiveRecordTypes: RecordType[];
 			if (!recordTypes || recordTypes.length === 0) {
 				const metadata = this.binaryHandler.getMetadata();
-				recordTypes = metadata.recordTypes;
-				console.log(`🔥 No recordTypes specified, defaulting to all: ${recordTypes.join(', ')}`);
+				effectiveRecordTypes = metadata.recordTypes;
+				console.log(`🔥 No recordTypes specified, defaulting to all: ${effectiveRecordTypes.join(', ')}`);
+			} else {
+				effectiveRecordTypes = recordTypes;
 			}
 
-			console.log(`🔥 Fetching heatmap timeline for recordTypes: ${recordTypes.join(', ')}`);
+			console.log(`🔥 Fetching heatmap timeline for recordTypes: ${effectiveRecordTypes.join(', ')}`);
 			if (tags && tags.length > 0) {
 				console.log(`🏷️ With tags: ${tags.join(', ')}`);
 			}
@@ -251,7 +257,7 @@ export class VisualizationApiService {
 				});
 			});
 
-			const missingTypes = recordTypes.filter((type) => !allRecordTypesInHeatmap.has(type));
+			const missingTypes = effectiveRecordTypes.filter((type) => !allRecordTypesInHeatmap.has(type));
 			if (missingTypes.length > 0) {
 				throw new Error(`RecordTypes "${missingTypes.join(', ')}" not found in heatmap data`);
 			}
@@ -261,14 +267,14 @@ export class VisualizationApiService {
 
 			if (!tags || tags.length === 0) {
 				// Return filtered timeline with individual recordType keys (client will merge)
-				resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, recordTypes);
+				resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, effectiveRecordTypes);
 				console.log(
-					`🔥 Returning filtered heatmap timeline for recordTypes "${recordTypes.join(', ')}": ${Object.keys(resultTimeline).length} periods`
+					`🔥 Returning filtered heatmap timeline for recordTypes "${effectiveRecordTypes.join(', ')}": ${Object.keys(resultTimeline).length} periods`
 				);
 			} else if (tags.length === 1) {
 				// Single tag - return filtered timeline with tag-specific heatmaps
 				const tag = tags[0];
-				resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, recordTypes, tag);
+				resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, effectiveRecordTypes, tag);
 
 				// No need to throw error - empty timeline is valid (shows empty visualization)
 
@@ -278,7 +284,7 @@ export class VisualizationApiService {
 			} else {
 				// Multiple tags - use combination key
 				const comboKey = tags.sort().join('+');
-				resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, recordTypes, comboKey);
+				resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, effectiveRecordTypes, comboKey);
 
 				// No need to throw error - empty timeline is valid (shows empty visualization)
 
@@ -291,7 +297,7 @@ export class VisualizationApiService {
 
 			return {
 				heatmapTimeline: this.binaryHandler.prepareForJsonResponse(resultTimeline),
-				recordTypes,
+				recordTypes: effectiveRecordTypes,
 				tags,
 				resolution: selectedResolution,
 				success: true,
@@ -303,7 +309,7 @@ export class VisualizationApiService {
 
 			return {
 				heatmapTimeline: {},
-				recordTypes,
+				recordTypes: recordTypes || [],
 				tags,
 				resolution: '',
 				success: false,
@@ -327,19 +333,22 @@ export class VisualizationApiService {
 			await this.initialize();
 
 			// Default to all recordTypes if none provided
+			let effectiveRecordTypes: RecordType[];
 			if (!recordTypes || recordTypes.length === 0) {
 				const metadata = this.binaryHandler.getMetadata();
-				recordTypes = metadata.recordTypes;
+				effectiveRecordTypes = metadata.recordTypes;
+			} else {
+				effectiveRecordTypes = recordTypes;
 			}
 
-			console.log(`🏷️ Getting available tags for recordTypes: ${recordTypes.join(', ')}`);
+			console.log(`🏷️ Getting available tags for recordTypes: ${effectiveRecordTypes.join(', ')}`);
 
 			const histograms = await this.binaryHandler.readHistograms();
 
 			// Track tags across all requested recordTypes
 			const tagStats = new Map<string, { totalFeatures: number; recordTypes: Set<RecordType> }>();
 
-			for (const recordType of recordTypes) {
+			for (const recordType of effectiveRecordTypes) {
 				const recordTypeData = histograms[recordType];
 				if (!recordTypeData) continue;
 
@@ -373,7 +382,7 @@ export class VisualizationApiService {
 
 			return {
 				tags: availableTags,
-				recordTypes,
+				recordTypes: effectiveRecordTypes,
 				success: true
 			};
 		} catch (error) {
@@ -404,13 +413,16 @@ export class VisualizationApiService {
 			await this.initialize();
 
 			// Default to all recordTypes if none provided
+			let effectiveRecordTypes: RecordType[];
 			if (!recordTypes || recordTypes.length === 0) {
 				const metadata = this.binaryHandler.getMetadata();
-				recordTypes = metadata.recordTypes;
+				effectiveRecordTypes = metadata.recordTypes;
+			} else {
+				effectiveRecordTypes = recordTypes;
 			}
 
 			console.log(
-				`🔍 Validating tag combination: ${selectedTags.join(', ')} for recordTypes: ${recordTypes.join(', ')}`
+				`🔍 Validating tag combination: ${selectedTags.join(', ')} for recordTypes: ${effectiveRecordTypes.join(', ')}`
 			);
 
 			// Single tags are always valid (they exist as individual tags)
@@ -429,7 +441,7 @@ export class VisualizationApiService {
 			let combinationExists = false;
 
 			// Check if combination exists for any of the specified record types
-			for (const recordType of recordTypes) {
+			for (const recordType of effectiveRecordTypes) {
 				const recordTypeData = histograms[recordType];
 				if (recordTypeData?.tags[comboKey]) {
 					combinationExists = true;
@@ -482,13 +494,16 @@ export class VisualizationApiService {
 			await this.initialize();
 
 			// Default to all recordTypes if none provided
+			let effectiveRecordTypes: RecordType[];
 			if (!recordTypes || recordTypes.length === 0) {
 				const metadata = this.binaryHandler.getMetadata();
-				recordTypes = metadata.recordTypes;
+				effectiveRecordTypes = metadata.recordTypes;
+			} else {
+				effectiveRecordTypes = recordTypes;
 			}
 
 			console.log(
-				`🔗 Getting tag combinations for recordTypes: ${recordTypes.join(', ')}, selected: ${selectedTags.join(', ')}`
+				`🔗 Getting tag combinations for recordTypes: ${effectiveRecordTypes.join(', ')}, selected: ${selectedTags.join(', ')}`
 			);
 
 			const histograms = await this.binaryHandler.readHistograms();
@@ -496,7 +511,7 @@ export class VisualizationApiService {
 			// Track available next tags with their feature counts
 			const nextTagStats = new Map<string, number>();
 
-			for (const recordType of recordTypes) {
+			for (const recordType of effectiveRecordTypes) {
 				const recordTypeData = histograms[recordType];
 				if (!recordTypeData) continue;
 
@@ -553,7 +568,7 @@ export class VisualizationApiService {
 			return {
 				availableTags,
 				currentSelection: selectedTags,
-				recordTypes,
+				recordTypes: effectiveRecordTypes,
 				success: true
 			};
 		} catch (error) {

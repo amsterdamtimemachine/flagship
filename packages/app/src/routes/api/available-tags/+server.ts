@@ -42,14 +42,14 @@ export const GET: RequestHandler = async ({ url }) => {
 			console.log(
 				`✅ Available tags API success - ${tagCount} tags with ${totalFeatures} total features`
 			);
-			return json<AvailableTagsResponse>(response, { headers });
+			return json(response, { headers });
 		} else {
 			console.error(`❌ Available tags API error: ${response.message}`);
-			return error(500, { message: response.message || 'Failed to load available tags' });
+			throw error(500, response.message || 'Failed to load available tags');
 		}
 	} catch (err) {
 		console.error('❌ Available tags API unexpected error:', err);
-		return error(500, { message: err instanceof Error ? err.message : 'Internal server error' });
+		throw error(500, err instanceof Error ? err.message : 'Internal server error');
 	}
 };
 

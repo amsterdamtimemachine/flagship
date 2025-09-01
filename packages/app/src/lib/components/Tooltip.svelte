@@ -1,18 +1,7 @@
 <script lang="ts">
 	import { createTooltip, melt } from '@melt-ui/svelte';
 	import { fade } from 'svelte/transition';
-	import type { Component } from 'svelte';
-
-	// Type for Phosphor icon props based on official documentation
-	interface PhosphorIconProps {
-		color?: string;
-		size?: number | string;
-		weight?: 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
-		mirrored?: boolean;
-	}
-
-	// Type for Phosphor icon components
-	type PhosphorIcon = Component<PhosphorIconProps>;
+	import type { PhosphorIcon } from '@atm/shared/types';
 
 	interface Props {
 		text: string; // Required text for the tooltip

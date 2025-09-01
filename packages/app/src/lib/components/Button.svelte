@@ -1,16 +1,8 @@
 <script lang="ts">
-	import type { Snippet, Component } from 'svelte';
+	import type { Snippet } from 'svelte';
 	import { mergeCss } from '$utils/utils';
 	import { melt, type MeltElement } from '@melt-ui/svelte';
-
-	interface PhosphorIconProps {
-		color?: string;
-		size?: number | string;
-		weight?: 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
-		mirrored?: boolean;
-	}
-
-	type PhosphorIcon = Component<PhosphorIconProps>;
+	import type { PhosphorIcon } from '@atm/shared/types';
 
 	interface Props {
 		onclick?: () => void;
