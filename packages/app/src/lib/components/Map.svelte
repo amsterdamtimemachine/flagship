@@ -5,15 +5,16 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { onMount, onDestroy } from 'svelte';
 	import maplibre, { type Map as MapLibreMap } from 'maplibre-gl';
-	import type { FeatureCollection, Feature, Polygon, GeoJSONProperties } from 'geojson';
+	import type { FeatureCollection, Feature, Polygon, GeoJsonProperties } from 'geojson';
 	import type { Heatmap, HeatmapDimensions, HeatmapBlueprintCell } from '@atm/shared/types';
 	import { mergeCss } from '$utils/utils';
 
-	interface CellProperties extends GeoJSONProperties {
+	interface CellProperties {
 		id: string;
 		row: number;
 		col: number;
 		count: number;
+		[key: string]: any; // Allow additional GeoJSON properties
 	}
 
 	export interface MapProps {
@@ -98,19 +99,17 @@
 
 	onDestroy(() => {
 		if (map) {
-			map.off('mousemove', 'heatmap-squares');
-			map.off('mouseleave', 'heatmap-squares');
-			map.off('click', 'heatmap-squares');
-			map.off('mouseenter', 'heatmap-squares');
+			// Remove the map instance which cleans up all event listeners
 			map.remove();
 		}
 	});
 
 	function resetAllCells(): void {
 		if (!map || !cellIdMap.size) return;
+		const mapInstance = map; // Store reference for TypeScript
 		cellIdMap.forEach((cellId) => {
 			if (cellId) {
-				map.setFeatureState(
+				mapInstance.setFeatureState(
 					{ source: 'heatmap', id: cellId },
 					{
 						value: 0,
@@ -123,8 +122,9 @@
 
 	function setActiveCells(): void {
 		if (!map) return;
+		const mapInstance = map;
 		activeCells.forEach((stateValues, cellId) => {
-			map.setFeatureState({ source: 'heatmap', id: cellId }, stateValues);
+			mapInstance.setFeatureState({ source: 'heatmap', id: cellId }, stateValues);
 		});
 	}
 
@@ -164,17 +164,18 @@
 
 	function updateSelectedCell(cellId: string | null): void {
 		if (!isMapLoaded || !map || !cellIdMap.size) return;
+		const mapInstance = map;
 
 		// Clear all previous highlights
 		cellIdMap.forEach((id) => {
 			if (id) {
-				map.setFeatureState({ source: 'heatmap', id }, { selected: false });
+				mapInstance.setFeatureState({ source: 'heatmap', id }, { selected: false });
 			}
 		});
 
 		// Set new highlight
 		if (cellId) {
-			map.setFeatureState({ source: 'heatmap', id: cellId }, { selected: true });
+			mapInstance.setFeatureState({ source: 'heatmap', id: cellId }, { selected: true });
 		}
 	}
 
@@ -202,17 +203,20 @@
 		});
 
 		map.on('load', () => {
+			if (!map) return; // Guard for TypeScript
+			const mapInstance = map;
+			
 			// Heatmap geometry
 			const geojsonData = generateHeatmapCells(heatmapBlueprint);
 
-			map.addSource('heatmap', {
+			mapInstance.addSource('heatmap', {
 				type: 'geojson',
 				data: geojsonData,
 				promoteId: 'id'
 			});
 
 			// Color and opacity of the heatmaps cells
-			map.addLayer({
+			mapInstance.addLayer({
 				id: 'heatmap-squares',
 				type: 'fill',
 				source: 'heatmap',
@@ -223,7 +227,7 @@
 			});
 
 			// Active cell
-			map.addLayer({
+			mapInstance.addLayer({
 				id: 'selected-cell',
 				type: 'line',
 				source: 'heatmap',
@@ -235,30 +239,30 @@
 			});
 
 			// Event handlers
-			map.on('mousemove', 'heatmap-squares', (e) => {
+			mapInstance.on('mousemove', 'heatmap-squares', (e) => {
 				if (e.features?.[0]) {
 					const feature = e.features[0];
-					const featureState = map.getFeatureState({
+					const featureState = mapInstance.getFeatureState({
 						source: 'heatmap',
 						id: feature.properties.id
 					});
 					if (featureState.count > 0) {
-						map.getCanvas().style.cursor = 'pointer';
+						mapInstance.getCanvas().style.cursor = 'pointer';
 					} else {
-						map.getCanvas().style.cursor = '';
+						mapInstance.getCanvas().style.cursor = '';
 					}
 				}
 			});
 
-			map.on('mouseleave', 'heatmap-squares', () => {
-				map.getCanvas().style.cursor = '';
+			mapInstance.on('mouseleave', 'heatmap-squares', () => {
+				mapInstance.getCanvas().style.cursor = '';
 			});
 
-			map.on('click', 'heatmap-squares', (e) => {
+			mapInstance.on('click', 'heatmap-squares', (e) => {
 				if (e.features?.[0]) {
 					const feature = e.features[0];
 					const featureId = feature.properties.id;
-					const featureState = map.getFeatureState({ source: 'heatmap', id: featureId });
+					const featureState = mapInstance.getFeatureState({ source: 'heatmap', id: featureId });
 
 					// select only cells with values
 					if (featureState.count > 0) {

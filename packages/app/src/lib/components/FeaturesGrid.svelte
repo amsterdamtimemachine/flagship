@@ -14,7 +14,7 @@
 	// Use CSS-only responsive columns if no explicit columns prop provided
 	const useResponsiveColumns = columns === undefined;
 
-	let masonryContainer: HTMLElement;
+	let masonryContainer = $state<HTMLElement>();
 	let masonry: MasonryMemoizedInstance | null = null;
 
 	onMount(() => {

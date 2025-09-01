@@ -18,6 +18,7 @@
 	import ErrorHandler from '$components/ErrorHandler.svelte';
 
 	import type { PageData } from './$types';
+import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline } from '@atm/shared/types';
 
 	let { data }: { data: PageData } = $props();
 
@@ -26,13 +27,13 @@
 	let recordTypes = $derived(data?.metadata?.recordTypes || []);
 	let tags = $derived(data?.metadata?.tags);
 	let availableTagNames = $derived(
-		data?.availableTags?.tags?.map((tag) => tag.name) || data?.metadata?.tags || []
+		data?.availableTags?.tags?.map((tag: { name: string }) => tag.name) || data?.metadata?.tags || []
 	);
-	let heatmapTimeline = $derived(data?.heatmapTimeline?.heatmapTimeline);
+	let heatmapTimeline = $derived((data?.heatmapTimeline as HeatmapTimelineApiResponse | null)?.heatmapTimeline);
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
 	let currentRecordTypes = $derived(data?.currentRecordTypes || []);
-	let currentTags = $derived(data?.currentTags);
-	let histograms = $derived(data?.histogram?.histograms);
+	let currentTags = $derived(data?.currentTags || []);
+	let histograms = $derived((data?.histogram as HistogramApiResponse | null)?.histograms);
 
 	const controller = createMapController();
 	let currentPeriod = $derived(controller.currentPeriod);
@@ -64,10 +65,10 @@
 				// Merge entire timeline for smooth navigation
 				const selectedTags = currentTags && currentTags.length > 0 ? currentTags : undefined;
 				return mergeHeatmapTimeline(
-					timelineData,
+					timelineData as unknown as HeatmapTimeline,
 					effectiveRecordTypes,
 					selectedTags,
-					heatmapBlueprint
+					data?.metadata?.heatmapBlueprint
 				);
 			} else {
 				// Single recordType, no tags - use original timeline
@@ -117,7 +118,7 @@
 
 	let currentHeatmap = $derived.by(() => {
 		if (mergedHeatmapTimeline && currentPeriod) {
-			const timeSliceData = mergedHeatmapTimeline[currentPeriod];
+			const timeSliceData = (mergedHeatmapTimeline as any)[currentPeriod];
 			if (timeSliceData) {
 				const mergedKey = Object.keys(timeSliceData)[0];
 				return timeSliceData[mergedKey]?.base || null;
@@ -187,8 +188,9 @@
 		controller.setPeriod(period);
 	}
 
-	function handleRecordTypeChange(recordTypes: string[]) {
-		controller.setRecordType(recordTypes, { resetTags: true });
+	function handleRecordTypeChange(recordTypes: string[] | string) {
+		const recordTypesArray = Array.isArray(recordTypes) ? recordTypes : [recordTypes];
+		controller.setRecordType(recordTypesArray, { resetTags: true });
 	}
 
 	function handleTagsChange(tags: string[]) {
@@ -273,7 +275,7 @@
 				<FeaturesPanel
 					cellId={selectedCellId}
 					period={currentPeriod}
-					bounds={selectedCellBounds}
+					bounds={selectedCellBounds ?? undefined}
 					recordTypes={currentRecordTypes}
 					tags={currentTags}
 					onClose={handleFeaturesPanelClose}

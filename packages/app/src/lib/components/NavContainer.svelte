@@ -14,8 +14,7 @@
 
 	let { class: className, isExpanded = $bindable(true), children }: Props = $props();
 
-	let startingPosition = $derived(isExpanded ? 0 : -100);
-	const navPosition = tweened(startingPosition, {
+	const navPosition = tweened(isExpanded ? 0 : -100, {
 		duration: 200,
 		easing: cubicOut
 	});

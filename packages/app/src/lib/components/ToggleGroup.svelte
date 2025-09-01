@@ -33,7 +33,7 @@
 		type?: 'single' | 'multiple';
 		selectedItems?: string[];
 		disabledItems?: string[];
-		onItemSelected?: (selected: string[]) => void;
+		onItemSelected?: (selected: string[] | string) => void;
 		class?: string;
 		children: Snippet<[item: string, isSelected: boolean, isDisabled: boolean]>;
 	}
@@ -59,7 +59,7 @@
 		defaultValue: type === 'single' ? selectedItems[0] : selectedItems,
 		orientation: orientation,
 		onValueChange: ({ curr, next }) => {
-			if (onItemSelected) {
+			if (onItemSelected && next !== undefined) {
 				onItemSelected(next);
 			}
 			return next;
@@ -67,7 +67,12 @@
 	});
 
 	function isSelected(itemValue: string): boolean {
-		return $value && ($value.includes(itemValue) || (type === 'single' && $value === itemValue));
+		if (!$value) return false;
+		if (type === 'single') {
+			return $value === itemValue;
+		} else {
+			return Array.isArray($value) && $value.includes(itemValue);
+		}
 	}
 
 	function isDisabled(itemValue: string): boolean {

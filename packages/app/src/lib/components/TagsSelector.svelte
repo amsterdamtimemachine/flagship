@@ -69,7 +69,7 @@
 				throw new Error(data.message || 'API returned unsuccessful response');
 			}
 
-			availableTagsForSelection = data.availableTags.map((tag) => tag.name);
+			availableTagsForSelection = data.availableTags.map((tag: { name: string }) => tag.name);
 		} catch (error) {
 			console.error('Failed to load available tag combinations:', error);
 			// On error, show all tags as available
@@ -78,13 +78,14 @@
 	}
 
 	// Validate tags before emitting to parent
-	async function handleTagSelection(selected: string[]) {
+	async function handleTagSelection(selected: string[] | string) {
+		const selectedArray = Array.isArray(selected) ? selected : [selected];
 		// Use the same validation logic as route loader
-		if (selected.length > 0) {
+		if (selectedArray.length > 0) {
 			try {
 				const effectiveRecordTypes = recordTypes.length > 0 ? recordTypes : allRecordTypes;
 				const response = await fetch(
-					`/api/tag-combinations?recordTypes=${effectiveRecordTypes.join(',')}&selected=${selected.join(',')}&validateAll=true`
+					`/api/tag-combinations?recordTypes=${effectiveRecordTypes.join(',')}&selected=${selectedArray.join(',')}&validateAll=true`
 				);
 
 				if (response.ok) {
@@ -100,7 +101,7 @@
 		}
 
 		// Fallback: pass selected tags as-is
-		onTagsSelected(selected);
+		onTagsSelected(selectedArray);
 	}
 </script>
 
