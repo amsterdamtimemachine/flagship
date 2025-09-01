@@ -3,20 +3,30 @@
 
 	interface Props {
 		class?: string;
-		variant?: 'default' | 'count';
+		variant?: 'default' | 'count' | 'selected';
+		disabled?: boolean;
 		children: import('svelte').Snippet;
 	}
 
 	let { 
 		class: className,
 		variant = 'default',
+		disabled = false,
 		children
 	}: Props = $props();
 
-	const baseClasses = 'text-xs px-1 py-0.5 rounded';
-	const variantClasses = variant === 'count' 
-		? 'bg-gray-200 text-gray-600' 
-		: 'bg-gray-100 text-gray-700';
+	const baseClasses = 'text-xs px-1 py-0.5 rounded transition-colors select-none';
+	
+	let variantClasses = '';
+	if (disabled) {
+		variantClasses = 'bg-gray-100 text-gray-400';
+	} else if (variant === 'count') {
+		variantClasses = 'bg-gray-200 text-gray-600';
+	} else if (variant === 'selected') {
+		variantClasses = 'bg-blue-100 text-blue-800';
+	} else {
+		variantClasses = 'bg-gray-100 text-gray-700';
+	}
 </script>
 
 <span class={mergeCss(`${baseClasses} ${variantClasses}`, className)}>

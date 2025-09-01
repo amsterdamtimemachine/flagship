@@ -1,5 +1,6 @@
 <script lang="ts">
-	import ToggleGroup from './ToggleGroup.svelte';
+	import ToggleGroupComposable from './ToggleGroupComposable.svelte';
+	import Tag from './Tag.svelte';
 	import type { RecordType } from '@atm/shared/types';
 	
 	interface Props {
@@ -108,14 +109,23 @@
 		<div class="text-sm text-gray-500">No tags available</div>
 	{:else}
 		{#key availableTags}
-		<ToggleGroup
+		<ToggleGroupComposable
 			items={availableTags}
 			selectedItems={validSelectedTags}
 			disabledItems={disabledTags}
 			onItemSelected={handleTagSelection}
 			orientation="vertical"
 			type="multiple"
-		/>
+		>
+			{#snippet children(item, isSelected, isDisabled)}
+				<Tag 
+					variant={isSelected ? 'selected' : 'default'} 
+					disabled={isDisabled}
+				>
+					{item}
+				</Tag>
+			{/snippet}
+		</ToggleGroupComposable>
 		{/key}
 	{/if}
 </div>

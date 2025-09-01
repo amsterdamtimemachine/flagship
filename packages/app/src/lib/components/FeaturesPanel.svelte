@@ -142,13 +142,8 @@
 
 <!-- Data Header -->
 <div class="sticky py-2 px-3 top-0 z-10 bg-white border-b border-gray-300 flex items-center justify-between shadow-[0px_5px_20px_5px_rgba(0,0,0,0.07)]">
-	<Button 
-		icon={X}
-		onclick={closeModal}
-		class="h-[32px] w-[32px]"
-		size={18}
-		aria-label="Close features panel"
-	/>
+
+	<Tooltip icon={QuestionMark} text="" />
 	<div class="flex items-center gap-4">
 		{#if !initialLoading && totalCount > 0}
 			<FeaturesCount 
@@ -167,10 +162,16 @@
 			{/if}
 		{/if}
 	</div>
-	<Tooltip icon={QuestionMark} text="" />
+	<Button 
+		icon={X}
+		onclick={closeModal}
+		class="h-[32px] w-[32px]"
+		size={18}
+		aria-label="Close features panel"
+	/>
 </div>
 
-<div class="bg-gray-200">
+<div class="h-full bg-gray-300">
 	{#if !initialLoading && !loading}
 		{#if allFeatures.length > 0}
 			<FeaturesGrid features={allFeatures} layoutMemory={layoutMemory} />
