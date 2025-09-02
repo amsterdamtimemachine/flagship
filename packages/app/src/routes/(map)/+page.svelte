@@ -15,6 +15,7 @@
 	import Tooltip from '$components/Tooltip.svelte';
 	import FeaturesPanel from '$components/FeaturesPanel.svelte';
 	import NavContainer from '$components/NavContainer.svelte';
+	import FiltersStatusPanel from '$components/FiltersStatusPanel.svelte';
 	import ErrorHandler from '$components/ErrorHandler.svelte';
 	import FeatureDetailModal from '$components/FeatureDetailModal.svelte';
 	import type { PageData } from './$types';
@@ -274,6 +275,16 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 				onTagsSelected={handleTagsChange}
 			/>
 		</NavContainer>
+
+	<!-- Show filters status when nav is collapsed -->
+	{#if !navExpanded}
+		<FiltersStatusPanel
+			selectedRecordTypes={currentRecordTypes}
+			allRecordTypes={recordTypes}
+			selectedTags={currentTags}
+			class="absolute top-4 left-12 z-25 max-w-sm"
+		/>
+	{/if}
 
 		{#if showCellModal && selectedCellId}
 			<div

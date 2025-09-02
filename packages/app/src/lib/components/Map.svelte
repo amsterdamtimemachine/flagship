@@ -208,7 +208,7 @@
 			
 			// Debug: Log available sources and layers
 		console.log('📍 Map sources:', mapInstance.getStyle().sources);
-		console.log('📍 Map layers:', mapInstance.getStyle().layers.map(l => ({ id: l.id, type: l.type, source: l.source })));
+		console.log('📍 Map layers:', mapInstance.getStyle().layers.map(l => ({ id: l.id, type: l.type, source: (l as any).source })));
 		
 		// Heatmap geometry
 			const geojsonData = generateHeatmapCells(heatmapBlueprint);
