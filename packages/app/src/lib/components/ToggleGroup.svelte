@@ -26,6 +26,7 @@
 	import { Check } from 'phosphor-svelte';
 	import { mergeCss } from '$utils/utils';
 	import type { Snippet } from 'svelte';
+	import type { PhosphorIcon } from '@atm/shared/types';
 
 	interface Props {
 		items: string[];
@@ -35,6 +36,7 @@
 		disabledItems?: string[];
 		onItemSelected?: (selected: string[] | string) => void;
 		class?: string;
+		checkIcon?: PhosphorIcon;
 		children: Snippet<[item: string, isSelected: boolean, isDisabled: boolean]>;
 	}
 
@@ -46,6 +48,7 @@
 		type = 'multiple',
 		onItemSelected,
 		class: className,
+		checkIcon: CheckIcon = Check,
 		children
 	}: Props = $props();
 
@@ -106,7 +109,7 @@
 				aria-hidden="true"
 			>
 				{#if isSelected(itemValue)}
-					<Check size={16} weight="bold" />
+					<CheckIcon size={18} weight="bold" />
 				{/if}
 			</span>
 

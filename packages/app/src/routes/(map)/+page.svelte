@@ -16,7 +16,7 @@
 	import FeaturesPanel from '$components/FeaturesPanel.svelte';
 	import NavContainer from '$components/NavContainer.svelte';
 	import ErrorHandler from '$components/ErrorHandler.svelte';
-
+	import FeatureDetailModal from '$components/FeatureDetailModal.svelte';
 	import type { PageData } from './$types';
 import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline } from '@atm/shared/types';
 
@@ -239,7 +239,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 
 		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
 			<div class="flex">
-				<h2 class="pr-1">Categories</h2>
+				<h2 class="pr-1">Content type</h2>
 				<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
 			</div>
 			<ToggleGroup
@@ -291,4 +291,6 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 			onPeriodChange={handlePeriodChange}
 		/>
 	{/if}
+
+	<FeatureDetailModal />
 </div>

@@ -206,7 +206,11 @@
 			if (!map) return; // Guard for TypeScript
 			const mapInstance = map;
 			
-			// Heatmap geometry
+			// Debug: Log available sources and layers
+		console.log('📍 Map sources:', mapInstance.getStyle().sources);
+		console.log('📍 Map layers:', mapInstance.getStyle().layers.map(l => ({ id: l.id, type: l.type, source: l.source })));
+		
+		// Heatmap geometry
 			const geojsonData = generateHeatmapCells(heatmapBlueprint);
 
 			mapInstance.addSource('heatmap', {
@@ -238,7 +242,20 @@
 				}
 			});
 
-			// Event handlers
+			// Add water outline on top of heatmap
+		mapInstance.addLayer({
+			id: 'heatmap-water-outlines',
+			type: 'line',
+			source: 'maptiler_planet',
+			'source-layer': 'water',
+			paint: {
+				'line-color': '#d69b58',
+				'line-width': 0.5,
+				'line-opacity': 0.8
+			}
+		});
+
+		// Event handlers
 			mapInstance.on('mousemove', 'heatmap-squares', (e) => {
 				if (e.features?.[0]) {
 					const feature = e.features[0];

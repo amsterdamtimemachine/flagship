@@ -1,4 +1,4 @@
-// src/lib/server/apiServiceSingleton.ts
+// src/lib/server/dataServiceSingleton.ts
 import { VisualizationDataService } from './dataService.js';
 
 // Get binary path from environment

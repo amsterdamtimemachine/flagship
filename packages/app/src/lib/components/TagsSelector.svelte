@@ -1,7 +1,8 @@
 <script lang="ts">
 	import ToggleGroup from './ToggleGroup.svelte';
 	import Tag from './Tag.svelte';
-	import type { RecordType } from '@atm/shared/types';
+	import type { RecordType, PhosphorIcon } from '@atm/shared/types';
+	import { Plus } from 'phosphor-svelte';
 
 	interface Props {
 		recordTypes: RecordType[]; // Currently selected record types
@@ -18,7 +19,7 @@
 		availableTags,
 		selectedTags,
 		onTagsSelected,
-		class: className = ''
+		class: className = '',
 	}: Props = $props();
 
 	// Tag combination state
@@ -117,6 +118,7 @@
 				onItemSelected={handleTagSelection}
 				orientation="vertical"
 				type="multiple"
+				checkIcon={Plus}
 			>
 				{#snippet children(item, isSelected, isDisabled)}
 					<Tag variant={isSelected ? 'selected' : 'default'} disabled={isDisabled}>
