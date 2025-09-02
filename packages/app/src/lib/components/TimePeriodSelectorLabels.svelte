@@ -12,8 +12,8 @@
 		{@const position = (i / (displayPeriods.length - 1)) * 100}
 		<text
 			x="{position}%"
-			y={timelineHeight + 24}
-			font-size="16"
+			y={timelineHeight + 18}
+			font-size="15"
 			fill="black"
 			text-anchor={i === 0 ? 'start' : i === displayPeriods.length - 1 ? 'end' : 'middle'}
 			class="font-sans"

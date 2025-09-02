@@ -238,25 +238,32 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 		{/if}
 
 		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
-			<div class="flex">
-				<h2 class="pr-1">Content type</h2>
-				<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
-			</div>
-			<ToggleGroup
-				items={recordTypes}
-				selectedItems={currentRecordTypes}
-				onItemSelected={handleRecordTypeChange}
-			>
-				{#snippet children(item, isSelected, isDisabled)}
-					<span class="transition-colors select-none {isDisabled ? 'text-gray-400' : 'text-gray-700'}">
-						{item}
-					</span>
-				{/snippet}
-			</ToggleGroup>
+			<h1 class="mb-4">Amsterdam Time Machine</h1>
 
-			<div class="flex">
-				<h2 class="pr-1">Themes</h2>
-				<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
+			<div class="mb-4">
+				<div class="flex">
+					<h2 class="mb-2 pr-1">Content type</h2>
+					<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
+				</div>
+
+				<ToggleGroup
+					items={recordTypes}
+					selectedItems={currentRecordTypes}
+					onItemSelected={handleRecordTypeChange}>
+					{#snippet children(item, isSelected, isDisabled)}
+						<span class="transition-colors select-none {isDisabled ? 'text-gray-400' : 'text-gray-700'}">
+							{item}
+						</span>
+					{/snippet}
+				</ToggleGroup>
+			</div>
+
+			<div class="mb-4">
+				<div class="flex">
+					<h2 class="pr-1">Topics</h2>
+					<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
+				</div>
+				<span class="text-xs text-neutral-600"> Include only content with all selected topics </span>
 			</div>
 
 			<TagsSelector
@@ -270,7 +277,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 
 		{#if showCellModal && selectedCellId}
 			<div
-				class="z-30 absolute top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300 shadow-[-5px_0px_20px_5px_rgba(0,0,0,0.07)]"
+				class="z-20 absolute top-0 right-0 w-1/2 h-full bg-white overflow-y-auto border-l border-solid border-gray-300 shadow-[-5px_0px_20px_5px_rgba(0,0,0,0.07)]"
 			>
 				<FeaturesPanel
 					cellId={selectedCellId}
@@ -289,6 +296,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 			period={currentPeriod}
 			histogram={mergedHistogram}
 			onPeriodChange={handlePeriodChange}
+			class="z-40"
 		/>
 	{/if}
 

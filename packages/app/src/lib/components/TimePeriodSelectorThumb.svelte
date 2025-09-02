@@ -26,7 +26,7 @@
 </script>
 
 <div
-	class="absolute z-10 cursor-grab bg-transparent border-2 border-red-500 rounded hover:bg-red-400/20 transition-colors duration-200"
+	class="absolute z-10 cursor-grab bg-transparent border-[3px] border-[#ff6b36] hover:bg-[#9c4324]/50 transition-colors duration-200"
 	class:cursor-grabbing={isDragging}
 	style="left: {thumbPosition()}%; width: {thumbWidth()}%; height: {timelineHeight}px; top: 0;"
 	onmousedown={onDragStart}

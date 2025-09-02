@@ -27,7 +27,7 @@
 
 	// Hardcoded icon styling for consistency
 	const iconProps: PhosphorIconProps = {
-		size: 18,
+		size: 16,
 		weight: 'bold',
 		color: 'white',
 		mirrored: false
@@ -60,13 +60,13 @@
 
 <!-- Trigger element -->
 {#if disabled}
-	<span class="inline-flex items-center justify-center w-6 h-6 bg-gray-300 rounded-full cursor-not-allowed {className}">
+	<span class="inline-flex items-center justify-center w-5 h-5 bg-gray-300 rounded-full cursor-not-allowed {className}">
 		<Icon {...iconProps} />
 	</span>
 {:else}
 	<span
 		use:melt={$trigger}
-		class="inline-flex items-center justify-center w-6 h-6 bg-black rounded-full cursor-pointer hover:bg-gray-800 transition-colors {className}"
+		class="inline-flex items-center justify-center w-5 h-5 bg-black rounded-full cursor-pointer hover:bg-gray-800 transition-colors {className}"
 	>
 		<Icon {...iconProps} />
 	</span>

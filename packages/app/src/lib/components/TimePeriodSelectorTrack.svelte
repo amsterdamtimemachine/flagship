@@ -44,7 +44,7 @@
 		{@const barWidth = 100 / bins.length}
 		{@const x = (i / bins.length) * 100}
 		<button
-			class="absolute h-full bg-transparent hover:bg-blue-200/30 transition-colors duration-200 cursor-pointer"
+			class="absolute h-full bg-transparent hover:bg-blue-800/50 transition-colors duration-200 cursor-pointer"
 			style="left: {x}%; width: {barWidth}%;"
 			onclick={(e) => {
 				e.stopPropagation();

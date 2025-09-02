@@ -43,11 +43,11 @@
 			x2="{position}%"
 			y2={timelineHeight}
 			stroke="black"
-			stroke-width="1"
+			stroke-width="0.5"
 			transform={i === 0 ? 'translate(0.5, 0)' : i === bins.length ? 'translate(-0.5, 0)' : ''}
 		/>
 	{/each}
 
 	<!-- Track line -->
-	<line x1="0%" y1={timelineHeight} x2="100%" y2={timelineHeight} stroke="black" stroke-width="1" />
+	<line x1="0%" y1={timelineHeight} x2="100%" y2={timelineHeight} stroke="black" stroke-width="0.5" />
 </svg>
