@@ -2,7 +2,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { RecordType, HistogramApiResponse } from '@atm/shared/types';
-import { getApiService } from '$lib/server/apiServiceSingleton';
+import { getDataService } from '$lib/server/dataServiceSingleton';
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
@@ -11,12 +11,12 @@ export const GET: RequestHandler = async ({ url }) => {
 		const tagsParam = url.searchParams.get('tags');
 
 		// Get API service to access metadata for defaulting
-		const apiService = await getApiService();
+		const dataService = await getDataService();
 
 		// Parse recordTypes - default to all available recordTypes if none specified
 		let recordTypes: RecordType[];
 		if (!recordTypesParam) {
-			const metadata = await apiService.getVisualizationMetadata();
+			const metadata = await dataService.getVisualizationMetadata();
 			recordTypes = metadata.recordTypes;
 			console.log(`📊 No recordTypes specified, defaulting to all: ${recordTypes.join(', ')}`);
 		} else {
@@ -37,7 +37,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		);
 
 		// Get histogram from service
-		const response = await apiService.getHistogram(recordTypes, tags);
+		const response = await dataService.getHistogram(recordTypes, tags);
 
 		// Set appropriate cache headers
 		const headers = {

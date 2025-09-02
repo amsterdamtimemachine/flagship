@@ -4,7 +4,7 @@
 	import type { PhosphorIcon, PhosphorIconProps } from '@atm/shared/types';
 
 	interface Props {
-		text: string; // Required text for the tooltip
+		text: string; 
 		icon: PhosphorIcon;
 		placement?:
 			| 'top'

@@ -1,5 +1,5 @@
 // src/lib/server/apiServiceSingleton.ts
-import { VisualizationApiService } from './apiService.js';
+import { VisualizationDataService } from './dataService.js';
 
 // Get binary path from environment
 
@@ -10,16 +10,16 @@ if (!PRIVATE_VISUALIZATION_BINARY_PATH) {
 }
 
 // Create singleton instance
-export const apiService = new VisualizationApiService(PRIVATE_VISUALIZATION_BINARY_PATH);
+export const dataService = new VisualizationDataService(PRIVATE_VISUALIZATION_BINARY_PATH);
 
 // Initialize the service once
 let initPromise: Promise<void> | null = null;
 
-export async function getApiService(): Promise<VisualizationApiService> {
+export async function getDataService(): Promise<VisualizationDataService> {
 	if (!initPromise) {
-		initPromise = apiService.initialize();
+		initPromise = dataService.initialize();
 	}
 
 	await initPromise;
-	return apiService;
+	return dataService;
 }

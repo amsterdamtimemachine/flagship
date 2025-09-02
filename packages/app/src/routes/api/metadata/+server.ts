@@ -1,7 +1,7 @@
 // src/routes/api/metadata/+server.ts
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getApiService } from '$lib/server/apiServiceSingleton';
+import { getDataService } from '$lib/server/dataServiceSingleton';
 import type { VisualizationMetadata } from '@atm/shared/types';
 
 interface MetadataApiResponse extends VisualizationMetadata {
@@ -13,8 +13,8 @@ export const GET: RequestHandler = async () => {
 	try {
 		console.log('📋 Metadata API request');
 
-		const apiService = await getApiService();
-		const metadata = await apiService.getVisualizationMetadata();
+		const dataService = await getDataService();
+		const metadata = await dataService.getVisualizationMetadata();
 
 		console.log(
 			`✅ Metadata API success - ${metadata.timeSlices.length} time slices, ${metadata.recordTypes.length} record types`

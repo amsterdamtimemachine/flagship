@@ -2,7 +2,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { RecordType } from '@atm/shared/types';
-import { getApiService } from '$lib/server/apiServiceSingleton';
+import { getDataService } from '$lib/server/dataServiceSingleton';
 
 interface TagCombinationsResponse {
 	availableTags: Array<{ name: string; totalFeatures: number }>;
@@ -23,7 +23,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		const validateAllParam = url.searchParams.get('validateAll');
 
 		// Get API service
-		const apiService = await getApiService();
+		const dataService = await getDataService();
 
 		// Parse recordTypes - default to all available recordTypes if none specified
 		let recordTypes: RecordType[] | undefined;
@@ -47,7 +47,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		// Handle validation mode
 		if (validateAllParam === 'true' && selectedTags.length > 0) {
 			// Use direct validation against precomputed combinations
-			const validationResult = await apiService.validateTagCombination(recordTypes, selectedTags);
+			const validationResult = await dataService.validateTagCombination(recordTypes, selectedTags);
 
 			// Set appropriate cache headers
 			const headers = {
@@ -73,7 +73,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		}
 
 		// Normal mode: get available next tags
-		const response = await apiService.getTagCombinations(recordTypes, selectedTags);
+		const response = await dataService.getTagCombinations(recordTypes, selectedTags);
 
 		// Set appropriate cache headers
 		const headers = {

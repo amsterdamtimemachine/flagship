@@ -2,7 +2,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { RecordType } from '@atm/shared/types';
-import { getApiService } from '$lib/server/apiServiceSingleton';
+import { getDataService } from '$lib/server/dataServiceSingleton';
 
 interface AvailableTagsResponse {
 	tags: Array<{ name: string; totalFeatures: number; recordTypes: RecordType[] }>;
@@ -17,7 +17,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		const recordTypesParam = url.searchParams.get('recordTypes');
 
 		// Get API service
-		const apiService = await getApiService();
+		const dataService = await getDataService();
 
 		// Parse recordTypes - default to all available recordTypes if none specified
 		let recordTypes: RecordType[] | undefined;
@@ -28,7 +28,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		console.log(`🏷️ Available tags API request - recordTypes: ${recordTypes?.join(', ') || 'all'}`);
 
 		// Get available tags from service
-		const response = await apiService.getAvailableTags(recordTypes);
+		const response = await dataService.getAvailableTags(recordTypes);
 
 		// Set appropriate cache headers
 		const headers = {

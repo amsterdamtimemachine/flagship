@@ -1,14 +1,13 @@
 // src/lib/server/api-service.ts
 import type {
 	RecordType,
-	Histogram,
 	HeatmapTimeline,
 	HistogramApiResponse,
 	HeatmapTimelineApiResponse
 } from '@atm/shared/types';
 import { VisualizationBinaryHandler } from './binaryHandler';
 
-export class VisualizationApiService {
+export class VisualizationDataService {
 	private binaryHandler: VisualizationBinaryHandler;
 	private initialized = false;
 
@@ -20,7 +19,7 @@ export class VisualizationApiService {
 		if (!this.initialized) {
 			await this.binaryHandler.initialize();
 			this.initialized = true;
-			console.log('✅ VisualizationApiService initialized');
+			console.log('✅ VisualizationDataService initialized');
 		}
 	}
 
@@ -285,8 +284,6 @@ export class VisualizationApiService {
 				// Multiple tags - use combination key
 				const comboKey = tags.sort().join('+');
 				resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, effectiveRecordTypes, comboKey);
-
-				// No need to throw error - empty timeline is valid (shows empty visualization)
 
 				console.log(
 					`🏷️ Returning tag-combination-filtered timeline for "${comboKey}": ${Object.keys(resultTimeline).length} periods`
