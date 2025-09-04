@@ -12,27 +12,30 @@
 
 	let { selectedRecordTypes, allRecordTypes, selectedTags, class: className }: Props = $props();
 
-	// Generate content types part (OR logic)
-	const contentTypesText = $derived.by(() => {
-		if (selectedRecordTypes.length === 0 || 
-			(selectedRecordTypes.length === allRecordTypes.length && 
-			 allRecordTypes.every(type => selectedRecordTypes.includes(type)))) {
-			return 'all content types';
-		} else if (selectedRecordTypes.length === 1) {
-			return selectedRecordTypes[0];
-		} else {
-			const lastType = selectedRecordTypes[selectedRecordTypes.length - 1];
-			const otherTypes = selectedRecordTypes.slice(0, -1);
-			return `${otherTypes.join(' or ')} or ${lastType}`;
-		}
-	});
+	// Check if all content types are selected
+	const hasAllTypes = $derived(
+		selectedRecordTypes.length === 0 || 
+		(selectedRecordTypes.length === allRecordTypes.length && 
+		 allRecordTypes.every(type => selectedRecordTypes.includes(type)))
+	);
+
+	// Get content types to display
+	const displayedRecordTypes = $derived(
+		hasAllTypes ? allRecordTypes : selectedRecordTypes
+	);
 </script>
 
 <div class={mergeCss("bg-white border border-gray-300 rounded-sm shadow-sm p-1", className)}>
-	<div class="text-sm text-gray-700 leading-relaxed flex flex-wrap items-center">
-		<span>Viewing {contentTypesText}</span>
+	<div class="text-sm text-gray-700 leading-relaxed flex flex-wrap items-center gap-1">
+		<span>Viewing</span>
+		{#each displayedRecordTypes as recordType, index}
+			<Tag variant="selected-outline">{recordType}</Tag>
+			{#if index < displayedRecordTypes.length - 1}
+				<span>or</span>
+			{/if}
+		{/each}
 		{#if selectedTags.length > 0}
-			<span class="mx-1">and</span>
+			<span>and</span>
 			{#each selectedTags as tag, index}
 				<Tag variant="selected">{tag}</Tag>
 				{#if index < selectedTags.length - 1}

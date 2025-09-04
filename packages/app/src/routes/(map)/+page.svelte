@@ -248,7 +248,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 					onItemSelected={handleRecordTypeChange}
 					requireOneItemSelected={true}>
 					{#snippet children(item, isSelected, isDisabled)}
-						<Tag variant={isSelected ? 'selected' : 'outline'} disabled={isDisabled}>
+						<Tag variant={isSelected ? 'selected-outline' : 'outline'} disabled={isDisabled}>
 							{item}
 						</Tag>
 					{/snippet}
