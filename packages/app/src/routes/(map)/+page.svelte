@@ -245,7 +245,8 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 				<ToggleGroup
 					items={recordTypes}
 					selectedItems={currentRecordTypes}
-					onItemSelected={handleRecordTypeChange}>
+					onItemSelected={handleRecordTypeChange}
+					requireOneItemSelected={true}>
 					{#snippet children(item, isSelected, isDisabled)}
 						<Tag variant={isSelected ? 'selected' : 'outline'} disabled={isDisabled}>
 							{item}

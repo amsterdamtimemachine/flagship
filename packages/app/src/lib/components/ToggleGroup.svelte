@@ -35,6 +35,7 @@
 		selectedItems?: string[];
 		disabledItems?: string[];
 		onItemSelected?: (selected: string[] | string) => void;
+		requireOneItemSelected?: boolean;
 		class?: string;
 		checkIcon?: PhosphorIcon;
 		children: Snippet<[item: string, isSelected: boolean, isDisabled: boolean]>;
@@ -47,6 +48,7 @@
 		orientation = 'vertical',
 		type = 'multiple',
 		onItemSelected,
+		requireOneItemSelected = false,
 		class: className,
 		checkIcon: CheckIcon = Check,
 		children
@@ -62,6 +64,13 @@
 		defaultValue: type === 'single' ? selectedItems[0] : selectedItems,
 		orientation: orientation,
 		onValueChange: ({ curr, next }) => {
+			// If requireOneItemSelected is true, prevent empty selection
+			if (requireOneItemSelected && (!next || (Array.isArray(next) && next.length === 0))) {
+				// Reject the change - return current value to maintain selection
+				return curr;
+			}
+			
+			// Valid change - proceed normally
 			if (onItemSelected && next !== undefined) {
 				onItemSelected(next);
 			}
