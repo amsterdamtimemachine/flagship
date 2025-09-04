@@ -113,8 +113,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			if (validTypes.length > 0) {
 				currentRecordTypes = validTypes;
 			} else {
-				// If no valid record types are provided the app will default to fetching all data
-				// Add validation error for invalid recordTypes
+				// If no valid record types are provided, add validation error but default to all types
 				errors.push(
 					createValidationError(
 						'recordTypes',
@@ -122,7 +121,12 @@ export const load: PageLoad = async ({ fetch, url }) => {
 						`Must contain at least one of: ${metadata.recordTypes.join(', ')}`
 					)
 				);
+				// Default to all record types for better UX
+				currentRecordTypes = metadata.recordTypes;
 			}
+		} else {
+			// No recordTypes parameter - initialize with all available record types
+			currentRecordTypes = metadata.recordTypes;
 		}
 	}
 

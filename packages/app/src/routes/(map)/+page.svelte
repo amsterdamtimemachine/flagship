@@ -12,6 +12,7 @@
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
 	import TagsSelector from '$components/TagsSelector.svelte';
+	import Tag from '$components/Tag.svelte';
 	import Tooltip from '$components/Tooltip.svelte';
 	import FeaturesPanel from '$components/FeaturesPanel.svelte';
 	import NavContainer from '$components/NavContainer.svelte';
@@ -54,20 +55,17 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 
 	let mergedHeatmapTimeline = $derived.by(() => {
 		if (heatmapTimeline && currentRecordTypes && recordTypes) {
-			// Empty selection = show all recordTypes (default behavior)
-			const effectiveRecordTypes = currentRecordTypes.length > 0 ? currentRecordTypes : recordTypes;
-
 			const timelineData = heatmapTimeline?.heatmapTimeline || heatmapTimeline;
 
 			const needsMerging =
-				effectiveRecordTypes.length > 1 || (currentTags && currentTags.length > 0);
+				currentRecordTypes.length > 1 || (currentTags && currentTags.length > 0);
 
 			if (needsMerging) {
 				// Merge entire timeline for smooth navigation
 				const selectedTags = currentTags && currentTags.length > 0 ? currentTags : undefined;
 				return mergeHeatmapTimeline(
 					timelineData as unknown as HeatmapTimeline,
-					effectiveRecordTypes,
+					currentRecordTypes,
 					selectedTags,
 					data?.metadata?.heatmapBlueprint
 				);
@@ -81,16 +79,13 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 
 	let mergedHistogram = $derived.by(() => {
 		if (histograms && currentRecordTypes && recordTypes) {
-			// Empty selection = show all recordTypes (default behavior)
-			const effectiveRecordTypes = currentRecordTypes.length > 0 ? currentRecordTypes : recordTypes;
-
 			// Determine selected tags if any
 			const selectedTags = currentTags && currentTags.length > 0 ? currentTags : undefined;
 
 			// Collect histograms to merge
 			const histogramsToMerge = [];
 
-			for (const recordType of effectiveRecordTypes) {
+			for (const recordType of currentRecordTypes) {
 				const recordTypeData = histograms[recordType];
 				if (recordTypeData) {
 					if (selectedTags && selectedTags.length > 0) {
@@ -252,9 +247,9 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 					selectedItems={currentRecordTypes}
 					onItemSelected={handleRecordTypeChange}>
 					{#snippet children(item, isSelected, isDisabled)}
-						<span class="text-xs transition-colors select-none {isDisabled ? 'text-gray-400' : 'text-gray-700'}">
+						<Tag variant={isSelected ? 'selected' : 'outline'} disabled={isDisabled}>
 							{item}
-						</span>
+						</Tag>
 					{/snippet}
 				</ToggleGroup>
 			</div>

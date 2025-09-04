@@ -3,7 +3,7 @@
 
 	interface Props {
 		class?: string;
-		variant?: 'default' | 'selected';
+		variant?: 'default' | 'selected' | 'outline';
 		disabled?: boolean;
 		children: import('svelte').Snippet;
 	}
@@ -17,6 +17,8 @@
 			? 'bg-gray-100 text-gray-400'
 			: variant === 'selected'
 			? 'bg-blue-100 text-blue-800'
+			: variant === 'outline'
+			? 'border border-gray-300 text-gray-700 bg-transparent'
 			: 'bg-gray-100 text-gray-700'
 	);
 </script>
