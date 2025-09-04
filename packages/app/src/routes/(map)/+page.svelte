@@ -252,7 +252,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 					selectedItems={currentRecordTypes}
 					onItemSelected={handleRecordTypeChange}>
 					{#snippet children(item, isSelected, isDisabled)}
-						<span class="transition-colors select-none {isDisabled ? 'text-gray-400' : 'text-gray-700'}">
+						<span class="text-xs transition-colors select-none {isDisabled ? 'text-gray-400' : 'text-gray-700'}">
 							{item}
 						</span>
 					{/snippet}
@@ -282,7 +282,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 			selectedRecordTypes={currentRecordTypes}
 			allRecordTypes={recordTypes}
 			selectedTags={currentTags}
-			class="absolute top-4 left-12 z-25 max-w-sm"
+			class="absolute top-3 left-3"
 		/>
 	{/if}
 

@@ -2,7 +2,6 @@
 	import ToggleGroup from './ToggleGroup.svelte';
 	import Tag from './Tag.svelte';
 	import type { RecordType, PhosphorIcon } from '@atm/shared/types';
-	import { Plus } from 'phosphor-svelte';
 
 	interface Props {
 		recordTypes: RecordType[]; // Currently selected record types
@@ -118,7 +117,6 @@
 				onItemSelected={handleTagSelection}
 				orientation="vertical"
 				type="multiple"
-				checkIcon={Plus}
 			>
 				{#snippet children(item, isSelected, isDisabled)}
 					<Tag variant={isSelected ? 'selected' : 'default'} disabled={isDisabled}>
