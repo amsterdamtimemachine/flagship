@@ -6,7 +6,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import maplibre, { type Map as MapLibreMap } from 'maplibre-gl';
 	import type { FeatureCollection, Feature, Polygon, GeoJsonProperties } from 'geojson';
-	import type { Heatmap, HeatmapDimensions, HeatmapBlueprintCell } from '@atm/shared/types';
+	import type { Heatmap, HeatmapDimensions, HeatmapBlueprintCell, Coordinates } from '@atm/shared/types';
 	import { mergeCss } from '$utils/utils';
 
 	interface CellProperties {
@@ -17,14 +17,43 @@
 		[key: string]: any; // Allow additional GeoJSON properties
 	}
 
+	export interface MapStyle {
+		boundsPanningOffsetLat: number, // in degrees 
+		boundsPanningOffsetLon: number, // in degrees 
+		minZoom: number,
+		maxZoom: number,
+		defaultZoom: number,
+		center: Coordinates,
+		cellSelectedOutlineColor: string, // hex
+		cellValueColor: string, // hex
+		outlineLayerColor: string, // hex
+		backgroundColor: string, // hex
+		waterFillColor: string, // hex
+	}
+
 	export interface MapProps {
 		heatmap: Heatmap;
 		heatmapBlueprint: HeatmapBlueprintCell[];
 		dimensions: HeatmapDimensions;
 		selectedCellId: string | null;
+		mapStyle: MapStyle;
 		class?: string;
 		handleCellClick?: (cellId: string | null) => void;
 		handleMapLoaded?: () => void;
+	}
+
+	const defaultMapStyle : mapStyle = {
+		boundsPanningOffsetLat: 0.1,
+		boundsPanningOffsetLon: 0.1,
+		minZoom: 11,
+		maxZoom: 14,
+		defaultZoom: 12,
+		center: {lat: 4.895645, lon: 52.372219},
+		cellSelectedOutlineColor: '#ff0000',
+		cellValueColor: '#1235fc',
+		outlineLayerColor:  '#2f3236',
+		backgroundColor: '#f5f4f2',
+		waterFillColor: '#D2E7EA',
 	}
 
 	let {
@@ -33,6 +62,7 @@
 		dimensions,
 		selectedCellId = null,
 		class: className,
+		mapStyle = defaultMapStyle,
 		handleCellClick,
 		handleMapLoaded
 	}: MapProps = $props();
@@ -187,14 +217,14 @@
 		map = new maplibre.Map({
 			container: mapContainer,
 			style: STYLE_URL,
-			//	maxBounds: [
-			//		[west, south],
-			//		[east, north]
-			//	],
-			center: [4.895645, 52.372219],
-			minZoom: 10,
-			maxZoom: 14,
-			zoom: 13,
+			maxBounds: [
+				[west - mapStyle.boundsPanningOffsetLon, south - mapStyle.boundsPanningOffsetLat],
+				[east + mapStyle.boundsPanningOffsetLon, north + mapStyle.boundsPanningOffsetLat]
+			],
+			center:  [mapStyle.center.lat, mapStyle.center.lon],
+			minZoom: mapStyle.minZoom,
+			maxZoom: mapStyle.maxZoom,
+			zoom: mapStyle.defaultZoom,
 			dragRotate: false,
 			touchZoomRotate: false,
 			dragPan: true,
@@ -202,16 +232,23 @@
 			scrollZoom: true
 		});
 
+
 		map.on('load', () => {
 			if (!map) return; // Guard for TypeScript
 			const mapInstance = map;
-			
-			// Debug: Log available sources and layers
-		console.log('📍 Map sources:', mapInstance.getStyle().sources);
-		console.log('📍 Map layers:', mapInstance.getStyle().layers.map(l => ({ id: l.id, type: l.type, source: (l as any).source })));
+
 		
-		// Heatmap geometry
+			// Heatmap geometry
 			const geojsonData = generateHeatmapCells(heatmapBlueprint);
+
+			// Add background layer with custom color
+			mapInstance.addLayer({
+				id: 'background',
+				type: 'background',
+				paint: {
+					'background-color': mapStyle.backgroundColor
+				}
+			}, mapInstance.getStyle().layers[0]?.id);
 
 			mapInstance.addSource('heatmap', {
 				type: 'geojson',
@@ -225,7 +262,7 @@
 				type: 'fill',
 				source: 'heatmap',
 				paint: {
-					'fill-color': '#0000ff',
+					'fill-color': mapStyle.cellValueColor,
 					'fill-opacity': ['coalesce', ['feature-state', 'value'], 0]
 				}
 			});
@@ -236,43 +273,99 @@
 				type: 'line',
 				source: 'heatmap',
 				paint: {
-					'line-color': '#ff0000',
-					'line-width': 2,
+					'line-color': mapStyle.cellSelectedOutlineColor,
+					'line-width': 3,
 					'line-opacity': ['case', ['boolean', ['feature-state', 'selected'], false], 1, 0]
 				}
 			});
 
+
+
+			// Add water fill layer
+			mapInstance.addLayer({
+				id: 'heatmap-water-fill',
+				type: 'fill',
+				source: 'maptiler_planet',
+				'source-layer': 'water',
+				paint: {
+					'fill-color': mapStyle.waterFillColor,
+					'fill-opacity': 0.6
+				}
+			});
+
 			// Add water outline on top of heatmap
-		mapInstance.addLayer({
-			id: 'heatmap-water-outlines',
-			type: 'line',
-			source: 'maptiler_planet',
-			'source-layer': 'water',
-			paint: {
-				'line-color': '#d69b58',
-				'line-width': 0.5,
-				'line-opacity': 0.8
-			}
-		});
+		//	mapInstance.addLayer({
+		//		id: 'heatmap-water-outlines',
+		//		type: 'line',
+		//		source: 'maptiler_planet',
+		//		'source-layer': 'water',
+		//		paint: {
+		//			'line-color': mapStyle.outlineLayerColor,
+		//			'line-width': 0.5,
+		//			'line-opacity': 0.8
+		//		}
+		//	});
+
+			// Hover cell
+			mapInstance.addLayer({
+				id: 'hovered-cell',
+				type: 'line',
+				source: 'heatmap',
+				paint: {
+					'line-color': '#ffffff',
+					'line-width': 3,
+					'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.8, 0]
+				}
+			});
+
+			
+
+			
 
 		// Event handlers
+			let hoveredFeatureId: string | null = null;
+
 			mapInstance.on('mousemove', 'heatmap-squares', (e) => {
 				if (e.features?.[0]) {
 					const feature = e.features[0];
+					const featureId = feature.properties.id;
 					const featureState = mapInstance.getFeatureState({
 						source: 'heatmap',
-						id: feature.properties.id
+						id: featureId
 					});
+
+					// Clear previous hover state
+					if (hoveredFeatureId && hoveredFeatureId !== featureId) {
+						mapInstance.setFeatureState({
+							source: 'heatmap',
+							id: hoveredFeatureId
+						}, { hover: false });
+					}
+
+					// Set new hover state
 					if (featureState.count > 0) {
 						mapInstance.getCanvas().style.cursor = 'pointer';
+						mapInstance.setFeatureState({
+							source: 'heatmap',
+							id: featureId
+						}, { hover: true });
+						hoveredFeatureId = featureId;
 					} else {
 						mapInstance.getCanvas().style.cursor = '';
+						hoveredFeatureId = null;
 					}
 				}
 			});
 
 			mapInstance.on('mouseleave', 'heatmap-squares', () => {
 				mapInstance.getCanvas().style.cursor = '';
+				if (hoveredFeatureId) {
+					mapInstance.setFeatureState({
+						source: 'heatmap',
+						id: hoveredFeatureId
+					}, { hover: false });
+					hoveredFeatureId = null;
+				}
 			});
 
 			mapInstance.on('click', 'heatmap-squares', (e) => {

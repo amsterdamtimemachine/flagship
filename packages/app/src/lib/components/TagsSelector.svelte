@@ -23,6 +23,8 @@
 
 	// Tag combination state
 	let availableTagsForSelection = $state<string[]>([]);
+	
+	console.log(availableTags);
 
 	// Use selectedTags from route data
 	let validSelectedTags = $derived(selectedTags);
