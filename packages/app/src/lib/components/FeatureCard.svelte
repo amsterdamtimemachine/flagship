@@ -30,7 +30,7 @@
 
 </script>
 
-<div class="w-full border rounded-sm border-gray-300 bg-white min-w-0">
+<div class="w-full border rounded-sm border-gray-300 bg-atm-sand min-w-0">
 	<FeatureCardHeader class="p-2" feature={commonProps} />
 	<div class={expanded ? '' : 'p-2'}>
 		<h3

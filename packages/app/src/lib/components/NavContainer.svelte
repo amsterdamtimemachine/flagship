@@ -39,7 +39,7 @@
 <div
 	id="table-of-contents-container"
 	class={mergeCss(
-		'absolute left-0 top-0 w-[300px] h-full xl:w-[290px] 2xl:w-[400px] border-r border-gray-300 bg-white shadow-[5px_0px_20px_5px_rgba(0,0,0,0.07)]',
+		'absolute left-0 top-0 w-[300px] h-full xl:w-[290px] 2xl:w-[400px] border-r border-gray-300 bg-atm-sand shadow-[5px_0px_20px_5px_rgba(0,0,0,0.07)]',
 		className
 	)}
 	style="transform: translateX({$navPosition}%);"

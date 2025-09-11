@@ -143,7 +143,7 @@
 
 <!-- Data Header -->
 <div
-	class="sticky py-2 px-3 top-0 z-10 bg-white border-b border-gray-300 flex items-center justify-between shadow-[0px_5px_20px_5px_rgba(0,0,0,0.07)]"
+	class="sticky py-2 px-3 top-0 z-10 bg-atm-sand border-b border-gray-300 flex items-center justify-between shadow-[0px_5px_20px_5px_rgba(0,0,0,0.07)]"
 >
 	<Tooltip icon={QuestionMark} text="" />
 	<div class="flex items-center gap-4">
@@ -163,7 +163,7 @@
 	<Button icon={X} onclick={closeModal} size={18} aria-label="Close features panel" />
 </div>
 
-<div class="min-h-full bg-gray-300">
+<div class="min-h-full bg-atm-sand-dark">
 	{#if !initialLoading && !loading}
 		{#if allFeatures.length > 0}
 			<FeaturesGrid features={allFeatures} {layoutMemory} />

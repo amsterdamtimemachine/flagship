@@ -43,7 +43,7 @@
 	};
 
 	const baseClasses =
-		'inline-flex items-center text-sm text-blue-600 hover:text-blue-800 underline';
+		'inline-flex items-center text-sm text-link hover:text-link-hover underline';
 	const gapClass = Icon && children ? 'gap-1' : '';
 </script>
 

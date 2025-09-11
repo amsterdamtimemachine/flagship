@@ -57,7 +57,7 @@
 		cellSelectedOutlineColor: '#ff4830',
 		cellHoveredOutlineColor: '#f28374',
 		cellSelectedOutlineWidth: 4, // px
-		cellValueColor: '#002aff',
+		cellValueColor: '#005bff',
 		backgroundColor: '#fbf5f2',
 		waterFillColor: '#e8f2fe',
 		waterOutlineColor:  '#e3bb86',
