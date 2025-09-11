@@ -8,6 +8,7 @@
 	import type { FeatureCollection, Feature, Polygon, GeoJsonProperties } from 'geojson';
 	import type { Heatmap, HeatmapDimensions, HeatmapBlueprintCell, Coordinates } from '@atm/shared/types';
 	import { mergeCss } from '$utils/utils';
+	import { MaskLayer } from '$utils/map';
 
 	interface CellProperties {
 		id: string;
@@ -25,10 +26,14 @@
 		defaultZoom: number,
 		center: Coordinates,
 		cellSelectedOutlineColor: string, // hex
+		cellSelectedOutlineWidth: number, // px
+		cellHoveredOutlineColor: string, //hex
 		cellValueColor: string, // hex
 		outlineLayerColor: string, // hex
 		backgroundColor: string, // hex
 		waterFillColor: string, // hex
+		waterOutlineWidth: number, // px
+		waterOutlineOpacity: number, // 0.0 - 1.0
 	}
 
 	export interface MapProps {
@@ -44,16 +49,20 @@
 
 	const defaultMapStyle : mapStyle = {
 		boundsPanningOffsetLat: 0.1,
-		boundsPanningOffsetLon: 0.1,
+		boundsPanningOffsetLon: 0.2,
 		minZoom: 11,
 		maxZoom: 14,
 		defaultZoom: 12,
 		center: {lat: 4.895645, lon: 52.372219},
-		cellSelectedOutlineColor: '#ff0000',
-		cellValueColor: '#1235fc',
-		outlineLayerColor:  '#2f3236',
-		backgroundColor: '#f5f4f2',
-		waterFillColor: '#D2E7EA',
+		cellSelectedOutlineColor: '#ff4830',
+		cellHoveredOutlineColor: '#f28374',
+		cellSelectedOutlineWidth: 4, // px
+		cellValueColor: '#002aff',
+		backgroundColor: '#fbf5f2',
+		waterFillColor: '#e8f2fe',
+		waterOutlineColor:  '#e3bb86',
+		waterOutlineWidth: 0.5,
+		waterOutlineOpacity: 1.0,
 	}
 
 	let {
@@ -70,6 +79,7 @@
 	let map: MapLibreMap | undefined = $state();
 	let mapContainer: HTMLElement;
 	let isMapLoaded = $state(false);
+	let maskLayer: MaskLayer;
 
 	const cellIdMap = $derived.by(() => {
 		const idMap = new Map<number, string>();
@@ -114,6 +124,7 @@
 		if (!isMapLoaded || !map || !heatmapBlueprint) return;
 		resetAllCells();
 		setActiveCells();
+		updateMask();
 	});
 
 	// Handle selected cell changes - THIS FIXES THE HIGHLIGHTING ISSUE
@@ -156,6 +167,23 @@
 		activeCells.forEach((stateValues, cellId) => {
 			mapInstance.setFeatureState({ source: 'heatmap', id: cellId }, stateValues);
 		});
+	}
+
+	function updateMask(): void {
+		if (!maskLayer || !map) return;
+		
+		// Get the existing heatmap source data
+		const heatmapSource = map.getSource('heatmap') as maplibregl.GeoJSONSource;
+		if (!heatmapSource) return;
+		
+		const sourceData = heatmapSource._data as FeatureCollection<Polygon, CellProperties>;
+		if (!sourceData) return;
+		
+		const activePolygons = sourceData.features.filter(feature => 
+			activeCells.has(feature.properties.id)
+		);
+		
+		maskLayer.setPolygons(activePolygons as Feature<Polygon>[]);
 	}
 
 	function generateHeatmapCells(
@@ -256,6 +284,21 @@
 				promoteId: 'id'
 			});
 
+
+			// Add water fill layer
+			mapInstance.addLayer({
+				id: 'heatmap-water-fill',
+				type: 'fill',
+				source: 'maptiler_planet',
+				'source-layer': 'water',
+				paint: {
+					'fill-color': mapStyle.waterFillColor,
+					'fill-opacity': 1.0
+				}
+			});
+
+
+
 			// Color and opacity of the heatmaps cells
 			mapInstance.addLayer({
 				id: 'heatmap-squares',
@@ -267,6 +310,26 @@
 				}
 			});
 
+
+
+			// Add water outline layer
+			mapInstance.addLayer({
+				id: 'heatmap-water-outlines',
+				type: 'line',
+				source: 'maptiler_planet',
+				'source-layer': 'water',
+				paint: {
+					'line-color': mapStyle.waterOutlineColor,
+					'line-width': mapStyle.waterOutlineWidth,
+					'line-opacity': mapStyle.waterOutlineOpacity,
+				}
+			});
+
+			// Add mask layer to mask water outlines outside active cells
+		//	maskLayer = new MaskLayer('heatmap-mask');
+		//	mapInstance.addLayer(maskLayer); 
+
+
 			// Active cell
 			mapInstance.addLayer({
 				id: 'selected-cell',
@@ -274,37 +337,11 @@
 				source: 'heatmap',
 				paint: {
 					'line-color': mapStyle.cellSelectedOutlineColor,
-					'line-width': 3,
+					'line-width': mapStyle.cellSelectedOutlineWidth,
 					'line-opacity': ['case', ['boolean', ['feature-state', 'selected'], false], 1, 0]
 				}
 			});
 
-
-
-			// Add water fill layer
-			mapInstance.addLayer({
-				id: 'heatmap-water-fill',
-				type: 'fill',
-				source: 'maptiler_planet',
-				'source-layer': 'water',
-				paint: {
-					'fill-color': mapStyle.waterFillColor,
-					'fill-opacity': 0.6
-				}
-			});
-
-			// Add water outline on top of heatmap
-		//	mapInstance.addLayer({
-		//		id: 'heatmap-water-outlines',
-		//		type: 'line',
-		//		source: 'maptiler_planet',
-		//		'source-layer': 'water',
-		//		paint: {
-		//			'line-color': mapStyle.outlineLayerColor,
-		//			'line-width': 0.5,
-		//			'line-opacity': 0.8
-		//		}
-		//	});
 
 			// Hover cell
 			mapInstance.addLayer({
@@ -312,15 +349,13 @@
 				type: 'line',
 				source: 'heatmap',
 				paint: {
-					'line-color': '#ffffff',
-					'line-width': 3,
+					'line-color': mapStyle.cellHoveredOutlineColor,
+					'line-width': mapStyle.cellSelectedOutlineWidth,
 					'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.8, 0]
 				}
 			});
 
-			
-
-			
+				
 
 		// Event handlers
 			let hoveredFeatureId: string | null = null;

@@ -44,9 +44,11 @@
 		"@atm/shared": "workspace:*",
 		"@melt-ui/svelte": "^0.86.6",
 		"@msgpack/msgpack": "^3.1.2",
+		"@qntm-code/utils": "^2.22.1",
 		"clsx": "^2.1.1",
+		"earcut": "^3.0.2",
 		"lodash.debounce": "^4.0.8",
-		"maplibre-gl": "^4.5.1",
+		"maplibre-gl": "^5.7.1 ", 
 		"melt": "^0.34.0",
 		"tailwind-merge": "^2.6.0"
 	}

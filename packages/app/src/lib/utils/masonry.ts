@@ -81,12 +81,6 @@ function distributeItemsWithMemory(
 	columns: HTMLElement[],
 	layoutMemory: Map<string, number>
 ): void {
-	console.log('🧠 Starting memory-aware distribution:', {
-		itemCount: items.length,
-		columnCount: columns.length,
-		memorySize: layoutMemory.size
-	});
-
 	let memoryHits = 0;
 	let newPlacements = 0;
 
@@ -102,24 +96,12 @@ function distributeItemsWithMemory(
 				const rememberedColumn = columns[rememberedColumnIndex];
 				rememberedColumn.appendChild(item);
 				memoryHits++;
-
-				if (index < 3) {
-					console.log(
-						`💾 Item ${index} (${featureId}): placed in remembered column ${rememberedColumnIndex}`
-					);
-				}
 			} else {
 				// Remembered column doesn't exist anymore, use height-based + update memory
 				const shortestColumnIndex = getShortestColumnIndex(columns);
 				columns[shortestColumnIndex].appendChild(item);
 				layoutMemory.set(featureId, shortestColumnIndex);
 				newPlacements++;
-
-				if (index < 3) {
-					console.log(
-						`🔄 Item ${index} (${featureId}): remembered column ${rememberedColumnIndex} invalid, placed in column ${shortestColumnIndex}`
-					);
-				}
 			}
 		} else {
 			// New feature or no ID - use height-based placement + store in memory
@@ -130,27 +112,10 @@ function distributeItemsWithMemory(
 				layoutMemory.set(featureId, shortestColumnIndex);
 			}
 			newPlacements++;
-
-			if (index < 3) {
-				console.log(
-					`✨ Item ${index} (${featureId || 'no-id'}): new placement in column ${shortestColumnIndex}`
-				);
-			}
 		}
 
 		// Force layout for accurate measurements
 		item.offsetHeight;
-	});
-
-	console.log(
-		`🏁 Memory-aware distribution complete - Memory hits: ${memoryHits}, New placements: ${newPlacements}`
-	);
-
-	// Log final distribution
-	const finalHeights = columns.map(getColumnHeight);
-	console.log('📊 Final column heights:', finalHeights);
-	columns.forEach((col, idx) => {
-		console.log(`📊 Column ${idx}: ${col.children.length} items, ${finalHeights[idx]}px height`);
 	});
 }
 
@@ -199,8 +164,6 @@ export function createMasonryMemoized(
 			distributeItemsWithMemory(items, targetColumns, layoutMemory);
 
 			lastColumnCount = currentColumnCount;
-		} else {
-			console.log('⏭️ Skipping layout - no changes needed');
 		}
 	}
 
@@ -208,7 +171,6 @@ export function createMasonryMemoized(
 	 * Clear layout memory
 	 */
 	function clearMemory(): void {
-		console.log('🧹 Clearing masonry layout memory');
 		layoutMemory.clear();
 	}
 
