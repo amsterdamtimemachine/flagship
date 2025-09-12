@@ -15,12 +15,12 @@ export default {
 				'atm-gold': '#dcb27d', 
 				'atm-gold-dark': '#cca36e', 
 				'atm-gold-darkest': '#58401a',
-				'atm-red': '#ff4830',
+				'atm-red': '#ee5e00',
 				'atm-red-light': '#f17562',
-				'atm-blue':'#5480f1',
+				'atm-blue':'#5e92f3',
 				'map': {
 					'cell-value': '#0053fb',
-					'background': '#cae8cf', //'dark sand #efd9ca', //' sand #fbf5f2',
+					'background': '#efd9ca', //'dark sand #efd9ca', //' sand #fbf5f2', // '#bfd9c3' green
 					'water-fill': '#ddecfe',
 					'water-outline': '#a3c4e7'
 				}

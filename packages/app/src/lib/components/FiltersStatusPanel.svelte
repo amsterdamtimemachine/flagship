@@ -39,7 +39,7 @@
 			{#each selectedTags as tag, index}
 				<Tag variant="selected">{tag}</Tag>
 				{#if index < selectedTags.length - 1}
-					<span>,</span>
+					<span>and</span>
 				{/if}
 			{/each}
 		{/if}
