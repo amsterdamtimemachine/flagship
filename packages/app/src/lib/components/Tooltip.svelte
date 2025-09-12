@@ -26,9 +26,8 @@
 		class?: string;
 	}
 
-	// Hardcoded icon styling for consistency
 	const iconProps: PhosphorIconProps = {
-		size: 16,
+		size: 15,
 		weight: 'bold',
 		color: 'black',
 		mirrored: false
@@ -61,13 +60,13 @@
 
 <!-- Trigger element -->
 {#if disabled}
-	<span class={mergeCss("inline-flex items-center justify-center w-5 h-5 bg-gray-100 rounded-full cursor-not-allowed", className)}>
+	<span class={mergeCss("inline-flex items-center justify-center w-5 h-5 bg-sand-li rounded-full cursor-not-allowed", className)}>
 		<Icon {...iconProps} />
 	</span>
 {:else}
 	<span
 		use:melt={$trigger}
-		class="inline-flex items-center justify-center w-5 h-5 bg-gray-100 rounded-full border border-gray-200 cursor-pointer hover:bg-gray-300 transition-colors {className}"
+		class="inline-flex items-center justify-center w-full h-5 bg-atm-sand-darkish rounded-full border border-atm-gold cursor-pointer hover:bg-atm-sand-dark transition-colors {className}"
 	>
 		<Icon {...iconProps} />
 	</span>

@@ -303,7 +303,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 			period={currentPeriod}
 			histogram={mergedHistogram}
 			onPeriodChange={handlePeriodChange}
-			class="z-40"
+			class="z-40 bg-atm-sand border-t border-atm-sand-border"
 		/>
 	{/if}
 
