@@ -5,7 +5,7 @@ export default {
 		extend: {
 			colors: {
 				'custom-green': '#00ff00',
-				'link': '#c99626',
+				'link': '#6D5026',
 				'link-hover': '#78481e',
 				'atm-sand': '#fcf8f7',
 				'atm-sand-darkish': '#f9f2f0',
@@ -14,12 +14,13 @@ export default {
 				'atm-sand-border': '#d7c5b8',
 				'atm-gold': '#dcb27d', 
 				'atm-gold-dark': '#cca36e', 
+				'atm-gold-darkest': '#58401a',
 				'atm-red': '#ff4830',
 				'atm-red-light': '#f17562',
 				'atm-blue':'#5480f1',
 				'map': {
-					'cell-value': '#0053fb',// '#0056f3', //'#005bff',
-					'background': '#fbf5f2',
+					'cell-value': '#0053fb',
+					'background': '#cae8cf', //'dark sand #efd9ca', //' sand #fbf5f2',
 					'water-fill': '#ddecfe',
 					'water-outline': '#a3c4e7'
 				}

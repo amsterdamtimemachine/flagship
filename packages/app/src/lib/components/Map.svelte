@@ -1,4 +1,3 @@
-<!-- Map.svelte -->
 <script lang="ts">
 	import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
 	const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
@@ -357,8 +356,8 @@
 			});
 
 			// Add mask layer to mask water outlines outside active cells
-		//	maskLayer = new MaskLayer('heatmap-mask');
-		//	mapInstance.addLayer(maskLayer); 
+			maskLayer = new MaskLayer('heatmap-mask');
+			mapInstance.addLayer(maskLayer); 
 
 				
 
@@ -443,3 +442,4 @@
 <div class={mergeCss('h-full w-full', className)}>
 	<div bind:this={mapContainer} class="h-full w-full"></div>
 </div>
+

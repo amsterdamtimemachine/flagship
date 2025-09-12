@@ -25,8 +25,8 @@
 	);
 </script>
 
-<div class={mergeCss("bg-white border border-gray-300 rounded-sm shadow-sm p-1", className)}>
-	<div class="text-sm text-gray-700 leading-relaxed flex flex-wrap items-center gap-1">
+<div class={mergeCss("bg-atm-sand border border-atm-sand-border rounded-sm shadow-sm p-1", className)}>
+	<div class="text-sm font-sans text-black flex flex-wrap items-center gap-1">
 		<span>Viewing</span>
 		{#each displayedRecordTypes as recordType, index}
 			<Tag variant="selected-outline">{recordType}</Tag>
