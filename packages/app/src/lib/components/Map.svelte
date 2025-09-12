@@ -62,7 +62,7 @@
 		center: {lat: 4.895645, lon: 52.372219},
 		cellSelectedOutlineColor: twConfig.theme.colors['atm-red'],
 		cellHoveredOutlineColor: twConfig.theme.colors['atm-red-light'],
-		cellSelectedOutlineWidth: 4, 
+		cellSelectedOutlineWidth: 3, 
 		cellValueColor: twConfig.theme.colors.map['cell-value'],
 		backgroundColor: twConfig.theme.colors.map['background'],
 		waterFillColor: twConfig.theme.colors.map['water-fill'],
@@ -331,11 +331,6 @@
 				}
 			});
 
-			// Add mask layer to mask water outlines outside active cells
-		//	maskLayer = new MaskLayer('heatmap-mask');
-		//	mapInstance.addLayer(maskLayer); 
-
-
 			// Active cell
 			mapInstance.addLayer({
 				id: 'selected-cell',
@@ -360,6 +355,10 @@
 					'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.8, 0]
 				}
 			});
+
+			// Add mask layer to mask water outlines outside active cells
+		//	maskLayer = new MaskLayer('heatmap-mask');
+		//	mapInstance.addLayer(maskLayer); 
 
 				
 

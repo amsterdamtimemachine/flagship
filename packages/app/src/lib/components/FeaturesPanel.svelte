@@ -143,7 +143,7 @@
 
 <!-- Data Header -->
 <div
-	class="sticky py-2 px-3 top-0 z-10 bg-atm-sand border-b border-gray-300 flex items-center justify-between shadow-[0px_5px_20px_5px_rgba(0,0,0,0.07)]"
+	class="sticky h-[50px] p-3 top-0 z-10 bg-atm-sand border-b border-gray-300 flex items-center justify-between shadow-[0px_5px_20px_5px_rgba(0,0,0,0.07)]"
 >
 	<Tooltip icon={QuestionMark} text="" />
 	<div class="flex items-center gap-4">

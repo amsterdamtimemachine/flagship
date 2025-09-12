@@ -66,7 +66,7 @@
 {:else}
 	<span
 		use:melt={$trigger}
-		class="inline-flex items-center justify-center w-full h-5 bg-atm-sand-darkish rounded-full border border-atm-gold cursor-pointer hover:bg-atm-sand-dark transition-colors {className}"
+		class="inline-flex items-center justify-center w-5 h-5 bg-atm-sand-darkish rounded-full border border-atm-gold cursor-pointer hover:bg-atm-sand-dark transition-colors {className}"
 	>
 		<Icon {...iconProps} />
 	</span>

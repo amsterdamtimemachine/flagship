@@ -8,6 +8,7 @@
 	import { mergeHistograms } from '$utils/histogram';
 	import { loadingState } from '$lib/state/loadingState.svelte';
 	import { QuestionMark } from 'phosphor-svelte';
+	import ButtonLink from '$components/ButtonLink.svelte';
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
@@ -234,42 +235,47 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 		{/if}
 
 		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
-			<h1 class="font-sans font-semibold mb-4">Amsterdam Time Machine</h1>
+			<nav class="bg-atm-sand flex items-center justify-between h-[50px] p-3 border-b border-atm-sand-border">
+				<h1 class="font-sans">Amsterdam Time Machine</h1>
+				<ButtonLink target='' rel='' href='/about'> About </ButtonLink>
+			
+			</nav>
+			<div class="p-3">
+				<div class="mb-4">
+					<div class="flex">
+						<h2 class="mb-2 pr-1">Content type</h2>
+						<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
+					</div>
 
-			<div class="mb-4">
-				<div class="flex">
-					<h2 class="mb-2 pr-1">Content type</h2>
-					<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
+					<ToggleGroup
+						items={recordTypes}
+						selectedItems={currentRecordTypes}
+						onItemSelected={handleRecordTypeChange}
+						requireOneItemSelected={true}>
+						{#snippet children(item, isSelected, isDisabled)}
+							<Tag variant={isSelected ? 'selected-outline' : 'outline'} disabled={isDisabled}>
+								{item}
+							</Tag>
+						{/snippet}
+					</ToggleGroup>
 				</div>
 
-				<ToggleGroup
-					items={recordTypes}
-					selectedItems={currentRecordTypes}
-					onItemSelected={handleRecordTypeChange}
-					requireOneItemSelected={true}>
-					{#snippet children(item, isSelected, isDisabled)}
-						<Tag variant={isSelected ? 'selected-outline' : 'outline'} disabled={isDisabled}>
-							{item}
-						</Tag>
-					{/snippet}
-				</ToggleGroup>
-			</div>
-
-			<div class="mb-4">
-				<div class="flex">
-					<h2 class="pr-1">Topics</h2>
-					<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
+				<div class="mb-4">
+					<div class="flex">
+						<h2 class="pr-1">Topics</h2>
+						<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
+					</div>
+					<span class="text-xs text-neutral-600"> Include only content with all selected topics </span>
 				</div>
-				<span class="text-xs text-neutral-600"> Include only content with all selected topics </span>
-			</div>
 
-			<TagsSelector
-				recordTypes={currentRecordTypes || []}
-				allRecordTypes={recordTypes}
-				availableTags={availableTagNames}
-				selectedTags={currentTags || []}
-				onTagsSelected={handleTagsChange}
-			/>
+				<TagsSelector
+					recordTypes={currentRecordTypes || []}
+					allRecordTypes={recordTypes}
+					availableTags={availableTagNames}
+					selectedTags={currentTags || []}
+					onTagsSelected={handleTagsChange}
+				/>
+			</div>
 		</NavContainer>
 
 	<!-- Show filters status when nav is collapsed -->

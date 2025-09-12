@@ -49,8 +49,6 @@
 >
 	<Button
 		icon={CaretLeft}
-		size={16}
-		class="h-[32px] w-[32px] data-[selected]:bg-gray-900 data-[selected]:text-white transition-colors"
 		meltAction={$prevButton}
 		aria-label="Previous page"
 	/>
@@ -59,7 +57,7 @@
 			<span class="px-2 text-gray-500">...</span>
 		{:else}
 			<Button
-				class="h-[32px] min-w-[32px] data-[selected]:bg-gray-900 data-[selected]:text-white transition-colors"
+				class="data-[selected]:bg-atm-gold data-[selected]:hover:bg-atm-gold-dark"
 				meltAction={$pageTrigger(page)}
 				aria-label="Go to page {page.value}"
 			>
@@ -69,8 +67,6 @@
 	{/each}
 	<Button
 		icon={CaretRight}
-		size={16}
-		class="h-[32px] w-[32px] data-[selected]:bg-gray-900 data-[selected]:text-white transition-colors"
 		meltAction={$nextButton}
 		aria-label="Next page"
 	/>
