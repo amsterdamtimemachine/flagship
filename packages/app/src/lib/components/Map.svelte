@@ -9,6 +9,10 @@
 	import type { Heatmap, HeatmapDimensions, HeatmapBlueprintCell, Coordinates } from '@atm/shared/types';
 	import { mergeCss } from '$utils/utils';
 	import { MaskLayer } from '$utils/map';
+	import resolveConfig from 'tailwindcss/resolveConfig'
+	import tailwindConfig from '$tailwindConfig' 
+
+
 
 	interface CellProperties {
 		id: string;
@@ -47,6 +51,8 @@
 		handleMapLoaded?: () => void;
 	}
 
+	const twConfig = resolveConfig(tailwindConfig)
+
 	const defaultMapStyle : mapStyle = {
 		boundsPanningOffsetLat: 0.1,
 		boundsPanningOffsetLon: 0.2,
@@ -54,14 +60,14 @@
 		maxZoom: 14,
 		defaultZoom: 12,
 		center: {lat: 4.895645, lon: 52.372219},
-		cellSelectedOutlineColor: '#ff4830',
-		cellHoveredOutlineColor: '#f28374',
-		cellSelectedOutlineWidth: 4, // px
-		cellValueColor: '#005bff',
-		backgroundColor: '#fbf5f2',
-		waterFillColor: '#e8f2fe',
-		waterOutlineColor:  '#e3bb86',
-		waterOutlineWidth: 0.5,
+		cellSelectedOutlineColor: twConfig.theme.colors['atm-red'],
+		cellHoveredOutlineColor: twConfig.theme.colors['atm-red-light'],
+		cellSelectedOutlineWidth: 4, 
+		cellValueColor: twConfig.theme.colors.map['cell-value'],
+		backgroundColor: twConfig.theme.colors.map['background'],
+		waterFillColor: twConfig.theme.colors.map['water-fill'],
+		waterOutlineColor: twConfig.theme.colors.map['water-outline'],
+		waterOutlineWidth: 0.75,
 		waterOutlineOpacity: 1.0,
 	}
 

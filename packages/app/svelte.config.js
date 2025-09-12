@@ -21,7 +21,8 @@ const config = {
 			$types: 'src/lib/types',
 			$utils: 'src/lib/utils/',
 			$constants: 'src/lib/constants.ts',
-			$stores: 'src/lib/stores'
+			$stores: 'src/lib/stores',
+			$tailwindConfig: 'tailwind.config.js',
 		}
 	}
 };

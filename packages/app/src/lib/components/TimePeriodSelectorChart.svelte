@@ -16,7 +16,7 @@
 	}
 </script>
 
-<svg class="absolute inset-x-0 top-0 w-full h-full pointer-events-none">
+<svg class="absolute top-0 w-full h-full pointer-events-none">
 	<!-- Histogram bars -->
 	{#each bins as bin, i}
 		{@const barWidth = 100 / bins.length}
@@ -27,8 +27,8 @@
 			y={timelineHeight - barHeight}
 			width="{barWidth}%"
 			height={barHeight}
-			fill="#5373cf"
-			class="transition-colors duration-200"
+			class="fill-atm-blue"
+			fill="#5480f1"
 		>
 			<title>Period: {bin.timeSlice.label}, Count: {bin.count}</title>
 		</rect>

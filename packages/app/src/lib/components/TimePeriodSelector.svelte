@@ -17,7 +17,7 @@
 	// Extract time period data
 	const timePeriods = $derived(histogram?.bins?.map((bin) => bin.timeSlice.key) || []);
 	const displayPeriods = $derived(createDisplayPeriods(histogram?.bins || []));
-	const timelineHeight = 20;
+	const timelineHeight = 15;
 
 	// Slider state
 	let currentIndex = $state(getInitialIndex());
@@ -115,7 +115,7 @@
 <svelte:document onmousemove={handleMouseMove} onmouseup={handleMouseUp} />
 
 {#if histogram?.bins?.length > 0}
-	<div class={mergeCss("bg-white border-t border-gray-300 w-full px-4 pb-2 pt-2", className)}>
+	<div class={mergeCss("bg-atm-sand border-t border-atm-sand-border w-full px-4 pt-2", className)}>
 		<div class="w-full relative h-[40px]" bind:this={trackElement}>
 			<!-- Chart Layer: Histogram bars and grid -->
 			<TimePeriodSelectorChart

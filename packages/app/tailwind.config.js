@@ -7,8 +7,12 @@ export default {
 				'custom-green': '#00ff00',
 				'link': '#c99626',
 				'link-hover': '#78481e',
-				'atm-sand': '#fff8f4',
-				'atm-sand-dark': '#e2d5cc',
+				'atm-sand': '#fcf8f7',
+				'atm-sand-dark': '#d9cdc5',
+				'atm-sand-border': '#9b8779',
+				'atm-red': '#ff4830',
+				'atm-red-light': '#f28374',
+				'atm-blue':'#5480f1',
 				'map': {
 					'cell-selected': '#ff4830',
 					'cell-hovered': '#f28374', 
@@ -20,9 +24,6 @@ export default {
 			},
 			fontFamily: {
 				'sans': ['Satoshi', 'sans-serif'],
-				// Add your custom fonts here, e.g.:
-				// 'custom': ['MyCustomFont', 'sans-serif'],
-				// 'heading': ['MyHeadingFont', 'serif'],
 			}
 		}
 	},
