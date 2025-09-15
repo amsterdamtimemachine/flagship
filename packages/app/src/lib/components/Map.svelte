@@ -356,8 +356,8 @@
 			});
 
 			// Add mask layer to mask water outlines outside active cells
-			maskLayer = new MaskLayer('heatmap-mask');
-			mapInstance.addLayer(maskLayer); 
+			//maskLayer = new MaskLayer('heatmap-mask');
+			//mapInstance.addLayer(maskLayer); 
 
 				
 

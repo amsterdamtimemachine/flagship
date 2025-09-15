@@ -20,7 +20,7 @@ export default {
 				'atm-blue':'#5e92f3',
 				'map': {
 					'cell-value': '#0053fb',
-					'background': '#efd9ca', //'dark sand #efd9ca', //' sand #fbf5f2', // '#bfd9c3' green
+					'background': '#efd9ca', //'dark sand #efd9ca', //' sand #fbf5f2', // '#bfd9c3' green // light sand ece7e4
 					'water-fill': '#ddecfe',
 					'water-outline': '#a3c4e7'
 				}
