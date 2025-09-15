@@ -21,10 +21,11 @@
 		bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number };
 		recordTypes: RecordType[];
 		tags: string[];
+		tagOperator?: 'AND' | 'OR';
 		onClose?: () => void;
 	}
 
-	let { cellId, period, bounds, recordTypes, tags, onClose }: Props = $props();
+	let { cellId, period, bounds, recordTypes, tags, tagOperator = 'OR', onClose }: Props = $props();
 
 	// Cell data state
 	let allFeatures = $state<any[]>([]);
@@ -63,7 +64,8 @@
 				end_year: `${endYear}-01-01`,
 				page,
 				recordTypes: recordTypes,
-				tags: tags
+				tags: tags,
+				tagOperator: tagOperator
 			};
 
 			// Only add bounds if they exist

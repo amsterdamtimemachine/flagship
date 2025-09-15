@@ -15,6 +15,7 @@
 	import TagsSelector from '$components/TagsSelector.svelte';
 	import Tag from '$components/Tag.svelte';
 	import Tooltip from '$components/Tooltip.svelte';
+	import TagOperatorSwitch from '$components/TagOperatorSwitch.svelte';
 	import FeaturesPanel from '$components/FeaturesPanel.svelte';
 	import NavContainer from '$components/NavContainer.svelte';
 	import FiltersStatusPanel from '$components/FiltersStatusPanel.svelte';
@@ -36,6 +37,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	let heatmapBlueprint = $derived(data?.metadata?.heatmapBlueprint?.cells);
 	let currentRecordTypes = $derived(data?.currentRecordTypes || []);
 	let currentTags = $derived(data?.currentTags || []);
+	let currentTagOperator = $derived(data?.currentTagOperator || 'OR');
 	let histograms = $derived((data?.histogram as HistogramApiResponse | null)?.histograms);
 
 	const controller = createMapController();
@@ -62,14 +64,30 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 				currentRecordTypes.length > 1 || (currentTags && currentTags.length > 0);
 
 			if (needsMerging) {
-				// Merge entire timeline for smooth navigation
-				const selectedTags = currentTags && currentTags.length > 0 ? currentTags : undefined;
-				return mergeHeatmapTimeline(
-					timelineData as unknown as HeatmapTimeline,
-					currentRecordTypes,
-					selectedTags,
-					data?.metadata?.heatmapBlueprint
-				);
+				// For OR operations with multiple tags, server already merged - just merge recordTypes if needed
+				if (currentTagOperator === 'OR' && currentTags && currentTags.length > 1) {
+					// OR operations: server already merged tags into base heatmaps, only merge recordTypes if needed
+					if (currentRecordTypes.length > 1) {
+						return mergeHeatmapTimeline(
+							timelineData as unknown as HeatmapTimeline,
+							currentRecordTypes,
+							undefined, // Don't pass tags - use base heatmaps
+							data?.metadata?.heatmapBlueprint
+						);
+					} else {
+						// Single recordType with OR tags - use as-is (server already merged)
+						return timelineData;
+					}
+				} else {
+					// AND operations or single tag - use original client-side merging logic
+					const selectedTags = currentTags && currentTags.length > 0 ? currentTags : undefined;
+					return mergeHeatmapTimeline(
+						timelineData as unknown as HeatmapTimeline,
+						currentRecordTypes,
+						selectedTags,
+						data?.metadata?.heatmapBlueprint
+					);
+				}
 			} else {
 				// Single recordType, no tags - use original timeline
 				return timelineData;
@@ -89,8 +107,14 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 			for (const recordType of currentRecordTypes) {
 				const recordTypeData = histograms[recordType];
 				if (recordTypeData) {
-					if (selectedTags && selectedTags.length > 0) {
-						// Use tag combination or individual tag histogram
+					// For OR operations with multiple tags, server already merged - use base histograms
+					if (currentTagOperator === 'OR' && selectedTags && selectedTags.length > 1) {
+						// OR operations: server already merged tags into base histograms
+						if (recordTypeData.base) {
+							histogramsToMerge.push(recordTypeData.base);
+						}
+					} else if (selectedTags && selectedTags.length > 0) {
+						// AND operations or single tag - use original logic
 						const tagKey =
 							selectedTags.length > 1 ? selectedTags.sort().join('+') : selectedTags[0];
 						if (recordTypeData.tags[tagKey]) {
@@ -161,7 +185,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 
 		// Sync URL parameters after router is ready
 		tick().then(() => {
-			controller.syncUrlParameters(initialPeriod);
+			controller.syncUrlParameters(initialPeriod, currentTagOperator);
 
 			// Handle cell bounds lookup from URL if cell parameter exists
 			const urlParams = new URLSearchParams(window.location.search);
@@ -190,8 +214,13 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 		controller.setRecordType(recordTypesArray, { resetTags: true });
 	}
 
-	function handleTagsChange(tags: string[]) {
-		controller.setTags(tags);
+	function handleTagsChange(tags: string | string[]) {
+		const tagArray = Array.isArray(tags) ? tags : [tags];
+		controller.setTags(tagArray);
+	}
+
+	function handleTagOperatorChange(operator: 'AND' | 'OR') {
+		controller.setTagOperator(operator);
 	}
 
 	// Handle cell selection from map
@@ -265,16 +294,38 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 						<h2 class="pr-1">Topics</h2>
 						<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
 					</div>
-					<span class="text-xs text-neutral-600"> Include only content with all selected topics </span>
+					<div class="flex items-center justify-between mb-3">
+						<span class="text-xs text-neutral-600">
+							{currentTagOperator === 'AND' ? 'Include only content with all selected topics' : 'Include content with any selected topics'}
+						</span>
+						<TagOperatorSwitch 
+							operator={currentTagOperator as 'AND' | 'OR'}
+							onOperatorChange={handleTagOperatorChange}
+						/>
+					</div>
 				</div>
 
-				<TagsSelector
-					recordTypes={currentRecordTypes || []}
-					allRecordTypes={recordTypes}
-					availableTags={availableTagNames}
-					selectedTags={currentTags || []}
-					onTagsSelected={handleTagsChange}
-				/>
+				{#if currentTagOperator === 'AND'}
+					<TagsSelector
+						recordTypes={currentRecordTypes || []}
+						allRecordTypes={recordTypes}
+						availableTags={availableTagNames}
+						selectedTags={currentTags || []}
+						onTagsSelected={handleTagsChange}
+					/>
+				{:else}
+					<ToggleGroup
+						items={availableTagNames}
+						selectedItems={currentTags || []}
+						onItemSelected={handleTagsChange}
+						requireOneItemSelected={false}>
+						{#snippet children(item, isSelected, isDisabled)}
+							<Tag variant={isSelected ? 'selected-outline' : 'outline'} disabled={isDisabled}>
+								{item}
+							</Tag>
+						{/snippet}
+					</ToggleGroup>
+				{/if}
 			</div>
 		</NavContainer>
 
@@ -298,6 +349,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 					bounds={selectedCellBounds ?? undefined}
 					recordTypes={currentRecordTypes}
 					tags={currentTags}
+					tagOperator={currentTagOperator as 'AND' | 'OR'}
 					onClose={handleFeaturesPanelClose}
 				/>
 			</div>

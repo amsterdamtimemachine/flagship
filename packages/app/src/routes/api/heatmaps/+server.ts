@@ -9,6 +9,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		// Parse query parameters
 		const recordTypesParam = url.searchParams.get('recordTypes');
 		const tagsParam = url.searchParams.get('tags');
+		const tagOperatorParam = url.searchParams.get('tagOperator');
 
 		// Get API service to access metadata for defaulting
 		const dataService = await getDataService();
@@ -33,11 +34,88 @@ export const GET: RequestHandler = async ({ url }) => {
 		}
 
 		console.log(
-			`🔥 Heatmaps API request - recordTypes: ${recordTypes.join(', ')}, tags: ${tags?.join(', ') || 'none'}`
+			`🔥 Heatmaps API request - recordTypes: ${recordTypes.join(', ')}, tags: ${tags?.join(', ') || 'none'}, operator: ${tagOperatorParam || 'AND'}`
 		);
 
-		// Get heatmap timeline from service
-		const response = await dataService.getHeatmapTimeline(recordTypes, tags);
+		let response: HeatmapTimelineApiResponse;
+
+		// Handle OR operation by merging individual tags
+		if (tagOperatorParam === 'OR' && tags && tags.length > 1) {
+			console.log(`🔀 OR operation: fetching and merging individual tags`);
+			
+			// Import merging utilities
+			const { mergeHeatmaps } = await import('$utils/heatmap');
+			
+			// Fetch each tag individually 
+			const individualResponses = await Promise.all(
+				tags.map(tag => dataService.getHeatmapTimeline(recordTypes, [tag]))
+			);
+			
+			// Check if all individual requests succeeded
+			const failedResponses = individualResponses.filter(r => !r.success);
+			if (failedResponses.length > 0) {
+				console.error(`❌ Some individual tag requests failed:`, failedResponses);
+				response = {
+					heatmapTimeline: {},
+					recordTypes,
+					tags,
+					resolution: '',
+					success: false,
+					message: 'Failed to fetch some individual tags for OR operation'
+				};
+			} else {
+				// Merge timelines by merging heatmaps for each time slice
+				const timelines = individualResponses.map(r => r.heatmapTimeline);
+				const mergedTimeline: any = {};
+				
+				// Get all unique time slice keys from all timelines
+				const allTimeSliceKeys = new Set<string>();
+				timelines.forEach(timeline => {
+					Object.keys(timeline).forEach(key => allTimeSliceKeys.add(key));
+				});
+				
+				// Merge each time slice
+				for (const timeSliceKey of allTimeSliceKeys) {
+					mergedTimeline[timeSliceKey] = {};
+					
+					// For each recordType, merge heatmaps from all timelines
+					for (const recordType of recordTypes) {
+						const heatmapsToMerge: any[] = [];
+						
+						// Collect heatmaps from all timelines for this time slice and record type
+						timelines.forEach(timeline => {
+							const timeSliceData = timeline[timeSliceKey];
+							if (timeSliceData && timeSliceData[recordType] && timeSliceData[recordType].base) {
+								heatmapsToMerge.push(timeSliceData[recordType].base);
+							}
+						});
+						
+						if (heatmapsToMerge.length > 0) {
+							// Merge all heatmaps for this recordType and time slice
+							const mergedHeatmap = mergeHeatmaps(heatmapsToMerge);
+							
+							// Create the merged recordType data structure
+							mergedTimeline[timeSliceKey][recordType] = {
+								base: mergedHeatmap,
+								tags: {} // OR results don't need individual tag data
+							};
+						}
+					}
+				}
+				
+				response = {
+					heatmapTimeline: mergedTimeline,
+					recordTypes,
+					tags,
+					resolution: individualResponses[0].resolution,
+					success: true,
+					processingTime: individualResponses.reduce((sum, r) => sum + (r.processingTime || 0), 0)
+				};
+			}
+		} else {
+			// Standard AND operation or single tag
+			response = await dataService.getHeatmapTimeline(recordTypes, tags);
+		}
 
 		// Set appropriate cache headers
 		const headers = {

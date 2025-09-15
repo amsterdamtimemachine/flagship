@@ -27,6 +27,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	// Parse URL parameters
 	const recordTypesParam = url.searchParams.get('recordTypes');
 	const tagsParam = url.searchParams.get('tags');
+	const tagOperatorParam = url.searchParams.get('tagOperator');
 
 	try {
 		const response = await fetch('/api/metadata');
@@ -132,6 +133,9 @@ export const load: PageLoad = async ({ fetch, url }) => {
 
 	// Parse tags if provided - need to validate combinations, not just existence
 	let currentTags: string[] | undefined;
+	
+	// Parse tagOperator with default to OR (advanced search is AND)
+	const currentTagOperator = tagOperatorParam === 'AND' ? 'AND' : 'OR';
 
 	if (metadata?.tags && tagsParam) {
 		const requestedTags = tagsParam.split(',').map((t) => t.trim()) as string[];
@@ -160,9 +164,18 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	// Histogram promise
 	const histogramPromise = (async () => {
 		try {
-			const histogramUrl =
-				`/api/histogram${currentRecordTypes.length > 0 ? `?recordTypes=${currentRecordTypes.join(',')}` : ''}${currentTags ? `${currentRecordTypes.length > 0 ? '&' : '?'}tags=${currentTags.join(',')}` : ''}` ||
-				'/api/histogram';
+			let histogramUrl = '/api/histogram';
+			const histogramParams = new URLSearchParams();
+			if (currentRecordTypes.length > 0) {
+				histogramParams.set('recordTypes', currentRecordTypes.join(','));
+			}
+			if (currentTags && currentTags.length > 0) {
+				histogramParams.set('tags', currentTags.join(','));
+				histogramParams.set('tagOperator', currentTagOperator);
+			}
+			if (histogramParams.toString()) {
+				histogramUrl += '?' + histogramParams.toString();
+			}
 			const histogramResponse = await fetch(histogramUrl);
 
 			if (!histogramResponse.ok) {
@@ -210,9 +223,18 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	// Heatmap timeline promise
 	const heatmapPromise = (async () => {
 		try {
-			const heatmapUrl =
-				`/api/heatmaps${currentRecordTypes.length > 0 ? `?recordTypes=${currentRecordTypes.join(',')}` : ''}${currentTags ? `${currentRecordTypes.length > 0 ? '&' : '?'}tags=${currentTags.join(',')}` : ''}` ||
-				'/api/heatmaps';
+			let heatmapUrl = '/api/heatmaps';
+			const heatmapParams = new URLSearchParams();
+			if (currentRecordTypes.length > 0) {
+				heatmapParams.set('recordTypes', currentRecordTypes.join(','));
+			}
+			if (currentTags && currentTags.length > 0) {
+				heatmapParams.set('tags', currentTags.join(','));
+				heatmapParams.set('tagOperator', currentTagOperator);
+			}
+			if (heatmapParams.toString()) {
+				heatmapUrl += '?' + heatmapParams.toString();
+			}
 			const heatmapResponse = await fetch(heatmapUrl);
 
 			if (!heatmapResponse.ok) {
@@ -306,8 +328,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	// Wait for all data requests to complete
 	await Promise.all([histogramPromise, heatmapPromise, availableTagsPromise]);
 
-	// Now validate tag combinations in a single API call
-	if (currentTags && currentTags.length > 0 && currentRecordTypes && metadata?.recordTypes) {
+	// Only validate tag combinations for AND operator (OR allows any combination)
+	if (currentTagOperator === 'AND' && currentTags && currentTags.length > 0 && currentRecordTypes && metadata?.recordTypes) {
 		try {
 			// Use the "show all" exception: if no current record types, use all record types
 			const effectiveRecordTypes =
@@ -359,6 +381,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		availableTags,
 		currentRecordTypes,
 		currentTags,
+		currentTagOperator,
 		errorData: createPageErrorData(errors)
 	};
 };

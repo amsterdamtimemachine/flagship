@@ -22,6 +22,7 @@ export async function fetchGeodataFromDatabase(
 		page?: number;
 		recordTypes?: string[];
 		tags?: string[];
+		tagOperator?: 'AND' | 'OR';
 		limit?: number;
 	},
 	fetchFn: FetchFunction = fetch
@@ -29,8 +30,8 @@ export async function fetchGeodataFromDatabase(
 	// Build the URL with parameters using environment variable
 	const url = new URL(`${PUBLIC_FEATURES_API_URL}/geodata`);
 
-	// Always add tag_operator=AND parameter
-	url.searchParams.set('tag_operator', 'AND');
+	// Set tag_operator parameter (defaults to OR to match app behavior)
+	url.searchParams.set('tag_operator', params.tagOperator || 'OR');
 
 	// Add all parameters to the URL
 	Object.entries(params).forEach(([key, value]) => {
@@ -45,6 +46,8 @@ export async function fetchGeodataFromDatabase(
 				if (value.length > 0) {
 					url.searchParams.set('tags', value.join(','));
 				}
+			} else if (key === 'tagOperator') {
+				// Skip - already handled above
 			} else {
 				url.searchParams.set(key, value.toString());
 			}

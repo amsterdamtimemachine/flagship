@@ -86,16 +86,31 @@ export function createMapController() {
 		goto(url.pathname + url.search);
 	}
 
+	function setTagOperator(operator: 'AND' | 'OR') {
+		if (!browser) return;
+
+		const url = new URL(window.location.href);
+		url.searchParams.set('tagOperator', operator);
+		// Navigate to new URL to trigger data refetch
+		goto(url.pathname + url.search);
+	}
+
 	/**
 	 * Syncs URL parameters with current state after navigation is complete.
 	 */
-	function syncUrlParameters(serverPeriod: string) {
+	function syncUrlParameters(serverPeriod: string, serverTagOperator: string = 'OR') {
 		if (!browser) return;
 
 		// Set period to URL if not already present
 		const urlPeriod = page.url.searchParams.get('period');
 		if (!urlPeriod) {
 			updateUrlParams({ period: serverPeriod });
+		}
+
+		// Set tagOperator to URL if not already present
+		const urlTagOperator = page.url.searchParams.get('tagOperator');
+		if (!urlTagOperator) {
+			updateUrlParams({ tagOperator: serverTagOperator });
 		}
 
 		// Check if cell should be opened from URL parameters
@@ -185,6 +200,7 @@ export function createMapController() {
 		setPeriod,
 		setRecordType,
 		setTags,
+		setTagOperator,
 		syncUrlParameters,
 		selectCell,
 		clearErrors,
