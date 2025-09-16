@@ -185,7 +185,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 
 		// Sync URL parameters after router is ready
 		tick().then(() => {
-			controller.syncUrlParameters(initialPeriod, currentTagOperator);
+			controller.syncUrlParameters(initialPeriod, currentTagOperator, currentRecordTypes);
 
 			// Handle cell bounds lookup from URL if cell parameter exists
 			const urlParams = new URLSearchParams(window.location.search);
@@ -220,7 +220,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	}
 
 	function handleTagOperatorChange(operator: 'AND' | 'OR') {
-		controller.setTagOperator(operator);
+		controller.setTagOperator(operator, { resetTags: true });
 	}
 
 	// Handle cell selection from map

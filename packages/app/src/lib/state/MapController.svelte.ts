@@ -86,11 +86,16 @@ export function createMapController() {
 		goto(url.pathname + url.search);
 	}
 
-	function setTagOperator(operator: 'AND' | 'OR') {
+	function setTagOperator(operator: 'AND' | 'OR', options: { resetTags?: boolean } = {}) {
 		if (!browser) return;
 
 		const url = new URL(window.location.href);
 		url.searchParams.set('tagOperator', operator);
+		
+		if (options.resetTags) {
+			url.searchParams.delete('tags');
+		}
+		
 		// Navigate to new URL to trigger data refetch
 		goto(url.pathname + url.search);
 	}
@@ -98,19 +103,33 @@ export function createMapController() {
 	/**
 	 * Syncs URL parameters with current state after navigation is complete.
 	 */
-	function syncUrlParameters(serverPeriod: string, serverTagOperator: string = 'OR') {
+	function syncUrlParameters(serverPeriod: string, serverTagOperator: string = 'OR', serverRecordTypes: string[] = []) {
 		if (!browser) return;
+
+		// Collect all missing parameters in a single object
+		const paramsToAdd: Record<string, string | null> = {};
 
 		// Set period to URL if not already present
 		const urlPeriod = page.url.searchParams.get('period');
 		if (!urlPeriod) {
-			updateUrlParams({ period: serverPeriod });
+			paramsToAdd.period = serverPeriod;
 		}
 
 		// Set tagOperator to URL if not already present
 		const urlTagOperator = page.url.searchParams.get('tagOperator');
 		if (!urlTagOperator) {
-			updateUrlParams({ tagOperator: serverTagOperator });
+			paramsToAdd.tagOperator = serverTagOperator;
+		}
+
+		// Set recordTypes to URL if not already present
+		const urlRecordTypes = page.url.searchParams.get('recordTypes');
+		if (!urlRecordTypes && serverRecordTypes.length > 0) {
+			paramsToAdd.recordTypes = serverRecordTypes.join(',');
+		}
+
+		// Update all missing parameters at once
+		if (Object.keys(paramsToAdd).length > 0) {
+			updateUrlParams(paramsToAdd);
 		}
 
 		// Check if cell should be opened from URL parameters
