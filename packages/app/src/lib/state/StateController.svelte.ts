@@ -1,16 +1,15 @@
-// state/MapController.svelte.ts
+// state/StateController.svelte.ts
 
 import { browser } from '$app/environment';
 import { page } from '$app/state';
-import { replaceState, goto } from '$app/navigation';
+import { replaceState } from '$app/navigation';
 import type { AppError } from '$types/error';
 
 /**
- * Creates a centralized controller for managing map state, URL synchronization,
- * and cell data loading. This handles the coordination between user interactions,
- * URL parameters, and server data.
+ * Creates a centralized state controller for managing application state and URL synchronization.
+ * The component is responsible for navigation decisions - this controller provides utilities.
  */
-export function createMapController() {
+export function createStateController() {
 	// Core reactive state
 	let currentPeriod = $state<string>('');
 	let selectedCellId = $state<string | null>(null);
@@ -40,64 +39,17 @@ export function createMapController() {
 	}
 
 	/**
-	 * Updates the current time period and syncs to URL.
-	 * This is typically called from the time period slider.
+	 * Updates the current time period.
 	 */
-	function setPeriod(newPeriod: string) {
+	function updatePeriod(newPeriod: string) {
 		currentPeriod = newPeriod;
-		updateUrlParams({ period: newPeriod });
-
-		// note period change affects only individual cell, hence this fn doesn't trigger goto
-		// cell data are fetched in $components/FeaturesPanel.svelte
 	}
 
-	function setRecordType(newRecordTypes: string[], options: { resetTags?: boolean } = {}) {
-		if (!browser) return;
-
-		const url = new URL(window.location.href);
-		// Update recordTypes parameter
-		if (newRecordTypes.length > 0) {
-			url.searchParams.set('recordTypes', newRecordTypes.join(','));
-		} else {
-			url.searchParams.delete('recordTypes');
-		}
-
-		if (options.resetTags) {
-			console.log('resettting tags!');
-			url.searchParams.delete('tags');
-		}
-
-		// Navigate to new URL to trigger data refetch
-		goto(url.pathname + url.search);
-	}
-
-	function setTags(newTags: string[]) {
-		if (!browser) return;
-
-		const url = new URL(window.location.href);
-
-		// Update tags parameter
-		if (newTags.length > 0) {
-			url.searchParams.set('tags', newTags.join(','));
-		} else {
-			url.searchParams.delete('tags');
-		}
-		// Navigate to new URL to trigger data refetch
-		goto(url.pathname + url.search);
-	}
-
-	function setTagOperator(operator: 'AND' | 'OR', options: { resetTags?: boolean } = {}) {
-		if (!browser) return;
-
-		const url = new URL(window.location.href);
-		url.searchParams.set('tagOperator', operator);
-		
-		if (options.resetTags) {
-			url.searchParams.delete('tags');
-		}
-		
-		// Navigate to new URL to trigger data refetch
-		goto(url.pathname + url.search);
+	/**
+	 * Updates a single URL parameter without navigation.
+	 */
+	function updateUrlParam(key: string, value: string | null) {
+		updateUrlParams({ [key]: value });
 	}
 
 	/**
@@ -214,15 +166,16 @@ export function createMapController() {
 			return errors;
 		},
 
-		// Control methods
+		// State management methods
 		initialize,
-		setPeriod,
-		setRecordType,
-		setTags,
-		setTagOperator,
-		syncUrlParameters,
+		updatePeriod,
 		selectCell,
 		clearErrors,
+
+		// URL utilities
+		updateUrlParam,
+		updateUrlParams,
+		syncUrlParameters,
 
 		// Callback setters
 		set onCellSelected(

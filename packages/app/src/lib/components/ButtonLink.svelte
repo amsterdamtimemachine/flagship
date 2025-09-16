@@ -27,7 +27,7 @@
 		class={mergeCss('h-[32px] px-2 inline-flex justify-center items-center bg-atm-sand-darkish rounded border border-atm-gold border-[1px] hover:bg-atm-sand-dark text-sm' , className)}
 		{href} {target} {rel}>
 		<span>
-			{@render children()}
+			{@render children?.()}
 		</span>
 	</a>
 

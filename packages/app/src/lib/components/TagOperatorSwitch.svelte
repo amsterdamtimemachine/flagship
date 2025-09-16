@@ -29,21 +29,20 @@
 </script>
 
 <div class="flex items-center gap-3">
-	<span class="text-xs text-neutral-600 select-none">OR</span>
+	<span class="text-xs text-neutral-600 select-none">Any</span>
 	<button
 		use:melt={$root}
-		class="relative h-5 w-9 cursor-pointer rounded-full bg-neutral-300 transition-colors duration-200 ease-in-out
-			   data-[state=checked]:bg-atm-blue 
+		class="relative h-5 w-9 cursor-pointer rounded-full bg-neutral-300 transition-transform duration-200 ease-in-out
 			   data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50
-			   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-atm-blue focus-visible:ring-offset-2"
-		aria-label="Toggle between OR and AND search modes"
+			   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2"
+		aria-label="Toggle between Any and All search modes"
 	>
 		<span 
 			class="thumb block h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out"
 		></span>
 	</button>
 	<input use:melt={$input} />
-	<span class="text-xs text-neutral-600 select-none">AND</span>
+	<span class="text-xs text-neutral-600 select-none">All</span>
 </div>
 
 <style>

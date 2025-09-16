@@ -10,9 +10,9 @@ export class MaskLayer implements maplibregl.CustomLayerInterface {
 
   private buffers: WebGLBuffer[] = [];
   private vertexCounts: number[] = [];
-  private aPos: GLint;
+  private aPos!: GLint;
 
-  private fullScreenQuadBuffer: WebGLBuffer;
+  private fullScreenQuadBuffer!: WebGLBuffer;
 
   private map?: maplibregl.Map;
 
@@ -197,7 +197,7 @@ export class MaskLayer implements maplibregl.CustomLayerInterface {
     const { vertices, holes, dimensions } = flatten([coordinates]);
     const triangles = earcut(vertices, holes, dimensions);
 
-    triangles.forEach((index) => {
+    triangles.forEach((index: number) => {
       resultVertices.push(flatCoords[index * 2], flatCoords[index * 2 + 1]);
     });
 

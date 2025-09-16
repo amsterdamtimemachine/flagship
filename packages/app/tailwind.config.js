@@ -18,12 +18,10 @@ export default {
 				'atm-red': '#ee5e00',
 				'atm-red-light': '#f17562',
 				'atm-blue':'#5e92f3',
-				'map': {
-					'cell-value': '#0053fb',
-					'background': '#efd9ca', //'dark sand #efd9ca', //' sand #fbf5f2', // '#bfd9c3' green // light sand ece7e4
-					'water-fill': '#ddecfe',
-					'water-outline': '#a3c4e7'
-				}
+				'map-cell-value': '#0053fb',
+				'map-background': '#efd9ca', //'dark sand #efd9ca', //' sand #fbf5f2', // '#bfd9c3' green // light sand ece7e4
+				'map-water-fill': '#ddecfe',
+				'map-water-outline': '#a3c4e7'
 			},
 			fontFamily: {
 				'sans': ['Satoshi', 'sans-serif'],

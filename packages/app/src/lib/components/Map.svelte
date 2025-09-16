@@ -7,7 +7,6 @@
 	import type { FeatureCollection, Feature, Polygon, GeoJsonProperties } from 'geojson';
 	import type { Heatmap, HeatmapDimensions, HeatmapBlueprintCell, Coordinates } from '@atm/shared/types';
 	import { mergeCss } from '$utils/utils';
-	import { MaskLayer } from '$utils/map';
 	import resolveConfig from 'tailwindcss/resolveConfig'
 	import tailwindConfig from '$tailwindConfig' 
 
@@ -35,6 +34,7 @@
 		outlineLayerColor: string, // hex
 		backgroundColor: string, // hex
 		waterFillColor: string, // hex
+		waterOutlineColor: string, // hex
 		waterOutlineWidth: number, // px
 		waterOutlineOpacity: number, // 0.0 - 1.0
 	}
@@ -44,28 +44,30 @@
 		heatmapBlueprint: HeatmapBlueprintCell[];
 		dimensions: HeatmapDimensions;
 		selectedCellId: string | null;
-		mapStyle: MapStyle;
+		mapStyle?: MapStyle;
 		class?: string;
 		handleCellClick?: (cellId: string | null) => void;
 		handleMapLoaded?: () => void;
 	}
 
 	const twConfig = resolveConfig(tailwindConfig)
+	const colors = twConfig.theme.colors as unknown as Record<string, string>
 
-	const defaultMapStyle : mapStyle = {
+	const defaultMapStyle : MapStyle = {
 		boundsPanningOffsetLat: 0.1,
 		boundsPanningOffsetLon: 0.2,
 		minZoom: 11,
 		maxZoom: 14,
 		defaultZoom: 12,
 		center: {lat: 4.895645, lon: 52.372219},
-		cellSelectedOutlineColor: twConfig.theme.colors['atm-red'],
-		cellHoveredOutlineColor: twConfig.theme.colors['atm-red-light'],
+		cellSelectedOutlineColor: colors['atm-red'],
+		cellHoveredOutlineColor: colors['atm-red-light'],
 		cellSelectedOutlineWidth: 3, 
-		cellValueColor: twConfig.theme.colors.map['cell-value'],
-		backgroundColor: twConfig.theme.colors.map['background'],
-		waterFillColor: twConfig.theme.colors.map['water-fill'],
-		waterOutlineColor: twConfig.theme.colors.map['water-outline'],
+		cellValueColor: colors['map-cell-value'],
+		outlineLayerColor: colors['atm-gold'],
+		backgroundColor: colors['map-background'],
+		waterFillColor: colors['map-water-fill'],
+		waterOutlineColor: colors['map-water-outline'],
 		waterOutlineWidth: 0.75,
 		waterOutlineOpacity: 1.0,
 	}
@@ -84,7 +86,6 @@
 	let map: MapLibreMap | undefined = $state();
 	let mapContainer: HTMLElement;
 	let isMapLoaded = $state(false);
-	let maskLayer: MaskLayer;
 
 	const cellIdMap = $derived.by(() => {
 		const idMap = new Map<number, string>();
@@ -129,7 +130,6 @@
 		if (!isMapLoaded || !map || !heatmapBlueprint) return;
 		resetAllCells();
 		setActiveCells();
-		updateMask();
 	});
 
 	// Handle selected cell changes - THIS FIXES THE HIGHLIGHTING ISSUE
@@ -174,22 +174,6 @@
 		});
 	}
 
-	function updateMask(): void {
-		if (!maskLayer || !map) return;
-		
-		// Get the existing heatmap source data
-		const heatmapSource = map.getSource('heatmap') as maplibregl.GeoJSONSource;
-		if (!heatmapSource) return;
-		
-		const sourceData = heatmapSource._data as FeatureCollection<Polygon, CellProperties>;
-		if (!sourceData) return;
-		
-		const activePolygons = sourceData.features.filter(feature => 
-			activeCells.has(feature.properties.id)
-		);
-		
-		maskLayer.setPolygons(activePolygons as Feature<Polygon>[]);
-	}
 
 	function generateHeatmapCells(
 		blueprint: HeatmapBlueprintCell[]
@@ -355,9 +339,7 @@
 				}
 			});
 
-			// Add mask layer to mask water outlines outside active cells
-			//maskLayer = new MaskLayer('heatmap-mask');
-			//mapInstance.addLayer(maskLayer); 
+ 
 
 				
 

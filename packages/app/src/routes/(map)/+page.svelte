@@ -2,7 +2,8 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { onNavigate, afterNavigate } from '$app/navigation';
-	import { createMapController } from '$state/MapController.svelte';
+	import { goto } from '$app/navigation';
+	import { createStateController } from '$state/StateController.svelte';
 	import { createPageErrorData } from '$utils/error';
 	import { mergeHeatmapTimeline, mergeHeatmaps } from '$utils/heatmap';
 	import { mergeHistograms } from '$utils/histogram';
@@ -40,7 +41,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	let currentTagOperator = $derived(data?.currentTagOperator || 'OR');
 	let histograms = $derived((data?.histogram as HistogramApiResponse | null)?.histograms);
 
-	const controller = createMapController();
+	const controller = createStateController();
 	let currentPeriod = $derived(controller.currentPeriod);
 	let selectedCellId = $derived(controller.selectedCellId);
 	let selectedCellBounds = $derived(controller.selectedCellBounds);
@@ -185,7 +186,11 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 
 		// Sync URL parameters after router is ready
 		tick().then(() => {
-			controller.syncUrlParameters(initialPeriod, currentTagOperator, currentRecordTypes);
+			// Only sync defaults on initial load (when URL has no params)
+			const hasUrlParams = window.location.search.length > 0;
+			if (!hasUrlParams) {
+				controller.syncUrlParameters(initialPeriod, currentTagOperator, currentRecordTypes);
+			}
 
 			// Handle cell bounds lookup from URL if cell parameter exists
 			const urlParams = new URLSearchParams(window.location.search);
@@ -206,21 +211,39 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	});
 
 	function handlePeriodChange(period: string) {
-		controller.setPeriod(period);
+		controller.updatePeriod(period);
+		controller.updateUrlParam('period', period);
 	}
 
 	function handleRecordTypeChange(recordTypes: string[] | string) {
 		const recordTypesArray = Array.isArray(recordTypes) ? recordTypes : [recordTypes];
-		controller.setRecordType(recordTypesArray, { resetTags: true });
+		const url = new URL(window.location.href);
+		if (recordTypesArray.length > 0) {
+			url.searchParams.set('recordTypes', recordTypesArray.join(','));
+		} else {
+			url.searchParams.delete('recordTypes');
+		}
+		url.searchParams.delete('tags'); // resetTags
+		goto(url.pathname + url.search);
 	}
 
 	function handleTagsChange(tags: string | string[]) {
 		const tagArray = Array.isArray(tags) ? tags : [tags];
-		controller.setTags(tagArray);
+		const url = new URL(window.location.href);
+		if (tagArray.length > 0) {
+			url.searchParams.set('tags', tagArray.join(','));
+		} else {
+			url.searchParams.delete('tags');
+		}
+		goto(url.pathname + url.search);
 	}
 
 	function handleTagOperatorChange(operator: 'AND' | 'OR') {
-		controller.setTagOperator(operator, { resetTags: true });
+		// Always navigate to ensure tags are reset and fresh data is fetched
+		const url = new URL(window.location.href);
+		url.searchParams.set('tagOperator', operator);
+		url.searchParams.delete('tags'); // resetTags
+		goto(url.pathname + url.search);
 	}
 
 	// Handle cell selection from map
@@ -320,7 +343,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 						onItemSelected={handleTagsChange}
 						requireOneItemSelected={false}>
 						{#snippet children(item, isSelected, isDisabled)}
-							<Tag variant={isSelected ? 'selected-outline' : 'outline'} disabled={isDisabled}>
+							<Tag variant={isSelected ? 'selected' : 'default'} disabled={isDisabled}>
 								{item}
 							</Tag>
 						{/snippet}
