@@ -23,6 +23,7 @@ const config = {
 			$constants: 'src/lib/constants.ts',
 			$stores: 'src/lib/stores',
 			$tailwindConfig: 'tailwind.config.js',
+			$content: 'static/content',
 		}
 	}
 };

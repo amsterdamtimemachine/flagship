@@ -147,7 +147,6 @@ export function createStateController() {
 		}
 	}
 
-	// Public interface - expose only what components need
 	return {
 		// State getters (reactive)
 		get currentPeriod() {

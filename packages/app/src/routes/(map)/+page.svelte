@@ -22,6 +22,7 @@
 	import FiltersStatusPanel from '$components/FiltersStatusPanel.svelte';
 	import ErrorHandler from '$components/ErrorHandler.svelte';
 	import FeatureDetailModal from '$components/FeatureDetailModal.svelte';
+	import Nav from '$components/Nav.svelte';
 	import type { PageData } from './$types';
 import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline } from '@atm/shared/types';
 
@@ -49,6 +50,9 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 
 	// Navigation state
 	let navExpanded = $state(true);
+	
+	// Flag to prevent multiple URL syncs
+	let hasInitializedUrl = $state(false);
 
 	// Combine server errors with controller errors for ErrorHandler
 	let allErrors = $derived.by(() => {
@@ -184,15 +188,8 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 		}
 		controller.initialize(initialPeriod);
 
-		// Sync URL parameters after router is ready
+		// Handle cell bounds lookup from URL if cell parameter exists
 		tick().then(() => {
-			// Only sync defaults on initial load (when URL has no params)
-			const hasUrlParams = window.location.search.length > 0;
-			if (!hasUrlParams) {
-				controller.syncUrlParameters(initialPeriod, currentTagOperator, currentRecordTypes);
-			}
-
-			// Handle cell bounds lookup from URL if cell parameter exists
 			const urlParams = new URLSearchParams(window.location.search);
 			const cellParam = urlParams.get('cell');
 			if (cellParam && heatmapBlueprint) {
@@ -208,6 +205,24 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 				}
 			}
 		});
+	});
+
+	// Sync URL parameters when data is ready
+	$effect(() => {
+		// Wait for all required data to be available
+		if (mergedHistogram && recordTypes.length > 0 && !hasInitializedUrl) {
+			const hasUrlParams = window.location.search.length > 0;
+			if (!hasUrlParams) {
+				// Get the actual first period and record types now that data is ready
+				const firstPeriod = mergedHistogram.bins?.[0]?.timeSlice?.key || '';
+				const defaultRecordTypes = currentRecordTypes.length > 0 ? currentRecordTypes : recordTypes;
+				
+				if (firstPeriod && defaultRecordTypes.length > 0) {
+					controller.syncUrlParameters(firstPeriod, currentTagOperator, defaultRecordTypes);
+					hasInitializedUrl = true;
+				}
+			}
+		}
 	});
 
 	function handlePeriodChange(period: string) {
@@ -287,11 +302,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 		{/if}
 
 		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
-			<nav class="bg-atm-sand flex items-center justify-between h-[50px] p-3 border-b border-atm-sand-border">
-				<h1 class="font-sans">Amsterdam Time Machine</h1>
-				<ButtonLink target='' rel='' href='/about'> About </ButtonLink>
-			
-			</nav>
+			<Nav />
 			<div class="p-3">
 				<div class="mb-4">
 					<div class="flex">
