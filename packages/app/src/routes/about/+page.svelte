@@ -18,7 +18,7 @@
   };
 </script>
 
-<div class="bg-atm-sand min-h-screen">
+<div class="bg-atm-sand-dark min-h-screen">
   <Nav />
   <div class="max-w-4xl mx-auto p-8">
     <SvelteMarkdown source={data.content} {renderers} />

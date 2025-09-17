@@ -14,14 +14,14 @@
 
 	const variantClasses = $derived(
 		disabled 
-			? 'bg-gray-100 text-gray-400'
+			? 'bg-atm-gold-gray text-gray-800'
 			: variant === 'selected'
-			? 'bg-blue-100 text-blue-800'
+			? 'bg-atm-blue-light text-black'
 			: variant === 'outline'
-			? 'border border-gray-300 text-gray-700 bg-transparent'
+			? 'border border-atm-gold-gray-dark text-black bg-transparent'
 			: variant === 'selected-outline'
-			? 'border border-blue-600 text-blue-600 bg-transparent'
-			: 'bg-gray-100 text-gray-700'
+			? 'border border-atm-blue text-black bg-transparent'
+			: 'bg-atm-gold-gray text-gray-700'
 	);
 </script>
 

@@ -92,7 +92,7 @@
 >
 	<div
 		{...progress.progress}
-		class="h-full bg-blue-500 transition-transform duration-300 ease-out"
+		class="h-full bg-atm-blue transition-transform duration-300 ease-out"
 		style:width="calc(100% - var(--progress))"
 		style:transform="translateX(calc(var(--progress) * -1))"
 	></div>
