@@ -373,6 +373,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 			selectedRecordTypes={currentRecordTypes}
 			allRecordTypes={recordTypes}
 			selectedTags={currentTags}
+			tagOperator={currentTagOperator as 'AND' | 'OR'}
 			class="absolute top-3 left-3"
 		/>
 	{/if}

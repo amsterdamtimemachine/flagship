@@ -7,10 +7,11 @@
 		selectedRecordTypes: RecordType[];
 		allRecordTypes: RecordType[];
 		selectedTags: string[];
+		tagOperator?: 'AND' | 'OR';
 		class?: string;
 	}
 
-	let { selectedRecordTypes, allRecordTypes, selectedTags, class: className }: Props = $props();
+	let { selectedRecordTypes, allRecordTypes, selectedTags, tagOperator = 'OR', class: className }: Props = $props();
 
 	// Check if all content types are selected
 	const hasAllTypes = $derived(
@@ -35,11 +36,11 @@
 			{/if}
 		{/each}
 		{#if selectedTags.length > 0}
-			<span>and</span>
+			<span>{tagOperator === 'AND' ? 'and' : 'or'}</span>
 			{#each selectedTags as tag, index}
 				<Tag variant="selected">{tag}</Tag>
 				{#if index < selectedTags.length - 1}
-					<span>and</span>
+					<span>{tagOperator === 'AND' ? 'and' : 'or'}</span>
 				{/if}
 			{/each}
 		{/if}

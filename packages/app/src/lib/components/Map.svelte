@@ -74,6 +74,7 @@
 		waterOutlineOpacity: 1.0,
 		transportationColor: colors['map-background'],
 		transportationOpacity: 1.0,
+		transportationOutlineWidth: 0.75,
 	}
 
 	let {
@@ -343,7 +344,8 @@
 				],
 				paint: {
 					'line-color': mapStyle.transportationColor,
-					'line-opacity': mapStyle.transportationOpacity
+					'line-opacity': mapStyle.transportationOpacity,
+					'line-width': mapStyle.transportationOutlineWidth
 				}
 			});
 
