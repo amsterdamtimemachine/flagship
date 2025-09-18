@@ -14,16 +14,17 @@ export default {
 				'atm-gold': '#dcb27d', 
 				'atm-gold-dark': '#cca36e', 
 				'atm-gold-darkest': '#58401a',
-				'atm-gold-gray': '#e8e2dc',
-				'atm-gold-gray-dark': '#91877c',
+				'atm-gold-gray': '#ebe1d6',
+				'atm-gold-gray-dark': '#5e5954',
 				'atm-red': '#ee5e00',
 				'atm-red-light': '#f17562',
 				'atm-blue':'#5e92f3',
 				'atm-blue-light':'#c2d0fb',
 				'map-cell-value': '#0053fb',
-				'map-background': '#fbf5f2', //'dark sand #efd9ca', //' sand #fbf5f2', // '#bfd9c3' green // light sand ece7e4
+				'map-background': '#f9efe9', //'dark sand #efd9ca', //' sand #fbf5f2', // '#bfd9c3' green // light sand ece7e4
 				'map-water-fill': '#ddecfe',
-				'map-water-outline': '#a3c4e7'
+				'map-water-outline': '#a3c4e7',
+				'map-transporation': '#99776c'
 			},
 			fontFamily: {
 				'sans': ['Satoshi', 'sans-serif'],

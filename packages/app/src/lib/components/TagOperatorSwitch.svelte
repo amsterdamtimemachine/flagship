@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { createSwitch, melt } from '@melt-ui/svelte';
+	import { mergeCss } from '$utils/utils';
 
 	interface Props {
 		operator: 'AND' | 'OR';
 		onOperatorChange: (operator: 'AND' | 'OR') => void;
 		disabled?: boolean;
+		class?: string;
 	}
 
-	let { operator, onOperatorChange, disabled = false }: Props = $props();
+	let { operator, onOperatorChange, disabled = false, class: className }: Props = $props();
 
 	const {
 		elements: { root, input },
@@ -21,15 +23,10 @@
 			return next;
 		}
 	});
-
-	// Update checked state when operator prop changes
-	$effect(() => {
-		checked.set(operator === 'AND');
-	});
 </script>
 
-<div class="flex items-center gap-3">
-	<span class="text-xs text-black select-none">Any</span>
+<div class={mergeCss('flex items-center gap-1', className)}>
+	<span class="font-sans text-sm text-black select-none">Any</span>
 	<button
 		use:melt={$root}
 		class="relative h-5 w-9 cursor-pointer rounded-full bg-atm-sand-darkish hover:bg-atm-sand-dark border border-atm-gold transition-transform duration-200 ease-in-out
@@ -38,17 +35,14 @@
 		aria-label="Toggle between Any and All search modes"
 	>
 		<span 
-			class="thumb block h-4 w-4 rounded-full bg-atm-sand-darkest border-atm-gold border shadow-sm transition-transform duration-200 ease-in-out"
+			class="thumb block h-4 w-4 rounded-full bg-atm-gold-dark shadow-sm transition-transform duration-200 ease-in-out"
 		></span>
 	</button>
 	<input use:melt={$input} />
-	<span class="text-xs text-neutral-600 select-none">All</span>
+	<span class="font-sans text-sm text-black select-none">All</span>
 </div>
 
 <style>
-	.thumb {
-	}
-
 	:global([data-state='checked']) .thumb {
 		transform: translateX(1.125rem);
 	}

@@ -21,7 +21,7 @@
 			? 'border border-atm-gold-gray-dark text-black bg-transparent'
 			: variant === 'selected-outline'
 			? 'border border-atm-blue text-black bg-transparent'
-			: 'bg-atm-gold-gray text-gray-700'
+			: 'bg-atm-gold-gray text-black'
 	);
 </script>
 

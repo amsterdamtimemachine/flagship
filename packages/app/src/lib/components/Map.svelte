@@ -37,6 +37,8 @@
 		waterOutlineColor: string, // hex
 		waterOutlineWidth: number, // px
 		waterOutlineOpacity: number, // 0.0 - 1.0
+		transportationColor: string, // hex
+		transportationOpacity: number, // 0.0 - 1.0
 	}
 
 	export interface MapProps {
@@ -70,6 +72,8 @@
 		waterOutlineColor: colors['map-water-outline'],
 		waterOutlineWidth: 0.75,
 		waterOutlineOpacity: 1.0,
+		transportationColor: colors['map-background'],
+		transportationOpacity: 1.0,
 	}
 
 	let {
@@ -311,6 +315,35 @@
 					'line-color': mapStyle.waterOutlineColor,
 					'line-width': mapStyle.waterOutlineWidth,
 					'line-opacity': mapStyle.waterOutlineOpacity,
+				}
+			});
+
+			// Add transportation layer (roads)
+			mapInstance.addLayer({
+				id: 'transportation',
+				type: 'line',
+				source: 'maptiler_planet',
+				'source-layer': 'transportation',
+				minzoom: 4,
+				maxzoom: 22,
+				layout: {
+					visibility: 'visible',
+					'line-cap': 'round'
+				},
+				filter: [
+					'all',
+					['==', ['geometry-type'], 'LineString'],
+					[
+						'match',
+						['get', 'class'],
+						['motorway', 'primary', 'secondary', 'tertiary', 'trunk'],
+						true,
+						false
+					]
+				],
+				paint: {
+					'line-color': mapStyle.transportationColor,
+					'line-opacity': mapStyle.transportationOpacity
 				}
 			});
 

@@ -23,6 +23,7 @@
 	import ErrorHandler from '$components/ErrorHandler.svelte';
 	import FeatureDetailModal from '$components/FeatureDetailModal.svelte';
 	import Nav from '$components/Nav.svelte';
+	import NavItem from '$components/NavItem.svelte';
 	import type { PageData } from './$types';
 import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline } from '@atm/shared/types';
 
@@ -302,7 +303,9 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 		{/if}
 
 		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
-			<Nav />
+			<Nav class="p-3">
+				<NavItem href="/about" label="About" />
+			</Nav>
 			<div class="p-3">
 				<div class="mb-4">
 					<div class="flex">
@@ -328,14 +331,15 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 						<h2 class="pr-1">Topics</h2>
 						<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
 					</div>
-					<div class="flex items-center justify-between mb-3">
-						<span class="text-xs text-neutral-600">
-							{currentTagOperator === 'AND' ? 'Include only content with all selected topics' : 'Include content with any selected topics'}
-						</span>
+					<div class="mt-2 mb-3">
 						<TagOperatorSwitch 
 							operator={currentTagOperator as 'AND' | 'OR'}
 							onOperatorChange={handleTagOperatorChange}
+							class="block"
 						/>
+						<span class="text-xs text-black">
+							{currentTagOperator === 'AND' ? 'Include only content with all selected topics' : 'Include content with any selected topics'}
+						</span>
 					</div>
 				</div>
 
