@@ -30,7 +30,7 @@
 
 </script>
 
-<div class="w-full border rounded-sm border-gray-300 bg-atm-sand min-w-0">
+<div class="w-full border rounded-sm border-atm-sand-border bg-atm-sand min-w-0">
 	<FeatureCardHeader class="p-2" feature={commonProps} />
 	<div class={expanded ? '' : 'p-2'}>
 		<h3
@@ -46,7 +46,7 @@
 		{:else if (feature.recordType === 'text' || feature.recordType === 'person') && 'text' in feature}
 			<FeatureCardText text={feature.text} {expanded} />
 		{:else}
-			<div class="{expanded ? 'px-2' : ''} text-gray-500 text-sm">
+			<div class="{expanded ? 'px-2' : ''} text-gray-800 text-sm">
 				Unknown feature type: {feature.recordType}
 			</div>
 		{/if}

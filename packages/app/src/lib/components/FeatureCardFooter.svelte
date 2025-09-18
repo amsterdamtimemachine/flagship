@@ -19,7 +19,7 @@
 <div
 	class={mergeCss(
 		expanded ? 'py-2' : 'py-1',
-		'px-2 flex justify-between items-center border-t border-gray-300',
+		'px-2 flex justify-between items-center border-t border-atm-sand-border',
 		className
 	)}
 >

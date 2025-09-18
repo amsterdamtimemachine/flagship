@@ -10,7 +10,7 @@
 
 	let { class: className, variant = 'default', disabled = false, children }: Props = $props();
 
-	const baseClasses = 'text-xs px-1 py-0.5 rounded transition-colors select-none';
+	const baseClasses = 'text-sm px-1 py-0.5 rounded transition-colors select-none';
 
 	const variantClasses = $derived(
 		disabled 

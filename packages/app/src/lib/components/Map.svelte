@@ -69,11 +69,11 @@
 		outlineLayerColor: colors['atm-gold'],
 		backgroundColor: colors['map-background'],
 		waterFillColor: colors['map-water-fill'],
-		waterOutlineColor: colors['map-water-outline'],
+		waterOutlineColor: colors['map-water-fill'],
 		waterOutlineWidth: 0.75,
-		waterOutlineOpacity: 1.0,
+		waterOutlineOpacity: 0.8,
 		transportationColor: colors['map-background'],
-		transportationOpacity: 1.0,
+		transportationOpacity: 0.8,
 		transportationOutlineWidth: 0.75,
 	}
 

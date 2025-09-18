@@ -12,13 +12,13 @@
 	let { feature, class: className }: Props = $props();
 </script>
 
-<div class={mergeCss('border-b border-gray-300', className)}>
+<div class={mergeCss('border-b border-atm-sand-border', className)}>
 	<!-- Dataset and Record Type -->
 	<div class="flex w-full justify-between items-center">
 		<Tag variant="outline">
 			{feature.recordType}
 		</Tag>
-		<span class="text-xs text-black">
+		<span class="text-sm text-black">
 			{formatTimePeriod(feature.per)}
 		</span>
 	</div>
