@@ -13,15 +13,15 @@
 	const baseClasses = 'text-sm px-1 py-0.5 rounded transition-colors select-none';
 
 	const variantClasses = $derived(
-		disabled 
+		disabled
 			? 'bg-atm-gold-gray text-gray-800'
 			: variant === 'selected'
-			? 'bg-atm-blue-light text-black'
-			: variant === 'outline'
-			? 'border border-atm-gold-gray-dark text-black bg-transparent'
-			: variant === 'selected-outline'
-			? 'border border-atm-blue text-black bg-transparent'
-			: 'bg-atm-gold-gray text-black'
+				? 'bg-atm-blue-light text-black'
+				: variant === 'outline'
+					? 'border border-atm-gold-gray-dark text-black bg-transparent'
+					: variant === 'selected-outline'
+						? 'border border-atm-blue text-black bg-transparent'
+						: 'bg-atm-gold-gray text-black'
 	);
 </script>
 

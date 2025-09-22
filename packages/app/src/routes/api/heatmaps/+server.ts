@@ -42,17 +42,17 @@ export const GET: RequestHandler = async ({ url }) => {
 		// Handle OR operation by merging individual tags
 		if (tagOperatorParam === 'OR' && tags && tags.length > 1) {
 			console.log(`🔀 OR operation: fetching and merging individual tags`);
-			
+
 			// Import merging utilities
 			const { mergeHeatmaps } = await import('$utils/heatmap');
-			
-			// Fetch each tag individually 
+
+			// Fetch each tag individually
 			const individualResponses = await Promise.all(
-				tags.map(tag => dataService.getHeatmapTimeline(recordTypes, [tag]))
+				tags.map((tag) => dataService.getHeatmapTimeline(recordTypes, [tag]))
 			);
-			
+
 			// Check if all individual requests succeeded
-			const failedResponses = individualResponses.filter(r => !r.success);
+			const failedResponses = individualResponses.filter((r) => !r.success);
 			if (failedResponses.length > 0) {
 				console.error(`❌ Some individual tag requests failed:`, failedResponses);
 				response = {
@@ -65,35 +65,35 @@ export const GET: RequestHandler = async ({ url }) => {
 				};
 			} else {
 				// Merge timelines by merging heatmaps for each time slice
-				const timelines = individualResponses.map(r => r.heatmapTimeline);
+				const timelines = individualResponses.map((r) => r.heatmapTimeline);
 				const mergedTimeline: any = {};
-				
+
 				// Get all unique time slice keys from all timelines
 				const allTimeSliceKeys = new Set<string>();
-				timelines.forEach(timeline => {
-					Object.keys(timeline).forEach(key => allTimeSliceKeys.add(key));
+				timelines.forEach((timeline) => {
+					Object.keys(timeline).forEach((key) => allTimeSliceKeys.add(key));
 				});
-				
+
 				// Merge each time slice
 				for (const timeSliceKey of allTimeSliceKeys) {
 					mergedTimeline[timeSliceKey] = {};
-					
+
 					// For each recordType, merge heatmaps from all timelines
 					for (const recordType of recordTypes) {
 						const heatmapsToMerge: any[] = [];
-						
+
 						// Collect heatmaps from all timelines for this time slice and record type
-						timelines.forEach(timeline => {
+						timelines.forEach((timeline) => {
 							const timeSliceData = timeline[timeSliceKey];
 							if (timeSliceData && timeSliceData[recordType] && timeSliceData[recordType].base) {
 								heatmapsToMerge.push(timeSliceData[recordType].base);
 							}
 						});
-						
+
 						if (heatmapsToMerge.length > 0) {
 							// Merge all heatmaps for this recordType and time slice
 							const mergedHeatmap = mergeHeatmaps(heatmapsToMerge);
-							
+
 							// Create the merged recordType data structure
 							mergedTimeline[timeSliceKey][recordType] = {
 								base: mergedHeatmap,
@@ -102,7 +102,7 @@ export const GET: RequestHandler = async ({ url }) => {
 						}
 					}
 				}
-				
+
 				response = {
 					heatmapTimeline: mergedTimeline,
 					recordTypes,
@@ -131,11 +131,17 @@ export const GET: RequestHandler = async ({ url }) => {
 			return json(response, { headers });
 		} else {
 			console.error(`❌ Heatmaps API error: ${response.message}`);
-			throw error(500, { code: 'HEATMAP_LOAD_ERROR', message: response.message || 'Failed to load heatmap data' });
+			throw error(500, {
+				code: 'HEATMAP_LOAD_ERROR',
+				message: response.message || 'Failed to load heatmap data'
+			});
 		}
 	} catch (err) {
 		console.error('❌ Heatmaps API unexpected error:', err);
-		throw error(500, { code: 'INTERNAL_ERROR', message: err instanceof Error ? err.message : 'Internal server error' });
+		throw error(500, {
+			code: 'INTERNAL_ERROR',
+			message: err instanceof Error ? err.message : 'Internal server error'
+		});
 	}
 };
 

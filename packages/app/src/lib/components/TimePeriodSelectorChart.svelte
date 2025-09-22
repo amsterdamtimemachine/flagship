@@ -49,5 +49,12 @@
 	{/each}
 
 	<!-- Track line -->
-	<line x1="0%" y1={timelineHeight} x2="100%" y2={timelineHeight} stroke="black" stroke-width="0.5" />
+	<line
+		x1="0%"
+		y1={timelineHeight}
+		x2="100%"
+		y2={timelineHeight}
+		stroke="black"
+		stroke-width="0.5"
+	/>
 </svg>

@@ -255,6 +255,10 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	}
 
 	function handleTagOperatorChange(operator: 'AND' | 'OR') {
+		// Update local state immediately for UI responsiveness
+		currentTagOperator = operator;
+		currentTags = []; // Reset tags immediately
+		
 		// Always navigate to ensure tags are reset and fresh data is fetched
 		const url = new URL(window.location.href);
 		url.searchParams.set('tagOperator', operator);

@@ -37,7 +37,7 @@
 			</div>
 		</div>
 	{:else}
-		<div class="relative w-full bg-gray-300">
+		<div class="relative w-full border-y border-atm-sand-border">
 			{#if !expanded && onExpand}
 				<button
 					type="button"

@@ -4,8 +4,6 @@
 	import { melt, type AnyMeltElement } from '@melt-ui/svelte';
 	import type { PhosphorIcon, PhosphorIconProps } from '@atm/shared/types';
 
-
-
 	interface Props {
 		onclick?: () => void;
 		class?: string;
@@ -43,7 +41,6 @@
 		'h-[32px] w-[32px] flex justify-center items-center bg-atm-sand-darkish rounded border border-atm-gold border-[1px] hover:bg-atm-sand-dark disabled:opacity-50 disabled:cursor-not-allowed text-sm';
 	const paddingClasses = Icon ? 'p-1' : 'px-3 py-2';
 </script>
-
 
 {#if meltAction}
 	<button

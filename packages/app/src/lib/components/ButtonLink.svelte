@@ -13,23 +13,20 @@
 
 	let {
 		href,
-		target='_blank',
-		rel='noopener noreferrer',
+		target = '_blank',
+		rel = 'noopener noreferrer',
 		class: className,
 		active = false,
-		children,
+		children
 	}: Props = $props();
 
-	const baseClasses = active 
+	const baseClasses = active
 		? 'h-[32px] px-2 inline-flex justify-center items-center bg-atm-gold rounded border border-atm-gold border-[1px] text-sm cursor-default'
 		: 'h-[32px] px-2 inline-flex justify-center items-center bg-atm-sand-darkish rounded border border-atm-gold border-[1px] hover:bg-atm-sand-dark text-sm';
 </script>
 
-<a
-	class={mergeCss(baseClasses, className)}
-	{href} {target} {rel}>
+<a class={mergeCss(baseClasses, className)} {href} {target} {rel}>
 	<span>
 		{@render children?.()}
 	</span>
 </a>
-

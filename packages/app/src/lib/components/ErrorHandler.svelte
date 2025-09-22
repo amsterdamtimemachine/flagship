@@ -21,7 +21,9 @@
 		if (!errorData.hasErrors) return;
 
 		// Only process new errors that haven't been shown yet
-		const newErrors = errorData.errors.filter((error: AppError) => !processedErrorIds.has(error.id));
+		const newErrors = errorData.errors.filter(
+			(error: AppError) => !processedErrorIds.has(error.id)
+		);
 
 		if (newErrors.length > 0) {
 			newErrors.forEach((error: AppError) => {

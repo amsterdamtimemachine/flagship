@@ -27,7 +27,6 @@
 		recordType: feature.recordType,
 		tags: feature.tags
 	};
-
 </script>
 
 <div class="w-full border rounded-sm border-atm-sand-border bg-atm-sand min-w-0">
@@ -42,7 +41,12 @@
 		</h3>
 		<!-- Feature-specific content -->
 		{#if feature.recordType === 'image' && 'thumbnail' in feature}
-			<FeatureCardImage thumbnail={feature.thumbnail} alt={feature.alt} {expanded} onExpand={handleExpand} />
+			<FeatureCardImage
+				thumbnail={feature.thumbnail}
+				alt={feature.alt}
+				{expanded}
+				onExpand={handleExpand}
+			/>
 		{:else if (feature.recordType === 'text' || feature.recordType === 'person') && 'text' in feature}
 			<FeatureCardText text={feature.text} {expanded} />
 		{:else}

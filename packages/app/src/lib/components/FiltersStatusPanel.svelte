@@ -11,22 +11,28 @@
 		class?: string;
 	}
 
-	let { selectedRecordTypes, allRecordTypes, selectedTags, tagOperator = 'OR', class: className }: Props = $props();
+	let {
+		selectedRecordTypes,
+		allRecordTypes,
+		selectedTags,
+		tagOperator = 'OR',
+		class: className
+	}: Props = $props();
 
 	// Check if all content types are selected
 	const hasAllTypes = $derived(
-		selectedRecordTypes.length === 0 || 
-		(selectedRecordTypes.length === allRecordTypes.length && 
-		 allRecordTypes.every(type => selectedRecordTypes.includes(type)))
+		selectedRecordTypes.length === 0 ||
+			(selectedRecordTypes.length === allRecordTypes.length &&
+				allRecordTypes.every((type) => selectedRecordTypes.includes(type)))
 	);
 
 	// Get content types to display
-	const displayedRecordTypes = $derived(
-		hasAllTypes ? allRecordTypes : selectedRecordTypes
-	);
+	const displayedRecordTypes = $derived(hasAllTypes ? allRecordTypes : selectedRecordTypes);
 </script>
 
-<div class={mergeCss("bg-atm-sand border border-atm-sand-border rounded-sm shadow-sm p-1", className)}>
+<div
+	class={mergeCss('bg-atm-sand border border-atm-sand-border rounded-sm shadow-sm p-1', className)}
+>
 	<div class="text-sm font-sans text-black flex flex-wrap items-center gap-1">
 		<span>Viewing</span>
 		{#each displayedRecordTypes as recordType, index}

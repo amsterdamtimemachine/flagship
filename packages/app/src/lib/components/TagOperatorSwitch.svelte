@@ -34,7 +34,7 @@
 			   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2"
 		aria-label="Toggle between Any and All search modes"
 	>
-		<span 
+		<span
 			class="thumb block h-4 w-4 rounded-full bg-atm-gold-dark shadow-sm transition-transform duration-200 ease-in-out"
 		></span>
 	</button>

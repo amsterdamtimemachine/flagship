@@ -33,5 +33,7 @@
 	role="button"
 	tabindex="0"
 	aria-label="Drag to change time period"
-	title="Period: {currentBin()?.timeSlice?.label || ''}{currentBin()?.count ? `, Count: ${currentBin().count}` : ''}"
+	title="Period: {currentBin()?.timeSlice?.label || ''}{currentBin()?.count
+		? `, Count: ${currentBin().count}`
+		: ''}"
 ></div>

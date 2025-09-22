@@ -42,17 +42,17 @@ export const GET: RequestHandler = async ({ url }) => {
 		// Handle OR operation by merging individual tags
 		if (tagOperatorParam === 'OR' && tags && tags.length > 1) {
 			console.log(`🔀 OR operation: fetching and merging individual histograms`);
-			
+
 			// Import merging utilities
 			const { mergeHistograms } = await import('$utils/histogram');
-			
-			// Fetch each tag individually 
+
+			// Fetch each tag individually
 			const individualResponses = await Promise.all(
-				tags.map(tag => dataService.getHistogram(recordTypes, [tag]))
+				tags.map((tag) => dataService.getHistogram(recordTypes, [tag]))
 			);
-			
+
 			// Check if all individual requests succeeded
-			const failedResponses = individualResponses.filter(r => !r.success);
+			const failedResponses = individualResponses.filter((r) => !r.success);
 			if (failedResponses.length > 0) {
 				console.error(`❌ Some individual histogram requests failed:`, failedResponses);
 				response = {
@@ -65,22 +65,22 @@ export const GET: RequestHandler = async ({ url }) => {
 			} else {
 				// Merge the individual histograms
 				const mergedHistograms: any = {};
-				
+
 				// For each recordType, merge histograms from all individual responses
 				for (const recordType of recordTypes) {
 					const histogramsToMerge: any[] = [];
-					
+
 					// Collect histograms from all responses for this record type
-					individualResponses.forEach(response => {
+					individualResponses.forEach((response) => {
 						if (response.histograms[recordType] && response.histograms[recordType].base) {
 							histogramsToMerge.push(response.histograms[recordType].base);
 						}
 					});
-					
+
 					if (histogramsToMerge.length > 0) {
 						// Merge all histograms for this recordType
 						const mergedHistogram = mergeHistograms(histogramsToMerge);
-						
+
 						// Create the merged recordType data structure
 						mergedHistograms[recordType] = {
 							base: mergedHistogram,
@@ -88,7 +88,7 @@ export const GET: RequestHandler = async ({ url }) => {
 						};
 					}
 				}
-				
+
 				response = {
 					histograms: mergedHistograms,
 					recordTypes,
@@ -114,11 +114,17 @@ export const GET: RequestHandler = async ({ url }) => {
 			return json(response, { headers });
 		} else {
 			console.error(`❌ Histogram API error: ${response.message}`);
-			throw error(500, { code: 'HISTOGRAM_LOAD_ERROR', message: response.message || 'Failed to load histogram data' });
+			throw error(500, {
+				code: 'HISTOGRAM_LOAD_ERROR',
+				message: response.message || 'Failed to load histogram data'
+			});
 		}
 	} catch (err) {
 		console.error('❌ Histogram API unexpected error:', err);
-		throw error(500, { code: 'INTERNAL_ERROR', message: err instanceof Error ? err.message : 'Internal server error' });
+		throw error(500, {
+			code: 'INTERNAL_ERROR',
+			message: err instanceof Error ? err.message : 'Internal server error'
+		});
 	}
 };
 

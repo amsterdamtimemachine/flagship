@@ -133,7 +133,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 
 	// Parse tags if provided - need to validate combinations, not just existence
 	let currentTags: string[] | undefined;
-	
+
 	// Parse tagOperator with default to OR (advanced search is AND)
 	const currentTagOperator = tagOperatorParam === 'AND' ? 'AND' : 'OR';
 
@@ -329,7 +329,13 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	await Promise.all([histogramPromise, heatmapPromise, availableTagsPromise]);
 
 	// Only validate tag combinations for AND operator (OR allows any combination)
-	if (currentTagOperator === 'AND' && currentTags && currentTags.length > 0 && currentRecordTypes && metadata?.recordTypes) {
+	if (
+		currentTagOperator === 'AND' &&
+		currentTags &&
+		currentTags.length > 0 &&
+		currentRecordTypes &&
+		metadata?.recordTypes
+	) {
 		try {
 			// Use the "show all" exception: if no current record types, use all record types
 			const effectiveRecordTypes =

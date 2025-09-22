@@ -12,7 +12,12 @@
 		onPeriodChange?: (newPeriod: string) => void;
 		class?: string;
 	}
-	let { histogram, period = undefined, onPeriodChange = undefined, class: className }: Props = $props();
+	let {
+		histogram,
+		period = undefined,
+		onPeriodChange = undefined,
+		class: className
+	}: Props = $props();
 
 	// Extract time period data
 	const timePeriods = $derived(histogram?.bins?.map((bin) => bin.timeSlice.key) || []);
@@ -115,7 +120,7 @@
 <svelte:document onmousemove={handleMouseMove} onmouseup={handleMouseUp} />
 
 {#if histogram?.bins?.length > 0}
-	<div class={mergeCss("bg-atm-sand border-t border-atm-sand-border w-full px-4 pt-2", className)}>
+	<div class={mergeCss('bg-atm-sand border-t border-atm-sand-border w-full px-4 pt-2', className)}>
 		<div class="w-full relative h-[40px]" bind:this={trackElement}>
 			<!-- Chart Layer: Histogram bars and grid -->
 			<TimePeriodSelectorChart

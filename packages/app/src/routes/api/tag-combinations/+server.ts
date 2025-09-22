@@ -90,11 +90,17 @@ export const GET: RequestHandler = async ({ url }) => {
 			return json(response, { headers });
 		} else {
 			console.error(`❌ Tag combinations API error: ${response.message}`);
-			throw error(500, { code: 'TAG_COMBINATIONS_LOAD_ERROR', message: response.message || 'Failed to load tag combinations' });
+			throw error(500, {
+				code: 'TAG_COMBINATIONS_LOAD_ERROR',
+				message: response.message || 'Failed to load tag combinations'
+			});
 		}
 	} catch (err) {
 		console.error('❌ Tag combinations API unexpected error:', err);
-		throw error(500, { code: 'INTERNAL_ERROR', message: err instanceof Error ? err.message : 'Internal server error' });
+		throw error(500, {
+			code: 'INTERNAL_ERROR',
+			message: err instanceof Error ? err.message : 'Internal server error'
+		});
 	}
 };
 

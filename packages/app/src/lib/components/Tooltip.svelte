@@ -5,7 +5,7 @@
 	import type { PhosphorIcon, PhosphorIconProps } from '@atm/shared/types';
 
 	interface Props {
-		text: string; 
+		text: string;
 		icon: PhosphorIcon;
 		placement?:
 			| 'top'
@@ -60,7 +60,12 @@
 
 <!-- Trigger element -->
 {#if disabled}
-	<span class={mergeCss("inline-flex items-center justify-center w-5 h-5 bg-sand-li rounded-full cursor-not-allowed", className)}>
+	<span
+		class={mergeCss(
+			'inline-flex items-center justify-center w-5 h-5 bg-sand-li rounded-full cursor-not-allowed',
+			className
+		)}
+	>
 		<Icon {...iconProps} />
 	</span>
 {:else}

@@ -38,7 +38,6 @@
 	});
 </script>
 
-
 {#if $open && selectedFeature}
 	<div use:melt={$portalled}>
 		<!-- Overlay/backdrop -->

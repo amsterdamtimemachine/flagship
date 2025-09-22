@@ -69,7 +69,7 @@
 				// Reject the change - return current value to maintain selection
 				return curr;
 			}
-			
+
 			// Valid change - proceed normally
 			if (onItemSelected && next !== undefined) {
 				onItemSelected(next);
@@ -103,7 +103,7 @@
 >
 	{#each sortedItems as itemValue (itemValue)}
 		<button
-			class="pb-1 last-child:pb-0 flex items-center gap-2 w-full text-left cursor-pointer  focus:outline-none  data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
+			class="pb-1 last-child:pb-0 flex items-center gap-2 w-full text-left cursor-pointer focus:outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
 			use:melt={$item({ value: itemValue, disabled: isDisabled(itemValue) })}
 			aria-label="Toggle {itemValue}"
 			role={type === 'single' ? 'radio' : 'checkbox'}

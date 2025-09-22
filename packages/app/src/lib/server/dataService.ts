@@ -91,7 +91,9 @@ export class VisualizationDataService {
 			if (!recordTypes || recordTypes.length === 0) {
 				const metadata = this.binaryHandler.getMetadata();
 				effectiveRecordTypes = metadata.recordTypes;
-				console.log(`📊 No recordTypes specified, defaulting to all: ${effectiveRecordTypes.join(', ')}`);
+				console.log(
+					`📊 No recordTypes specified, defaulting to all: ${effectiveRecordTypes.join(', ')}`
+				);
 			} else {
 				effectiveRecordTypes = recordTypes;
 			}
@@ -223,12 +225,16 @@ export class VisualizationDataService {
 			if (!recordTypes || recordTypes.length === 0) {
 				const metadata = this.binaryHandler.getMetadata();
 				effectiveRecordTypes = metadata.recordTypes;
-				console.log(`🔥 No recordTypes specified, defaulting to all: ${effectiveRecordTypes.join(', ')}`);
+				console.log(
+					`🔥 No recordTypes specified, defaulting to all: ${effectiveRecordTypes.join(', ')}`
+				);
 			} else {
 				effectiveRecordTypes = recordTypes;
 			}
 
-			console.log(`🔥 Fetching heatmap timeline for recordTypes: ${effectiveRecordTypes.join(', ')}`);
+			console.log(
+				`🔥 Fetching heatmap timeline for recordTypes: ${effectiveRecordTypes.join(', ')}`
+			);
 			if (tags && tags.length > 0) {
 				console.log(`🏷️ With tags: ${tags.join(', ')}`);
 			}
@@ -256,7 +262,9 @@ export class VisualizationDataService {
 				});
 			});
 
-			const missingTypes = effectiveRecordTypes.filter((type) => !allRecordTypesInHeatmap.has(type));
+			const missingTypes = effectiveRecordTypes.filter(
+				(type) => !allRecordTypesInHeatmap.has(type)
+			);
 			if (missingTypes.length > 0) {
 				throw new Error(`RecordTypes "${missingTypes.join(', ')}" not found in heatmap data`);
 			}
@@ -283,7 +291,11 @@ export class VisualizationDataService {
 			} else {
 				// Multiple tags - use combination key
 				const comboKey = tags.sort().join('+');
-				resultTimeline = this.filterHeatmapTimelines(heatmapTimeline, effectiveRecordTypes, comboKey);
+				resultTimeline = this.filterHeatmapTimelines(
+					heatmapTimeline,
+					effectiveRecordTypes,
+					comboKey
+				);
 
 				console.log(
 					`🏷️ Returning tag-combination-filtered timeline for "${comboKey}": ${Object.keys(resultTimeline).length} periods`

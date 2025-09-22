@@ -47,11 +47,7 @@
 	aria-label="pagination"
 	use:melt={$root}
 >
-	<Button
-		icon={CaretLeft}
-		meltAction={$prevButton}
-		aria-label="Previous page"
-	/>
+	<Button icon={CaretLeft} meltAction={$prevButton} aria-label="Previous page" />
 	{#each $pages as page (page.key)}
 		{#if page.type === 'ellipsis'}
 			<span class="px-2 text-gray-500">...</span>
@@ -65,9 +61,5 @@
 			</Button>
 		{/if}
 	{/each}
-	<Button
-		icon={CaretRight}
-		meltAction={$nextButton}
-		aria-label="Next page"
-	/>
+	<Button icon={CaretRight} meltAction={$nextButton} aria-label="Next page" />
 </nav>

@@ -55,7 +55,11 @@ export function createStateController() {
 	/**
 	 * Syncs URL parameters with current state after navigation is complete.
 	 */
-	function syncUrlParameters(serverPeriod: string, serverTagOperator: string = 'OR', serverRecordTypes: string[] = []) {
+	function syncUrlParameters(
+		serverPeriod: string,
+		serverTagOperator: string = 'OR',
+		serverRecordTypes: string[] = []
+	) {
 		if (!browser) return;
 
 		// Collect all missing parameters in a single object
