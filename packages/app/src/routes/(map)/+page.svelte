@@ -166,13 +166,13 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	});
 
 	onMount(() => {
-		// Initialize controller with period from URL or first available time period
+		// Initialize controller with period from URL or last available time period
 		const urlParams = new URLSearchParams(window.location.search);
 		const periodFromUrl = urlParams.get('period');
-		const firstPeriod = mergedHistogram?.bins?.[0]?.timeSlice?.key;
+		const lastPeriod = mergedHistogram?.bins?.[mergedHistogram.bins.length - 1]?.timeSlice?.key;
 
-		// Use period from URL if valid, otherwise fall back to first period
-		let initialPeriod = firstPeriod || '';
+		// Use period from URL if valid, otherwise fall back to last period (most recent)
+		let initialPeriod = lastPeriod || '';
 		if (
 			periodFromUrl &&
 			mergedHistogram?.bins?.some((bin) => bin.timeSlice.key === periodFromUrl)
@@ -180,11 +180,11 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 			initialPeriod = periodFromUrl;
 		}
 
-		// Fallback to first heatmap period if histogram doesn't have data
+		// Fallback to last heatmap period if histogram doesn't have data
 		if (!initialPeriod && mergedHeatmapTimeline) {
 			const heatmapPeriods = Object.keys(mergedHeatmapTimeline);
 			if (heatmapPeriods.length > 0) {
-				initialPeriod = heatmapPeriods[0];
+				initialPeriod = heatmapPeriods[heatmapPeriods.length - 1];
 			}
 		}
 		controller.initialize(initialPeriod);

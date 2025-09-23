@@ -60,8 +60,8 @@
 	const colors = twConfig.theme.colors as unknown as Record<string, string>;
 
 	const defaultMapStyle: MapStyle = {
-		boundsPanningOffsetLat: 0.1,
-		boundsPanningOffsetLon: 0.2,
+		boundsPanningOffsetLat: 0.15,
+		boundsPanningOffsetLon: 0.3,
 		minZoom: 11,
 		maxZoom: 14,
 		defaultZoom: 12,
@@ -73,10 +73,10 @@
 		outlineLayerColor: colors['atm-gold'],
 		backgroundColor: colors['map-background'],
 		waterFillColor: colors['map-water-fill'],
-		waterOutlineColor: colors['map-water-fill'],
+		waterOutlineColor: colors['map-water-outline'],
 		waterOutlineWidth: 0.75,
 		waterOutlineOpacity: 0.8,
-		transportationColor: colors['map-background'],
+		transportationColor: colors['map-transporation-outline'],
 		transportationOpacity: 0.8,
 		transportationOutlineWidth: 0.75
 	};
