@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { HistogramBin } from '@atm/shared/types';
+	import { calculateHistogramBarHeights } from '$lib/utils/histogram';
 
 	interface Props {
 		bins: HistogramBin[];
@@ -8,19 +9,16 @@
 	}
 	let { bins, maxCount, timelineHeight }: Props = $props();
 
-	// Calculate histogram bar heights (normalized to max height)
-	function getBarHeight(count: number, maxCount: number, minHeight: number = 2): number {
-		if (count === 0 || maxCount === 0) return 0;
-		const normalizedHeight = (count / maxCount) * 40;
-		return Math.max(normalizedHeight, minHeight);
-	}
+	// Calculate bar heights using logarithmic scaling with global maxCount
+	const barHeights = $derived(calculateHistogramBarHeights(bins, maxCount, timelineHeight, 1));
+	$inspect(barHeights);
 </script>
 
 <svg class="absolute top-0 w-full h-full pointer-events-none">
 	<!-- Histogram bars -->
 	{#each bins as bin, i}
 		{@const barWidth = 100 / bins.length}
-		{@const barHeight = getBarHeight(bin.count, maxCount)}
+		{@const barHeight = barHeights[i]}
 		{@const x = (i / bins.length) * 100}
 		<rect
 			x="{x}%"

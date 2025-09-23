@@ -82,3 +82,39 @@ export function mergeHistograms(histograms: Histogram[]): Histogram {
 		totalFeatures
 	};
 }
+
+/**
+ * Calculate normalized bar heights for histogram visualization
+ * Applies logarithmic scaling and normalizes to maxHeight
+ *
+ * @param bins Array of histogram bins
+ * @param maxCount Maximum count value for scaling
+ * @param maxHeight Maximum height for scaling (default 40px)
+ * @param minHeight Minimum height for non-zero values (default 2px)
+ * @returns Array of calculated heights for each bin
+ */
+export function calculateHistogramBarHeights(
+	bins: HistogramBin[],
+	maxCount: number,
+	maxHeight: number = 40,
+	minHeight: number = 2
+): number[] {
+	if (maxCount === 0) {
+		return bins.map(() => 0);
+	}
+
+	// Apply logarithmic transformation for better visual distribution
+	const maxTransformed = Math.log(maxCount + 1);
+	
+	return bins.map(bin => {
+		if (bin.count === 0) return 0;
+		
+		// Log transform and normalize
+		const logValue = Math.log(bin.count + 1);
+		const normalizedValue = logValue / maxTransformed;
+		const scaledHeight = normalizedValue * maxHeight;
+		
+		// Ensure minimum height for visibility
+		return Math.max(scaledHeight, minHeight);
+	});
+}

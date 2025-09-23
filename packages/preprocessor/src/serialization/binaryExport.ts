@@ -262,10 +262,19 @@ export function generateVisualizationStats(
       }
     }
     
-    // Get grid cell count from first heatmap
-    const firstTimeSlice = Object.values(heatmapTimeline)[0];
-    const firstRecordType = Object.values(firstTimeSlice)[0];
-    const gridCellCount = firstRecordType.base.countArray?.length || 0;
+    // Get grid cell count from first heatmap with data
+    let gridCellCount = 0;
+    const timeSlices = Object.values(heatmapTimeline);
+    for (const timeSlice of timeSlices) {
+      const recordTypes = Object.values(timeSlice);
+      for (const recordType of recordTypes) {
+        if (recordType?.base?.countArray) {
+          gridCellCount = recordType.base.countArray.length;
+          break;
+        }
+      }
+      if (gridCellCount > 0) break;
+    }
     
     return {
       totalFeatures,

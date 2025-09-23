@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Histogram } from '@atm/shared/types';
 	import { mergeCss } from '$utils/utils';
-	import TimePeriodSelectorChart from '$components/TimePeriodSelectorChart.svelte';
+	import TimePeriodSelectorHistogram from '$components/TimePeriodSelectorHistogram.svelte';
 	import TimePeriodSelectorLabels from '$components/TimePeriodSelectorLabels.svelte';
 	import TimePeriodSelectorThumb from '$components/TimePeriodSelectorThumb.svelte';
 	import TimePeriodSelectorTrack from '$components/TimePeriodSelectorTrack.svelte';
@@ -122,8 +122,8 @@
 {#if histogram?.bins?.length > 0}
 	<div class={mergeCss('bg-atm-sand border-t border-atm-sand-border w-full px-4 pt-2', className)}>
 		<div class="w-full relative h-[40px]" bind:this={trackElement}>
-			<!-- Chart Layer: Histogram bars and grid -->
-			<TimePeriodSelectorChart
+			<!-- Histogram Layer: Histogram bars and grid -->
+			<TimePeriodSelectorHistogram
 				bins={histogram.bins}
 				maxCount={histogram.maxCount}
 				{timelineHeight}
