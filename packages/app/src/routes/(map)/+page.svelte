@@ -52,8 +52,6 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	// Navigation state
 	let navExpanded = $state(true);
 	
-	// Flag to prevent multiple URL syncs
-	let hasInitializedUrl = $state(false);
 
 	// Combine server errors with controller errors for ErrorHandler
 	let allErrors = $derived.by(() => {
@@ -169,23 +167,24 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 		// Initialize controller with period from URL or last available time period
 		const urlParams = new URLSearchParams(window.location.search);
 		const periodFromUrl = urlParams.get('period');
-		const lastPeriod = mergedHistogram?.bins?.[mergedHistogram.bins.length - 1]?.timeSlice?.key;
-
-		// Use period from URL if valid, otherwise fall back to last period (most recent)
-		let initialPeriod = lastPeriod || '';
-		if (
-			periodFromUrl &&
-			mergedHistogram?.bins?.some((bin) => bin.timeSlice.key === periodFromUrl)
-		) {
-			initialPeriod = periodFromUrl;
+		
+		// Get last period from raw dataset (not filtered data)
+		let lastPeriod = '';
+		if (heatmapTimeline) {
+			const allPeriods = Object.keys(heatmapTimeline);
+			if (allPeriods.length > 0) {
+				lastPeriod = allPeriods[allPeriods.length - 1];
+			}
 		}
 
-		// Fallback to last heatmap period if histogram doesn't have data
-		if (!initialPeriod && mergedHeatmapTimeline) {
-			const heatmapPeriods = Object.keys(mergedHeatmapTimeline);
-			if (heatmapPeriods.length > 0) {
-				initialPeriod = heatmapPeriods[heatmapPeriods.length - 1];
-			}
+		// Use period from URL if valid, otherwise fall back to last period (most recent)
+		let initialPeriod = lastPeriod;
+		if (
+			periodFromUrl &&
+			heatmapTimeline &&
+			Object.keys(heatmapTimeline).includes(periodFromUrl)
+		) {
+			initialPeriod = periodFromUrl;
 		}
 		controller.initialize(initialPeriod);
 
@@ -205,26 +204,22 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 					});
 				}
 			}
+
+			// Set URL defaults if no parameters exist
+			const hasUrlParams = window.location.search.length > 0;
+			if (!hasUrlParams && heatmapTimeline && recordTypes.length > 0) {
+				// Get the actual last period from raw dataset (not filtered data)
+				const allPeriods = Object.keys(heatmapTimeline);
+				const lastPeriod = allPeriods.length > 0 ? allPeriods[allPeriods.length - 1] : '';
+				const defaultRecordTypes = currentRecordTypes.length > 0 ? currentRecordTypes : recordTypes;
+				
+				if (lastPeriod && defaultRecordTypes.length > 0) {
+					controller.syncUrlParameters(lastPeriod, currentTagOperator, defaultRecordTypes);
+				}
+			}
 		});
 	});
 
-	// Sync URL parameters when data is ready
-	$effect(() => {
-		// Wait for all required data to be available
-		if (mergedHistogram && recordTypes.length > 0 && !hasInitializedUrl) {
-			const hasUrlParams = window.location.search.length > 0;
-			if (!hasUrlParams) {
-				// Get the actual first period and record types now that data is ready
-				const firstPeriod = mergedHistogram.bins?.[0]?.timeSlice?.key || '';
-				const defaultRecordTypes = currentRecordTypes.length > 0 ? currentRecordTypes : recordTypes;
-				
-				if (firstPeriod && defaultRecordTypes.length > 0) {
-					controller.syncUrlParameters(firstPeriod, currentTagOperator, defaultRecordTypes);
-					hasInitializedUrl = true;
-				}
-			}
-		}
-	});
 
 	function handlePeriodChange(period: string) {
 		controller.updatePeriod(period);
