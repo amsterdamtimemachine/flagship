@@ -12,12 +12,12 @@
 	let { level = 1, id, style, class: className, children }: Props = $props();
 
 	const levelStyles = {
-		1: 'text-heading1Mobile md:text-heading1 font-semibold',
-		2: 'text-heading2Mobile md:text-heading2 font-light',
-		3: 'text-heading3Mobile md:text-heading3 font-light',
-		4: 'text-heading4Mobile md:text-heading4 font-semibold',
-		5: 'text-heading5Mobile md:text-heading5 font-semibold',
-		6: 'text-heading6Mobile md:text-heading6 font-semibold'
+		1: 'text-lg font-bold',
+		2: 'text-base font-bold',
+		3: 'text-lg font-light',
+		4: 'text-base font-light',
+		5: 'text-base font-light',
+		6: 'text-base font-light'
 	};
 </script>
 

@@ -9,7 +9,7 @@
 	import { mergeHistograms } from '$utils/histogram';
 	import { loadingState } from '$lib/state/loadingState.svelte';
 	import { QuestionMark } from 'phosphor-svelte';
-	import ButtonLink from '$components/ButtonLink.svelte';
+	import Heading from '$components/Heading.svelte';
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
@@ -247,7 +247,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 			url.searchParams.delete('tags');
 		}
 		goto(url.pathname + url.search);
-	}
+	 }
 
 	function handleTagOperatorChange(operator: 'AND' | 'OR') {
 		// Update local state immediately for UI responsiveness
@@ -306,11 +306,10 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 				<NavItem href="/about" label="About" />
 			</Nav>
 			<div class="p-3">
+					
 				<div class="mb-4">
-					<div class="flex">
-						<h2 class="mb-2 pr-1">Content type</h2>
-						<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
-					</div>
+						<Heading level={2} class="mb-2"> Filters </Heading>
+						<Heading level={3} class="mb-2"> Content type </Heading>
 
 					<ToggleGroup
 						items={recordTypes}
@@ -327,8 +326,8 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 
 				<div class="mb-4">
 					<div class="flex">
-						<h2 class="pr-1">Topics</h2>
-						<Tooltip icon={QuestionMark} text="this is a tooltip test!" placement="bottom" />
+						<Heading level={3} class="pr-2"> Topics </Heading>
+						<Tooltip icon={QuestionMark} text="Thematic categories based on newspaper sections, applied across all data using machine learning." placement="bottom" />
 					</div>
 					<div class="mt-2 mb-3">
 						<TagOperatorSwitch 

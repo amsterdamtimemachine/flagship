@@ -6,6 +6,7 @@
 	import FeatureCardImage from '$components/FeatureCardImage.svelte';
 	import FeatureCardText from '$components/FeatureCardText.svelte';
 	import TagList from '$components/TagList.svelte';
+	import Heading from '$components/Heading.svelte';
 
 	type Props = {
 		feature: Feature;
@@ -32,13 +33,14 @@
 <div class="w-full border rounded-sm border-atm-sand-border bg-atm-sand min-w-0">
 	<FeatureCardHeader class="p-2" feature={commonProps} />
 	<div class={expanded ? '' : 'p-2'}>
-		<h3
+		<Heading
+		level={3}
 			class={expanded
-				? 'font-semibold text-xl text-black my-3 px-2'
-				: 'font-semibold text-sm text-black line-clamp-2 mb-1'}
+				? 'font-bold text-xl my-3 px-2'
+				: 'font-bold text-sm line-clamp-2 mb-1'}
 		>
 			{commonProps.tit}
-		</h3>
+		</Heading>
 		<!-- Feature-specific content -->
 		{#if feature.recordType === 'image' && 'thumbnail' in feature}
 			<FeatureCardImage
