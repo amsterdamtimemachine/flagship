@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { HistogramBin } from '@atm/shared/types';
+	import { calculateHistogramBarHeights } from '$lib/utils/histogram';
 
 	interface Props {
 		bins: HistogramBin[];
@@ -8,27 +9,23 @@
 	}
 	let { bins, maxCount, timelineHeight }: Props = $props();
 
-	// Calculate histogram bar heights (normalized to max height)
-	function getBarHeight(count: number, maxCount: number, minHeight: number = 2): number {
-		if (count === 0 || maxCount === 0) return 0;
-		const normalizedHeight = (count / maxCount) * 40;
-		return Math.max(normalizedHeight, minHeight);
-	}
+	// Calculate bar heights using logarithmic scaling with global maxCount
+	const barHeights = $derived(bins && bins.length > 0 ? calculateHistogramBarHeights(bins, maxCount, timelineHeight, 1) : []);
 </script>
 
-<svg class="absolute inset-x-0 top-0 w-full h-full pointer-events-none">
+<svg class="absolute top-0 w-full h-full pointer-events-none">
 	<!-- Histogram bars -->
 	{#each bins as bin, i}
 		{@const barWidth = 100 / bins.length}
-		{@const barHeight = getBarHeight(bin.count, maxCount)}
+		{@const barHeight = barHeights[i]}
 		{@const x = (i / bins.length) * 100}
 		<rect
 			x="{x}%"
 			y={timelineHeight - barHeight}
 			width="{barWidth}%"
 			height={barHeight}
-			fill="#5373cf"
-			class="transition-colors duration-200"
+			class="fill-atm-blue"
+			fill="#5480f1"
 		>
 			<title>Period: {bin.timeSlice.label}, Count: {bin.count}</title>
 		</rect>
@@ -43,12 +40,8 @@
 			x2="{position}%"
 			y2={timelineHeight}
 			stroke="black"
-			stroke-width="1"
-			transform={i === 0
-				? 'translate(0.5, 0)'
-				: i === bins.length
-					? 'translate(-0.5, 0)'
-					: ''}
+			stroke-width="0.5"
+			transform={i === 0 ? 'translate(0.5, 0)' : i === bins.length ? 'translate(-0.5, 0)' : ''}
 		/>
 	{/each}
 
@@ -59,6 +52,6 @@
 		x2="100%"
 		y2={timelineHeight}
 		stroke="black"
-		stroke-width="1"
+		stroke-width="0.5"
 	/>
 </svg>

@@ -26,7 +26,11 @@ export function createPageErrorData(errors: AppError[] = []): PageErrorData {
 }
 
 // Helper functions for common error scenarios
-export function createPeriodNotFoundError(requestedPeriod: string, availablePeriods: string[], fallbackPeriod: string): AppError {
+export function createPeriodNotFoundError(
+	requestedPeriod: string,
+	availablePeriods: string[],
+	fallbackPeriod: string
+): AppError {
 	return createError(
 		'warning',
 		'Period Not Found',
@@ -52,7 +56,7 @@ export function createCellLoadError(cellId: string, period: string, reason?: str
 	return createError(
 		'error',
 		'Failed to Load Cell Data',
-		reason 
+		reason
 			? `Could not load data for cell "${cellId}": ${reason}`
 			: `Could not load data for cell "${cellId}". Please try again.`,
 		{ cellId, period, reason }
@@ -69,10 +73,9 @@ export function createEmptyCellError(cellId: string, period: string): AppError {
 }
 
 export function createValidationError(field: string, value: any, reason: string): AppError {
-	return createError(
-		'warning',
-		'Invalid Input',
-		`${field} "${value}" is invalid: ${reason}`,
-		{ field, value, reason }
-	);
+	return createError('warning', 'Invalid Input', `${field} "${value}" is invalid: ${reason}`, {
+		field,
+		value,
+		reason
+	});
 }

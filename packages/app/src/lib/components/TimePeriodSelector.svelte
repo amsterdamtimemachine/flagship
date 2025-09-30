@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Histogram } from '@atm/shared/types';
-	import TimePeriodSelectorChart from '$components/TimePeriodSelectorChart.svelte';
+	import { mergeCss } from '$utils/utils';
+	import TimePeriodSelectorHistogram from '$components/TimePeriodSelectorHistogram.svelte';
 	import TimePeriodSelectorLabels from '$components/TimePeriodSelectorLabels.svelte';
 	import TimePeriodSelectorThumb from '$components/TimePeriodSelectorThumb.svelte';
 	import TimePeriodSelectorTrack from '$components/TimePeriodSelectorTrack.svelte';
@@ -9,13 +10,19 @@
 		histogram: Histogram;
 		period?: string;
 		onPeriodChange?: (newPeriod: string) => void;
+		class?: string;
 	}
-	let { histogram, period = undefined, onPeriodChange = undefined }: Props = $props();
+	let {
+		histogram,
+		period = undefined,
+		onPeriodChange = undefined,
+		class: className
+	}: Props = $props();
 
 	// Extract time period data
 	const timePeriods = $derived(histogram?.bins?.map((bin) => bin.timeSlice.key) || []);
 	const displayPeriods = $derived(createDisplayPeriods(histogram?.bins || []));
-	const timelineHeight = 26;
+	const timelineHeight = 15;
 
 	// Slider state
 	let currentIndex = $state(getInitialIndex());
@@ -34,7 +41,7 @@
 
 	function createDisplayPeriods(bins: any[]): string[] {
 		if (!bins.length) return [];
-		
+
 		const result = bins.map((bin) => {
 			return bin.timeSlice.startYear.toString();
 		});
@@ -69,12 +76,12 @@
 
 	function handleMouseMove(event: MouseEvent) {
 		if (!isDragging || !trackElement) return;
-		
+
 		const rect = trackElement.getBoundingClientRect();
 		const dragX = event.clientX - rect.left;
 		const percentage = Math.max(0, Math.min(1, dragX / rect.width));
 		const newIndex = Math.round(percentage * (timePeriods.length - 1));
-		
+
 		handleIndexChange(newIndex);
 	}
 
@@ -84,7 +91,7 @@
 
 	function handleKeyDown(event: KeyboardEvent) {
 		let newIndex = currentIndex;
-		
+
 		switch (event.key) {
 			case 'ArrowLeft':
 			case 'ArrowDown':
@@ -103,7 +110,7 @@
 			default:
 				return;
 		}
-		
+
 		event.preventDefault();
 		handleIndexChange(newIndex);
 	}
@@ -113,32 +120,29 @@
 <svelte:document onmousemove={handleMouseMove} onmouseup={handleMouseUp} />
 
 {#if histogram?.bins?.length > 0}
-	<div class="w-full px-4 pb-1 pt-4">
-		<div class="w-full relative h-[60px]" bind:this={trackElement}>
-			<!-- Chart Layer: Histogram bars and grid -->
-			<TimePeriodSelectorChart 
-				bins={histogram.bins} 
-				maxCount={histogram.maxCount} 
-				{timelineHeight} 
+	<div class={mergeCss('bg-atm-sand border-t border-atm-sand-border w-full px-4 pt-2', className)}>
+		<div class="w-full relative h-[40px]" bind:this={trackElement}>
+			<!-- Histogram Layer: Histogram bars and grid -->
+			<TimePeriodSelectorHistogram
+				bins={histogram?.bins || []}
+				maxCount={histogram?.maxCount || 0}
+				{timelineHeight}
 			/>
-			
+
 			<!-- Labels Layer: Year labels -->
-			<TimePeriodSelectorLabels 
-				{displayPeriods} 
-				{timelineHeight} 
-			/>
-			
+			<TimePeriodSelectorLabels {displayPeriods} {timelineHeight} />
+
 			<!-- Interactive Layer: Clickable track -->
-			<TimePeriodSelectorTrack 
+			<TimePeriodSelectorTrack
 				bins={histogram.bins}
 				{currentIndex}
 				onIndexChange={handleIndexChange}
 				{timelineHeight}
 				onKeyDown={handleKeyDown}
 			/>
-			
+
 			<!-- Thumb Layer: Draggable indicator -->
-			<TimePeriodSelectorThumb 
+			<TimePeriodSelectorThumb
 				{currentIndex}
 				totalBins={histogram.bins.length}
 				{isDragging}

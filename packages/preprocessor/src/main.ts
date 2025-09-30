@@ -46,8 +46,12 @@ async function main() {
 
     // Define time periods
     const timeSlices: TimeSlice[] = createTimeSlices([
-      { start: 1600, end: 1700 }, 
-      { start: 1700, end: 1800 }, 
+      { start: 1500, end: 1550 }, 
+      { start: 1550, end: 1600 }, 
+      { start: 1600, end: 1650 }, 
+      { start: 1650, end: 1700 }, 
+      { start: 1700, end: 1750 }, 
+      { start: 1750, end: 1800 }, 
       { start: 1800, end: 1850 }, 
       { start: 1850, end: 1900 }, 
       { start: 1900, end: 1950 }, 

@@ -1,0 +1,131 @@
+/* Custom Fonts CSS
+   Place your font files in static/fonts/ folder and define @font-face rules here
+   
+   Example usage:
+   1. Create static/fonts/ folder 
+   2. Add your font files (e.g., MyFont-Regular.woff2, MyFont-Bold.woff2)
+   3. Uncomment and customize the @font-face rules below
+   4. Add the font family to your Tailwind config
+*/
+
+/* Example @font-face declarations - uncomment and customize as needed */
+
+/*
+@font-face {
+  font-family: 'MyCustomFont';
+  src: url('./fonts/MyCustomFont-Regular.woff2') format('woff2'),
+       url('./fonts/MyCustomFont-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MyCustomFont';
+  src: url('./fonts/MyCustomFont-Bold.woff2') format('woff2'),
+       url('./fonts/MyCustomFont-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MyCustomFont';
+  src: url('./fonts/MyCustomFont-Italic.woff2') format('woff2'),
+       url('./fonts/MyCustomFont-Italic.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+*/
+
+/* Satoshi Font Family */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./fonts/Satoshi-Light.woff2') format('woff2'),
+       url('./fonts/Satoshi-Light.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./fonts/Satoshi-LightItalic.woff2') format('woff2'),
+       url('./fonts/Satoshi-LightItalic.woff') format('woff');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./fonts/Satoshi-Regular.woff2') format('woff2'),
+       url('./fonts/Satoshi-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./fonts/Satoshi-Italic.woff2') format('woff2'),
+       url('./fonts/Satoshi-Italic.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./fonts/Satoshi-Medium.woff2') format('woff2'),
+       url('./fonts/Satoshi-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./fonts/Satoshi-MediumItalic.woff2') format('woff2'),
+       url('./fonts/Satoshi-MediumItalic.woff') format('woff');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./fonts/Satoshi-Bold.woff2') format('woff2'),
+       url('./fonts/Satoshi-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./fonts/Satoshi-BoldItalic.woff2') format('woff2'),
+       url('./fonts/Satoshi-BoldItalic.woff') format('woff');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./fonts/Satoshi-Black.woff2') format('woff2'),
+       url('./fonts/Satoshi-Black.woff') format('woff');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('./fonts/Satoshi-BlackItalic.woff2') format('woff2'),
+       url('./fonts/Satoshi-BlackItalic.woff') format('woff');
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}

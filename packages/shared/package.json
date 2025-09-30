@@ -20,6 +20,7 @@
     "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "svelte": "^5.39.4",
+    "typescript": "^5.9.2"
   }
 }

@@ -12,12 +12,12 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 
 		// Build the external API URL
 		const externalApiUrl = `https://atmbackend.create.humanities.uva.nl/api/geodata?${params.toString()}`;
-		
+
 		console.log('🌍 Proxying geodata request to:', externalApiUrl);
 
 		// Make the request to the external API
 		const response = await fetch(externalApiUrl);
-		
+
 		if (!response.ok) {
 			console.error('External API error:', response.status, response.statusText);
 			return json(
@@ -27,7 +27,7 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 		}
 
 		const data = await response.json();
-		
+
 		// Return the data with CORS headers
 		return json(data, {
 			headers: {
@@ -36,11 +36,13 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 				'Access-Control-Allow-Headers': 'Content-Type'
 			}
 		});
-		
 	} catch (error) {
 		console.error('Proxy error:', error);
 		return json(
-			{ error: 'Internal server error', message: error instanceof Error ? error.message : 'Unknown error' },
+			{
+				error: 'Internal server error',
+				message: error instanceof Error ? error.message : 'Unknown error'
+			},
 			{ status: 500 }
 		);
 	}

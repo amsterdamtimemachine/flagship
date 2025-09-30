@@ -1,24 +1,48 @@
-<!-- Map.svelte -->
 <script lang="ts">
 	import { PUBLIC_MAPTILER_API_KEY } from '$env/static/public';
 	const STYLE_URL = `https://api.maptiler.com/maps/8b292bff-5b9a-4be2-aaea-22585e67cf10/style.json?key=${PUBLIC_MAPTILER_API_KEY}`;
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { onMount, onDestroy } from 'svelte';
-	import maplibre, {
-		type Map,
-		type FeatureCollection,
-		type Feature,
-		type Polygon,
-		type GeoJSONProperties
-	} from 'maplibre-gl';
-	import type { Heatmap, HeatmapDimensions, HeatmapBlueprintCell } from '@atm/shared/types';
+	import maplibre, { type Map as MapLibreMap } from 'maplibre-gl';
+	import type { FeatureCollection, Feature, Polygon, GeoJsonProperties } from 'geojson';
+	import type {
+		Heatmap,
+		HeatmapDimensions,
+		HeatmapBlueprintCell,
+		Coordinates
+	} from '@atm/shared/types';
 	import { mergeCss } from '$utils/utils';
+	import resolveConfig from 'tailwindcss/resolveConfig';
+	import tailwindConfig from '$tailwindConfig';
 
-	interface CellProperties extends GeoJSONProperties {
+	interface CellProperties {
 		id: string;
 		row: number;
 		col: number;
 		count: number;
+		[key: string]: any; // Allow additional GeoJSON properties
+	}
+
+	export interface MapStyle {
+		boundsPanningOffsetLat: number; // in degrees
+		boundsPanningOffsetLon: number; // in degrees
+		minZoom: number;
+		maxZoom: number;
+		defaultZoom: number;
+		center: Coordinates;
+		cellSelectedOutlineColor: string; // hex
+		cellSelectedOutlineWidth: number; // px
+		cellHoveredOutlineColor: string; //hex
+		cellValueColor: string; // hex
+		outlineLayerColor: string; // hex
+		backgroundColor: string; // hex
+		waterFillColor: string; // hex
+		waterOutlineColor: string; // hex
+		waterOutlineWidth: number; // px
+		waterOutlineOpacity: number; // 0.0 - 1.0
+		transportationColor: string; // hex
+		transportationOpacity: number; // 0.0 - 1.0
+		transportationOutlineWidth: number; // px
 	}
 
 	export interface MapProps {
@@ -26,10 +50,36 @@
 		heatmapBlueprint: HeatmapBlueprintCell[];
 		dimensions: HeatmapDimensions;
 		selectedCellId: string | null;
-		className?: string;
+		mapStyle?: MapStyle;
+		class?: string;
 		handleCellClick?: (cellId: string | null) => void;
 		handleMapLoaded?: () => void;
 	}
+
+	const twConfig = resolveConfig(tailwindConfig);
+	const colors = twConfig.theme.colors as unknown as Record<string, string>;
+
+	const defaultMapStyle: MapStyle = {
+		boundsPanningOffsetLat: 0.15,
+		boundsPanningOffsetLon: 0.3,
+		minZoom: 11,
+		maxZoom: 14,
+		defaultZoom: 12,
+		center: { lat: 4.895645, lon: 52.372219 },
+		cellSelectedOutlineColor: colors['atm-red'],
+		cellHoveredOutlineColor: colors['atm-red-light'],
+		cellSelectedOutlineWidth: 3,
+		cellValueColor: colors['map-cell-value'],
+		outlineLayerColor: colors['atm-gold'],
+		backgroundColor: colors['map-background'],
+		waterFillColor: colors['map-water-fill'],
+		waterOutlineColor: colors['map-water-outline'],
+		waterOutlineWidth: 0.75,
+		waterOutlineOpacity: 0.8,
+		transportationColor: colors['map-transporation-outline'],
+		transportationOpacity: 0.8,
+		transportationOutlineWidth: 0.75
+	};
 
 	let {
 		heatmap,
@@ -37,12 +87,13 @@
 		dimensions,
 		selectedCellId = null,
 		class: className,
+		mapStyle = defaultMapStyle,
 		handleCellClick,
 		handleMapLoaded
 	}: MapProps = $props();
 
-	let map: Map | undefined = $state();
-	let mapContainer: HTMLElement = $state();
+	let map: MapLibreMap | undefined = $state();
+	let mapContainer: HTMLElement;
 	let isMapLoaded = $state(false);
 
 	const cellIdMap = $derived.by(() => {
@@ -50,17 +101,14 @@
 		if (!heatmapBlueprint || !dimensions) {
 			return idMap;
 		}
-		
+
 		heatmapBlueprint.forEach((cell) => {
 			const index = cell.row * dimensions.colsAmount + cell.col;
 			idMap.set(index, cell.cellId);
 		});
-		
-		
+
 		return idMap;
 	});
-
-
 
 	let activeCells = $derived.by(() => {
 		if (!isMapLoaded || !map || !heatmap || !heatmap.countArray || !cellIdMap.size) {
@@ -106,19 +154,17 @@
 
 	onDestroy(() => {
 		if (map) {
-			map.off('mousemove', 'heatmap-squares');
-			map.off('mouseleave', 'heatmap-squares');
-			map.off('click', 'heatmap-squares');
-			map.off('mouseenter', 'heatmap-squares');
+			// Remove the map instance which cleans up all event listeners
 			map.remove();
 		}
 	});
 
 	function resetAllCells(): void {
 		if (!map || !cellIdMap.size) return;
+		const mapInstance = map; // Store reference for TypeScript
 		cellIdMap.forEach((cellId) => {
 			if (cellId) {
-				map.setFeatureState(
+				mapInstance.setFeatureState(
 					{ source: 'heatmap', id: cellId },
 					{
 						value: 0,
@@ -131,8 +177,9 @@
 
 	function setActiveCells(): void {
 		if (!map) return;
+		const mapInstance = map;
 		activeCells.forEach((stateValues, cellId) => {
-			map.setFeatureState({ source: 'heatmap', id: cellId }, stateValues);
+			mapInstance.setFeatureState({ source: 'heatmap', id: cellId }, stateValues);
 		});
 	}
 
@@ -172,17 +219,18 @@
 
 	function updateSelectedCell(cellId: string | null): void {
 		if (!isMapLoaded || !map || !cellIdMap.size) return;
+		const mapInstance = map;
 
 		// Clear all previous highlights
 		cellIdMap.forEach((id) => {
 			if (id) {
-				map.setFeatureState({ source: 'heatmap', id }, { selected: false });
+				mapInstance.setFeatureState({ source: 'heatmap', id }, { selected: false });
 			}
 		});
 
 		// Set new highlight
 		if (cellId) {
-			map.setFeatureState({ source: 'heatmap', id: cellId }, { selected: true });
+			mapInstance.setFeatureState({ source: 'heatmap', id: cellId }, { selected: true });
 		}
 	}
 
@@ -194,14 +242,14 @@
 		map = new maplibre.Map({
 			container: mapContainer,
 			style: STYLE_URL,
-		//	maxBounds: [
-		//		[west, south],
-		//		[east, north]
-		//	],
-			center: [4.895645, 52.372219], 
-			minZoom: 10,
-			maxZoom: 14,
-			zoom: 13,
+			maxBounds: [
+				[west - mapStyle.boundsPanningOffsetLon, south - mapStyle.boundsPanningOffsetLat],
+				[east + mapStyle.boundsPanningOffsetLon, north + mapStyle.boundsPanningOffsetLat]
+			],
+			center: [mapStyle.center.lat, mapStyle.center.lon],
+			minZoom: mapStyle.minZoom,
+			maxZoom: mapStyle.maxZoom,
+			zoom: mapStyle.defaultZoom,
 			dragRotate: false,
 			touchZoomRotate: false,
 			dragPan: true,
@@ -210,63 +258,180 @@
 		});
 
 		map.on('load', () => {
+			if (!map) return; // Guard for TypeScript
+			const mapInstance = map;
+
 			// Heatmap geometry
 			const geojsonData = generateHeatmapCells(heatmapBlueprint);
-			
-			map.addSource('heatmap', {
+
+			// Add background layer with custom color
+			mapInstance.addLayer(
+				{
+					id: 'background',
+					type: 'background',
+					paint: {
+						'background-color': mapStyle.backgroundColor
+					}
+				},
+				mapInstance.getStyle().layers[0]?.id
+			);
+
+			mapInstance.addSource('heatmap', {
 				type: 'geojson',
 				data: geojsonData,
 				promoteId: 'id'
 			});
 
+			// Add water fill layer
+			mapInstance.addLayer({
+				id: 'heatmap-water-fill',
+				type: 'fill',
+				source: 'maptiler_planet',
+				'source-layer': 'water',
+				paint: {
+					'fill-color': mapStyle.waterFillColor,
+					'fill-opacity': 1.0
+				}
+			});
+
 			// Color and opacity of the heatmaps cells
-			map.addLayer({
+			mapInstance.addLayer({
 				id: 'heatmap-squares',
 				type: 'fill',
 				source: 'heatmap',
 				paint: {
-					'fill-color': '#0000ff',
+					'fill-color': mapStyle.cellValueColor,
 					'fill-opacity': ['coalesce', ['feature-state', 'value'], 0]
 				}
 			});
 
+			// Add water outline layer
+			mapInstance.addLayer({
+				id: 'heatmap-water-outlines',
+				type: 'line',
+				source: 'maptiler_planet',
+				'source-layer': 'water',
+				paint: {
+					'line-color': mapStyle.waterOutlineColor,
+					'line-width': mapStyle.waterOutlineWidth,
+					'line-opacity': mapStyle.waterOutlineOpacity
+				}
+			});
+
+			// Add transportation layer (roads)
+			mapInstance.addLayer({
+				id: 'transportation',
+				type: 'line',
+				source: 'maptiler_planet',
+				'source-layer': 'transportation',
+				minzoom: 4,
+				maxzoom: 22,
+				layout: {
+					visibility: 'visible',
+					'line-cap': 'round'
+				},
+				filter: [
+					'all',
+					['==', ['geometry-type'], 'LineString'],
+					[
+						'match',
+						['get', 'class'],
+						['motorway', 'primary', 'secondary', 'tertiary', 'trunk'],
+						true,
+						false
+					]
+				],
+				paint: {
+					'line-color': mapStyle.transportationColor,
+					'line-opacity': mapStyle.transportationOpacity,
+					'line-width': mapStyle.transportationOutlineWidth
+				}
+			});
+
 			// Active cell
-			map.addLayer({
+			mapInstance.addLayer({
 				id: 'selected-cell',
 				type: 'line',
 				source: 'heatmap',
 				paint: {
-					'line-color': '#ff0000',
-					'line-width': 2,
+					'line-color': mapStyle.cellSelectedOutlineColor,
+					'line-width': mapStyle.cellSelectedOutlineWidth,
 					'line-opacity': ['case', ['boolean', ['feature-state', 'selected'], false], 1, 0]
 				}
 			});
 
+			// Hover cell
+			mapInstance.addLayer({
+				id: 'hovered-cell',
+				type: 'line',
+				source: 'heatmap',
+				paint: {
+					'line-color': mapStyle.cellHoveredOutlineColor,
+					'line-width': mapStyle.cellSelectedOutlineWidth,
+					'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.8, 0]
+				}
+			});
+
 			// Event handlers
-			map.on('mousemove', 'heatmap-squares', (e) => {
+			let hoveredFeatureId: string | null = null;
+
+			mapInstance.on('mousemove', 'heatmap-squares', (e) => {
 				if (e.features?.[0]) {
 					const feature = e.features[0];
-					const featureState = map.getFeatureState({
+					const featureId = feature.properties.id;
+					const featureState = mapInstance.getFeatureState({
 						source: 'heatmap',
-						id: feature.properties.id
+						id: featureId
 					});
+
+					// Clear previous hover state
+					if (hoveredFeatureId && hoveredFeatureId !== featureId) {
+						mapInstance.setFeatureState(
+							{
+								source: 'heatmap',
+								id: hoveredFeatureId
+							},
+							{ hover: false }
+						);
+					}
+
+					// Set new hover state
 					if (featureState.count > 0) {
-						map.getCanvas().style.cursor = 'pointer';
+						mapInstance.getCanvas().style.cursor = 'pointer';
+						mapInstance.setFeatureState(
+							{
+								source: 'heatmap',
+								id: featureId
+							},
+							{ hover: true }
+						);
+						hoveredFeatureId = featureId;
 					} else {
-						map.getCanvas().style.cursor = '';
+						mapInstance.getCanvas().style.cursor = '';
+						hoveredFeatureId = null;
 					}
 				}
 			});
 
-			map.on('mouseleave', 'heatmap-squares', () => {
-				map.getCanvas().style.cursor = '';
+			mapInstance.on('mouseleave', 'heatmap-squares', () => {
+				mapInstance.getCanvas().style.cursor = '';
+				if (hoveredFeatureId) {
+					mapInstance.setFeatureState(
+						{
+							source: 'heatmap',
+							id: hoveredFeatureId
+						},
+						{ hover: false }
+					);
+					hoveredFeatureId = null;
+				}
 			});
 
-			map.on('click', 'heatmap-squares', (e) => {
+			mapInstance.on('click', 'heatmap-squares', (e) => {
 				if (e.features?.[0]) {
 					const feature = e.features[0];
 					const featureId = feature.properties.id;
-					const featureState = map.getFeatureState({ source: 'heatmap', id: featureId });
+					const featureState = mapInstance.getFeatureState({ source: 'heatmap', id: featureId });
 
 					// select only cells with values
 					if (featureState.count > 0) {
@@ -284,9 +449,9 @@
 					}
 				}
 			});
-			
+
 			isMapLoaded = true;
-			
+
 			if (handleMapLoaded) {
 				handleMapLoaded();
 			}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Progress } from "melt/builders";
+	import { Progress } from 'melt/builders';
 	import { loadingState } from '$state/loadingState.svelte';
 	import { onDestroy } from 'svelte';
 	import { mergeCss } from '$utils/utils';
@@ -8,9 +8,7 @@
 		class?: string;
 	}
 
-	let { 
-		class: className = undefined,
-	}: Props = $props();
+	let { class: className = undefined }: Props = $props();
 
 	// Use melt-ui Progress builder
 	const progress = new Progress({
@@ -24,7 +22,7 @@
 
 	$effect(() => {
 		if (loadingState.isLoading) {
-			startLoading()
+			startLoading();
 		} else {
 			completeLoading();
 		}
@@ -32,7 +30,7 @@
 
 	function startLoading() {
 		if (isActive) return;
-		
+
 		isActive = true;
 		progress.value = 0;
 		startTime = performance.now();
@@ -41,9 +39,9 @@
 
 	function completeLoading() {
 		if (!isActive) return;
-		
+
 		progress.value = 100;
-		
+
 		setTimeout(() => {
 			isActive = false;
 			progress.value = 0;
@@ -59,7 +57,7 @@
 
 		const elapsed = performance.now() - startTime;
 		let newProgress = 0;
-		
+
 		if (elapsed < 200) {
 			newProgress = (elapsed / 200) * 30;
 		} else if (elapsed < 1000) {
@@ -67,11 +65,11 @@
 		} else {
 			const remaining = 100 - 70;
 			const slowFactor = Math.min((elapsed - 1000) / 5000, 0.8);
-			newProgress = 70 + (remaining * slowFactor);
+			newProgress = 70 + remaining * slowFactor;
 		}
 
 		progress.value = Math.min(newProgress, 95);
-		
+
 		if (isActive) {
 			animationId = requestAnimationFrame(animate);
 		}
@@ -83,20 +81,19 @@
 			cancelAnimationFrame(animationId);
 		}
 	});
-
 </script>
-<div 
-	{...progress.root} 
-	class={mergeCss("w-full h-[3px]", className)}
+
+<div
+	{...progress.root}
+	class={mergeCss('w-full h-[3px]', className)}
 	class:opacity-100={isActive}
 	class:opacity-0={!isActive}
 	style:transition="opacity 150ms ease-in-out"
 >
-	<div 
+	<div
 		{...progress.progress}
-		class="h-full bg-blue-500 transition-transform duration-300 ease-out"
+		class="h-full bg-atm-blue transition-transform duration-300 ease-out"
 		style:width="calc(100% - var(--progress))"
 		style:transform="translateX(calc(var(--progress) * -1))"
 	></div>
 </div>
-
