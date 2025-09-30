@@ -10,7 +10,7 @@
 	let { bins, maxCount, timelineHeight }: Props = $props();
 
 	// Calculate bar heights using logarithmic scaling with global maxCount
-	const barHeights = $derived(calculateHistogramBarHeights(bins, maxCount, timelineHeight, 1));
+	const barHeights = $derived(bins && bins.length > 0 ? calculateHistogramBarHeights(bins, maxCount, timelineHeight, 1) : []);
 	$inspect(barHeights);
 </script>
 

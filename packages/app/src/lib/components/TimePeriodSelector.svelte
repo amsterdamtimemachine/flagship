@@ -124,8 +124,8 @@
 		<div class="w-full relative h-[40px]" bind:this={trackElement}>
 			<!-- Histogram Layer: Histogram bars and grid -->
 			<TimePeriodSelectorHistogram
-				bins={histogram.bins}
-				maxCount={histogram.maxCount}
+				bins={histogram?.bins || []}
+				maxCount={histogram?.maxCount || 0}
 				{timelineHeight}
 			/>
 

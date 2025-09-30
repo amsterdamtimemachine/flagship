@@ -14,8 +14,8 @@
 
 	// Create custom renderers - test direct component passing
 	const renderers = {
-		heading: Heading as any,
-		paragraph: Paragraph as any
+		heading: Heading,
+		paragraph: Paragraph
 	};
 </script>
 
