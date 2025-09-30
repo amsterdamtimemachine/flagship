@@ -21,10 +21,10 @@ export default {
 				'atm-blue':'#5e92f3',
 				'atm-blue-light':'#c2d0fb',
 				'map-cell-value': '#0053fb',
-				'map-background': '#f4e2d6', //#f9efe9', //'dark sand #efd9ca', //' sand #fbf5f2', // '#bfd9c3' green // light sand ece7e4
+				'map-background': '#f7ece4', //#f9efe9', //'dark sand #efd9ca', //' sand #fbf5f2', // '#bfd9c3' green // light sand ece7e4
 				'map-water-fill': '#c5e0fd',
 				'map-water-outline': '#c5e0fd',
-				'map-transporation-outline': '#f4e2d6'
+				'map-transporation-outline': '#f7ece4'
 			},
 			fontFamily: {
 				'sans': ['Satoshi', 'sans-serif'],

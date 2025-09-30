@@ -11,7 +11,6 @@
 
 	// Calculate bar heights using logarithmic scaling with global maxCount
 	const barHeights = $derived(bins && bins.length > 0 ? calculateHistogramBarHeights(bins, maxCount, timelineHeight, 1) : []);
-	$inspect(barHeights);
 </script>
 
 <svg class="absolute top-0 w-full h-full pointer-events-none">

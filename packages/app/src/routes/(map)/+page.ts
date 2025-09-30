@@ -56,34 +56,9 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			} else {
 				metadata = apiResponse;
 
-				console.log('✅ Metadata loaded successfully:', {
-					version: metadata.version,
-					timestamp: metadata.timestamp,
-					timeSlices: metadata.timeSlices.length,
-					recordTypes: metadata.recordTypes,
-					tags: metadata.tags.length,
-					resolutions: metadata.resolutions.length,
-					primaryGridDimensions: `${metadata.heatmapDimensions.colsAmount}x${metadata.heatmapDimensions.rowsAmount}`,
-					allResolutionDimensions: Object.keys(metadata.resolutionDimensions || {}),
-					timeRange: metadata.timeRange,
-					totalFeatures: metadata.stats?.totalFeatures
-				});
-
-				// Debug: Check actual processing bounds
-				// console.log('🗺️ Processing bounds:', {
-				//   primaryResolution: {
-				//     minLon: metadata.heatmapDimensions.minLon,
-				//     maxLon: metadata.heatmapDimensions.maxLon,
-				//     minLat: metadata.heatmapDimensions.minLat,
-				//     maxLat: metadata.heatmapDimensions.maxLat,
-				//     cellWidth: metadata.heatmapDimensions.cellWidth,
-				//     cellHeight: metadata.heatmapDimensions.cellHeight
-				//   }
-				// });
-
-				if (metadata.resolutionDimensions) {
-					console.log('📐 Available resolutions:', metadata.resolutionDimensions);
-				}
+			//	if (metadata.resolutionDimensions) {
+			//		console.log('📐 Available resolutions:', metadata.resolutionDimensions);
+			//	}
 			}
 		}
 	} catch (err) {

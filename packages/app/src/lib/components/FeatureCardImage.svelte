@@ -11,9 +11,6 @@
 	let imageError = $state(false);
 	let imageLoading = $state(true);
 
-	// Debug logging
-	console.log('FeatureCardImage props:', { thumbnail, alt, expanded });
-
 	const handleImageLoad = () => {
 		imageLoading = false;
 	};

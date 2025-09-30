@@ -13,7 +13,7 @@
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
 	import ToggleGroup from '$components/ToggleGroup.svelte';
-	import TagsSelector from '$components/TagsSelector.svelte';
+	import TagsANDSelector from '$components/TagsANDSelector.svelte';
 	import Tag from '$components/Tag.svelte';
 	import Tooltip from '$components/Tooltip.svelte';
 	import TagOperatorSwitch from '$components/TagOperatorSwitch.svelte';
@@ -318,7 +318,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 						onItemSelected={handleRecordTypeChange}
 						requireOneItemSelected={true}>
 						{#snippet children(item, isSelected, isDisabled)}
-							<Tag variant={isSelected ? 'selected-outline' : 'outline'} disabled={isDisabled}>
+							<Tag variant={isSelected ? 'selected-outline' : 'outline'} disabled={isDisabled} interactive={true}>
 								{item}
 							</Tag>
 						{/snippet}
@@ -343,7 +343,8 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 				</div>
 
 				{#if currentTagOperator === 'AND'}
-					<TagsSelector
+				<!-- use dedicated component for AND op -->
+					<TagsANDSelector
 						recordTypes={currentRecordTypes || []}
 						allRecordTypes={recordTypes}
 						availableTags={availableTagNames}
@@ -351,13 +352,14 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 						onTagsSelected={handleTagsChange}
 					/>
 				{:else}
+					<!-- OR op uses simple Toggle group -->
 					<ToggleGroup
 						items={availableTagNames}
 						selectedItems={currentTags || []}
 						onItemSelected={handleTagsChange}
 						requireOneItemSelected={false}>
 						{#snippet children(item, isSelected, isDisabled)}
-							<Tag variant={isSelected ? 'selected' : 'default'} disabled={isDisabled}>
+							<Tag variant={isSelected ? 'selected' : 'default'} disabled={isDisabled} interactive={true}>
 								{item}
 							</Tag>
 						{/snippet}

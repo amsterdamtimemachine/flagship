@@ -45,14 +45,12 @@
 	 * Clear layout memory when data context changes
 	 */
 	function clearLayoutMemory() {
-		console.log('🧹 Clearing layout memory - context changed');
 		layoutMemory.clear();
 	}
 
 	async function loadCellData(page: number = 1) {
 		loading = true;
 		loadingState.startLoading();
-		console.log('fetching cell data');
 
 		try {
 			// Parse period to get start and end years
@@ -113,7 +111,7 @@
 		const newContext = `${cellId}_${period}`;
 
 		if (currentContext !== newContext) {
-			console.log('🔄 Context changed:', { from: currentContext, to: newContext });
+			// console.log('🔄 Context changed:', { from: currentContext, to: newContext });
 			clearLayoutMemory();
 			currentContext = newContext;
 		}

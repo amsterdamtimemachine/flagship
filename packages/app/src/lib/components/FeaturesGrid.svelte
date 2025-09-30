@@ -34,11 +34,8 @@
 		masonry?.destroy();
 	});
 
-	// Re-layout when features change
 	$effect(() => {
-		// This effect tracks 'features' changes
 		if (masonry && features.length > 0) {
-			console.log('🔄 Features changed, re-laying out with memory:', features.length);
 			setTimeout(() => masonry?.layout(true), 10);
 		}
 	});

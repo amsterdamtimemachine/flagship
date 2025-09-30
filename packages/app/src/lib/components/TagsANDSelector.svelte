@@ -121,7 +121,7 @@
 				type="multiple"
 			>
 				{#snippet children(item, isSelected, isDisabled)}
-					<Tag variant={isSelected ? 'selected' : 'default'} disabled={isDisabled}>
+					<Tag variant={isSelected ? 'selected' : 'default'} disabled={isDisabled} interactive={true}>
 						{item}
 					</Tag>
 				{/snippet}
