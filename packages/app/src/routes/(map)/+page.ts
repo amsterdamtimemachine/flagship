@@ -8,6 +8,7 @@ import type {
 } from '@atm/shared/types';
 import type { AppError } from '$types/error';
 import { createPageErrorData, createError, createValidationError } from '$utils/error';
+import { validateCellId } from '$utils/utils';
 import { loadingState } from '$lib/state/loadingState.svelte';
 
 interface MetadataApiResponse extends VisualizationMetadata {
@@ -28,6 +29,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	const recordTypesParam = url.searchParams.get('recordTypes');
 	const tagsParam = url.searchParams.get('tags');
 	const tagOperatorParam = url.searchParams.get('tagOperator');
+	const cellParam = url.searchParams.get('cell');
 
 	try {
 		const response = await fetch('/api/metadata');
@@ -303,6 +305,37 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	// Wait for all data requests to complete
 	await Promise.all([histogramPromise, heatmapPromise, availableTagsPromise]);
 
+	// Validate cell parameter if provided
+	let validatedCell: string | null = null;
+	let cellBounds: { minLat: number; maxLat: number; minLon: number; maxLon: number } | null = null;
+
+	if (cellParam && metadata?.heatmapBlueprint && metadata?.heatmapDimensions) {
+		const validation = validateCellId(cellParam, metadata.heatmapBlueprint.cells, metadata.heatmapDimensions);
+		
+		if (validation.isValid) {
+			validatedCell = cellParam;
+			// Find cell bounds from blueprint
+			const cell = metadata.heatmapBlueprint.cells.find((c) => c.cellId === cellParam);
+			if (cell?.bounds) {
+				cellBounds = {
+					minLat: cell.bounds.minLat,
+					maxLat: cell.bounds.maxLat,
+					minLon: cell.bounds.minLon,
+					maxLon: cell.bounds.maxLon
+				};
+			}
+		} else {
+			// Add validation error for invalid cell
+			errors.push(
+				createValidationError(
+					'cell',
+					cellParam,
+					validation.error || `Cell "${cellParam}" not found. Please select a valid cell from the map.`
+				)
+			);
+		}
+	}
+
 	// Only validate tag combinations for AND operator (OR allows any combination)
 	if (
 		currentTagOperator === 'AND' &&
@@ -363,6 +396,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		currentRecordTypes,
 		currentTags,
 		currentTagOperator,
+		validatedCell,
+		cellBounds,
 		errorData: createPageErrorData(errors)
 	};
 };

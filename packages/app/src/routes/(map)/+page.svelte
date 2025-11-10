@@ -7,8 +7,6 @@
 	import { createPageErrorData } from '$utils/error';
 	import { mergeHeatmapTimeline, mergeHeatmaps } from '$utils/heatmap';
 	import { mergeHistograms } from '$utils/histogram';
-	import { validateCellId } from '$utils/utils';
-	import { addToast } from '$components/Toaster.svelte';
 	import { loadingState } from '$lib/state/loadingState.svelte';
 	import { QuestionMark } from 'phosphor-svelte';
 	import Heading from '$components/Heading.svelte';
@@ -43,6 +41,8 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	let currentRecordTypes = $derived(data?.currentRecordTypes || []);
 	let currentTags = $derived(data?.currentTags || []);
 	let currentTagOperator = $derived(data?.currentTagOperator || 'OR');
+	let validatedCell = $derived(data?.validatedCell);
+	let validatedCellBounds = $derived(data?.cellBounds);
 	let histograms = $derived((data?.histogram as HistogramApiResponse | null)?.histograms);
 
 	const controller = createStateController();
@@ -199,41 +199,11 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 		}
 		controller.initialize(initialPeriod);
 
-		// Handle cell bounds lookup from URL if cell parameter exists
+		// Handle server-validated cell from URL parameter
 		tick().then(() => {
-			const urlParams = new URLSearchParams(window.location.search);
-			const cellParam = urlParams.get('cell');
-			if (cellParam && heatmapBlueprint && dimensions) {
-				// Validate cell before selecting it
-				const validation = validateCellId(cellParam, heatmapBlueprint, dimensions);
-				
-				if (validation.isValid) {
-					const cell = heatmapBlueprint.find((c) => c.cellId === cellParam);
-					if (cell?.bounds) {
-						// Update controller with bounds for the cell from URL
-						controller.selectCell(cellParam, {
-							minLat: cell.bounds.minLat,
-							maxLat: cell.bounds.maxLat,
-							minLon: cell.bounds.minLon,
-							maxLon: cell.bounds.maxLon
-						});
-					}
-				} else {
-					// Show error toast and remove invalid cell from URL
-					addToast({
-						data: {
-							title: 'Invalid Cell',
-							description: validation.error || `Cell "${cellParam}" not found. Please select a valid cell from the map.`,
-							type: 'error'
-						},
-						timeout: 5000
-					});
-					
-					// Clean invalid cell parameter from URL while preserving other parameters
-					const url = new URL(window.location.href);
-					url.searchParams.delete('cell');
-					goto(url.pathname + url.search, { replaceState: true });
-				}
+			if (validatedCell && validatedCellBounds) {
+				// Use server-validated cell data
+				controller.selectCell(validatedCell, validatedCellBounds);
 			}
 
 			// Set URL defaults if no parameters exist
