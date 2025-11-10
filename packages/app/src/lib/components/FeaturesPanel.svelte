@@ -59,7 +59,7 @@
 			// Build params for API call - only include bounds if available
 			const params: any = {
 				start_year: `${startYear}-01-01`,
-				end_year: `${endYear}-01-01`,
+				end_year: `${endYear}-12-31`,
 				page,
 				recordTypes: recordTypes,
 				tags: tags,

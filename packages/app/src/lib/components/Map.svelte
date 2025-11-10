@@ -95,6 +95,7 @@
 	let map: MapLibreMap | undefined = $state();
 	let mapContainer: HTMLElement;
 	let isMapLoaded = $state(false);
+	let hoverTooltip = $state<{ x: number; y: number; count: number; cellId: string } | null>(null);
 
 	const cellIdMap = $derived.by(() => {
 		const idMap = new Map<number, string>();
@@ -406,9 +407,18 @@
 							{ hover: true }
 						);
 						hoveredFeatureId = featureId;
+						
+						// Show tooltip with count
+						hoverTooltip = {
+							x: e.point.x,
+							y: e.point.y,
+							count: featureState.count as number,
+							cellId: featureId
+						};
 					} else {
 						mapInstance.getCanvas().style.cursor = '';
 						hoveredFeatureId = null;
+						hoverTooltip = null;
 					}
 				}
 			});
@@ -425,6 +435,7 @@
 					);
 					hoveredFeatureId = null;
 				}
+				hoverTooltip = null;
 			});
 
 			mapInstance.on('click', 'heatmap-squares', (e) => {
@@ -459,6 +470,17 @@
 	}
 </script>
 
-<div class={mergeCss('h-full w-full', className)}>
+<div class={mergeCss('h-full w-full relative', className)}>
 	<div bind:this={mapContainer} class="h-full w-full"></div>
+	
+	<!-- Hover tooltip -->
+	{#if hoverTooltip}
+		<div 
+			class="absolute z-50 bg-black bg-opacity-80 text-white px-2 py-1 rounded text-sm pointer-events-none transform -translate-x-1/2 -translate-y-full"
+			style="left: {hoverTooltip.x}px; top: {hoverTooltip.y - 8}px;"
+		>
+			<div class="font-medium">{hoverTooltip.count} features</div>
+			<div class="text-xs opacity-75">Cell: {hoverTooltip.cellId}</div>
+		</div>
+	{/if}
 </div>

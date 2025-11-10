@@ -163,6 +163,15 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 		return null;
 	});
 
+	// Log heatmap total whenever it changes
+	$effect(() => {
+		if (currentHeatmap?.countArray) {
+			const total = currentHeatmap.countArray.reduce((sum, count) => sum + count, 0);
+			console.log(`🗺️ Current heatmap total: ${total} features (period: ${currentPeriod})`);
+			console.log(`📊 Filters: recordTypes=[${currentRecordTypes?.join(', ')}], tags=[${currentTags?.join(', ')}], operator=${currentTagOperator}`);
+		}
+	});
+
 	onMount(() => {
 		// Initialize controller with period from URL or last available time period
 		const urlParams = new URLSearchParams(window.location.search);
