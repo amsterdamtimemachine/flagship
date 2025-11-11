@@ -4,6 +4,7 @@ import type {
 	VisualizationMetadata,
 	HistogramApiResponse,
 	HeatmapTimelineApiResponse,
+	HeatmapTimeline,
 	RecordType
 } from '@atm/shared/types';
 import type { AppError } from '$types/error';
@@ -32,7 +33,7 @@ function isChronologicallyValid(period: string): boolean {
 	return start < end;
 }
 
-function getLastAvailablePeriod(heatmapTimeline: any): string {
+function getLastAvailablePeriod(heatmapTimeline: HeatmapTimeline | null): string {
 	if (!heatmapTimeline) return '';
 	const periods = Object.keys(heatmapTimeline);
 	return periods.length > 0 ? periods[periods.length - 1] : '';
@@ -374,7 +375,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	let validatedPeriod: string | null = null;
 
 	if (periodParam && heatmapTimeline) {
-		const availablePeriods = Object.keys(heatmapTimeline.heatmapTimeline || heatmapTimeline);
+		const timelineData = (heatmapTimeline as HeatmapTimelineApiResponse).heatmapTimeline;
+		const availablePeriods = Object.keys(timelineData);
 		
 		// 1. Format validation
 		if (!isValidPeriodFormat(periodParam)) {
@@ -409,7 +411,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		}
 		// 4. Availability validation
 		else if (!availablePeriods.includes(periodParam)) {
-			const fallbackPeriod = getLastAvailablePeriod(heatmapTimeline.heatmapTimeline || heatmapTimeline);
+			const fallbackPeriod = getLastAvailablePeriod(timelineData);
 			errors.push(
 				createPeriodNotFoundError(periodParam, availablePeriods, fallbackPeriod)
 			);
@@ -421,7 +423,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	}
 
 	// Default to last available period if validation fails or no period provided
-	const defaultPeriod = validatedPeriod || getLastAvailablePeriod(heatmapTimeline?.heatmapTimeline || heatmapTimeline);
+	const defaultPeriod = validatedPeriod || getLastAvailablePeriod(heatmapTimeline ? (heatmapTimeline as HeatmapTimelineApiResponse).heatmapTimeline : null);
 
 	// Only validate tag combinations for AND operator (OR allows any combination)
 	if (
