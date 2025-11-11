@@ -325,7 +325,6 @@ export const load: PageLoad = async ({ fetch, url }) => {
 				};
 			}
 		} else {
-			// Add validation error for invalid cell
 			errors.push(
 				createValidationError(
 					'cell',
@@ -388,6 +387,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	}
 
 	loadingState.stopLoading();
+	console.log(errors);
 	return {
 		metadata,
 		histogram,

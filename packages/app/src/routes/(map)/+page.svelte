@@ -17,6 +17,7 @@
 	import Tag from '$components/Tag.svelte';
 	import Tooltip from '$components/Tooltip.svelte';
 	import TagOperatorSwitch from '$components/TagOperatorSwitch.svelte';
+	import DummyTagsSection from '$components/DummyTagsSection.svelte';
 	import FeaturesPanel from '$components/FeaturesPanel.svelte';
 	import NavContainer from '$components/NavContainer.svelte';
 	import FiltersStatusPanel from '$components/FiltersStatusPanel.svelte';
@@ -53,6 +54,9 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 
 	// Navigation state
 	let navExpanded = $state(true);
+	
+	// Feature flag for tags - set to false until tags data is ready
+	const TAGS_FEATURE_READY = false;
 	
 
 	// Combine server errors with controller errors for ErrorHandler
@@ -163,15 +167,6 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 		}
 
 		return null;
-	});
-
-	// Log heatmap total whenever it changes
-	$effect(() => {
-		if (currentHeatmap?.countArray) {
-			const total = currentHeatmap.countArray.reduce((sum, count) => sum + count, 0);
-			console.log(`🗺️ Current heatmap total: ${total} features (period: ${currentPeriod})`);
-			console.log(`📊 Filters: recordTypes=[${currentRecordTypes?.join(', ')}], tags=[${currentTags?.join(', ')}], operator=${currentTagOperator}`);
-		}
 	});
 
 	onMount(() => {
@@ -325,45 +320,52 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 					</ToggleGroup>
 				</div>
 
-				<div class="mb-4">
-					<div class="flex">
-						<Heading level={3} class="pr-2"> Topics </Heading>
-						<Tooltip icon={QuestionMark} text="Thematic categories based on newspaper sections, applied across all data using machine learning." placement="bottom" />
+				<!-- Topics Section - Use dummy version until tags data is ready -->
+				{#if TAGS_FEATURE_READY}
+					<!-- Real tags implementation - disabled for now -->
+					<div class="mb-4">
+						<div class="flex">
+							<Heading level={3} class="pr-2"> Topics </Heading>
+							<Tooltip icon={QuestionMark} text="Thematic categories based on newspaper sections, applied across all data using machine learning." placement="bottom" />
+						</div>
+						<div class="mt-2 mb-3">
+							<TagOperatorSwitch 
+								operator={currentTagOperator as 'AND' | 'OR'}
+								onOperatorChange={handleTagOperatorChange}
+								class="block"
+							/>
+							<span class="text-xs text-black">
+								{currentTagOperator === 'AND' ? 'Include only content with all selected topics' : 'Include content with any selected topics'}
+							</span>
+						</div>
 					</div>
-					<div class="mt-2 mb-3">
-						<TagOperatorSwitch 
-							operator={currentTagOperator as 'AND' | 'OR'}
-							onOperatorChange={handleTagOperatorChange}
-							class="block"
-						/>
-						<span class="text-xs text-black">
-							{currentTagOperator === 'AND' ? 'Include only content with all selected topics' : 'Include content with any selected topics'}
-						</span>
-					</div>
-				</div>
 
-				{#if currentTagOperator === 'AND'}
-				<!-- use dedicated component for AND op -->
-					<TagsANDSelector
-						recordTypes={currentRecordTypes || []}
-						allRecordTypes={recordTypes}
-						availableTags={availableTagNames}
-						selectedTags={currentTags || []}
-						onTagsSelected={handleTagsChange}
-					/>
+					{#if currentTagOperator === 'AND'}
+					<!-- use dedicated component for AND op -->
+						<TagsANDSelector
+							recordTypes={currentRecordTypes || []}
+							allRecordTypes={recordTypes}
+							availableTags={availableTagNames}
+							selectedTags={currentTags || []}
+							onTagsSelected={handleTagsChange}
+						/>
+					{:else}
+						<!-- OR op uses simple Toggle group -->
+						<ToggleGroup
+							items={availableTagNames}
+							selectedItems={currentTags || []}
+							onItemSelected={handleTagsChange}
+							requireOneItemSelected={false}>
+							{#snippet children(item, isSelected, isDisabled)}
+								<Tag variant={isSelected ? 'selected' : 'default'} disabled={isDisabled} interactive={true}>
+									{item}
+								</Tag>
+							{/snippet}
+						</ToggleGroup>
+					{/if}
 				{:else}
-					<!-- OR op uses simple Toggle group -->
-					<ToggleGroup
-						items={availableTagNames}
-						selectedItems={currentTags || []}
-						onItemSelected={handleTagsChange}
-						requireOneItemSelected={false}>
-						{#snippet children(item, isSelected, isDisabled)}
-							<Tag variant={isSelected ? 'selected' : 'default'} disabled={isDisabled} interactive={true}>
-								{item}
-							</Tag>
-						{/snippet}
-					</ToggleGroup>
+					<!-- Dummy tags section for preview -->
+					<DummyTagsSection />
 				{/if}
 			</div>
 		</NavContainer>
