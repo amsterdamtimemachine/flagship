@@ -22,8 +22,8 @@
 <div class="w-full bg-atm-sand-dark min-h-screen">
 	<div class="w-full flex justify-center bg-atm-sand border-b border-atm-sand-border">
 		<Nav class="max-w-4xl border-none">
-			<NavItem href="/" label="Map" />
-			<NavItem href="/about" label="About" />
+			<NavItem href="/" label="Kaart" />
+			<NavItem href="/about" label="Over" />
 		</Nav>
 	</div>
 	<div class="max-w-4xl mx-auto py-8">

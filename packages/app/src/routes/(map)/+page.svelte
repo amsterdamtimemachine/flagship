@@ -44,6 +44,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	let currentTagOperator = $derived(data?.currentTagOperator || 'OR');
 	let validatedCell = $derived(data?.validatedCell);
 	let validatedCellBounds = $derived(data?.cellBounds);
+	let validatedPeriod = $derived(data?.validatedPeriod);
 	let histograms = $derived((data?.histogram as HistogramApiResponse | null)?.histograms);
 
 	const controller = createStateController();
@@ -170,28 +171,8 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	});
 
 	onMount(() => {
-		// Initialize controller with period from URL or last available time period
-		const urlParams = new URLSearchParams(window.location.search);
-		const periodFromUrl = urlParams.get('period');
-		
-		// Get last period from raw dataset (not filtered data)
-		let lastPeriod = '';
-		if (heatmapTimeline) {
-			const allPeriods = Object.keys(heatmapTimeline);
-			if (allPeriods.length > 0) {
-				lastPeriod = allPeriods[allPeriods.length - 1];
-			}
-		}
-
-		// Use period from URL if valid, otherwise fall back to last period (most recent)
-		let initialPeriod = lastPeriod;
-		if (
-			periodFromUrl &&
-			heatmapTimeline &&
-			Object.keys(heatmapTimeline).includes(periodFromUrl)
-		) {
-			initialPeriod = periodFromUrl;
-		}
+		// Initialize controller with server-validated period
+		const initialPeriod = validatedPeriod || '';
 		controller.initialize(initialPeriod);
 
 		// Handle server-validated cell from URL parameter
@@ -299,13 +280,13 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 
 		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
 			<Nav class="p-3">
-				<NavItem href="/about" label="About" />
+				<NavItem href="/about" label="Over" />
 			</Nav>
 			<div class="p-3">
 					
 				<div class="mb-4">
 						<Heading level={2} class="mb-2"> Filters </Heading>
-						<Heading level={3} class="mb-2"> Content type </Heading>
+						<Heading level={3} class="mb-2"> Inhoudstype </Heading>
 
 					<ToggleGroup
 						items={recordTypes}
@@ -325,7 +306,7 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 					<!-- Real tags implementation - disabled for now -->
 					<div class="mb-4">
 						<div class="flex">
-							<Heading level={3} class="pr-2"> Topics </Heading>
+							<Heading level={3} class="pr-2"> Onderwerpen </Heading>
 							<Tooltip icon={QuestionMark} text="Thematic categories based on newspaper sections, applied across all data using machine learning." placement="bottom" />
 						</div>
 						<div class="mt-2 mb-3">

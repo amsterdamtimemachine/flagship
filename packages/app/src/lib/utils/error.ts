@@ -34,7 +34,7 @@ export function createPeriodNotFoundError(
 	return createError(
 		'warning',
 		'Period Not Found',
-		`Period "${requestedPeriod}" doesn't exist. Showing default instead.`,
+		`Period "${requestedPeriod}" doesn't exist in the dataset. Defaulting to most recent period (${fallbackPeriod}).`,
 		{
 			requestedPeriod,
 			fallbackPeriod,

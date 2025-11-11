@@ -7,13 +7,34 @@ import type {
 	RecordType
 } from '@atm/shared/types';
 import type { AppError } from '$types/error';
-import { createPageErrorData, createError, createValidationError } from '$utils/error';
+import { createPageErrorData, createError, createValidationError, createPeriodNotFoundError } from '$utils/error';
 import { validateCellId } from '$utils/utils';
 import { loadingState } from '$lib/state/loadingState.svelte';
 
 interface MetadataApiResponse extends VisualizationMetadata {
 	success: boolean;
 	message?: string;
+}
+
+// Helper functions for period validation
+function isValidPeriodFormat(period: string): boolean {
+	return /^\d{4}_\d{4}$/.test(period);
+}
+
+function getPeriodDuration(period: string): number {
+	const [start, end] = period.split('_').map(Number);
+	return end - start;
+}
+
+function isChronologicallyValid(period: string): boolean {
+	const [start, end] = period.split('_').map(Number);
+	return start < end;
+}
+
+function getLastAvailablePeriod(heatmapTimeline: any): string {
+	if (!heatmapTimeline) return '';
+	const periods = Object.keys(heatmapTimeline);
+	return periods.length > 0 ? periods[periods.length - 1] : '';
 }
 
 export const load: PageLoad = async ({ fetch, url }) => {
@@ -30,6 +51,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	const tagsParam = url.searchParams.get('tags');
 	const tagOperatorParam = url.searchParams.get('tagOperator');
 	const cellParam = url.searchParams.get('cell');
+	const periodParam = url.searchParams.get('period');
 
 	try {
 		const response = await fetch('/api/metadata');
@@ -87,16 +109,28 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		if (recordTypesParam) {
 			const requestedTypes = recordTypesParam.split(',').map((t) => t.trim()) as RecordType[];
 			const validTypes = requestedTypes.filter((type) => metadata.recordTypes.includes(type));
+			const invalidTypes = requestedTypes.filter((type) => !metadata.recordTypes.includes(type));
 
 			if (validTypes.length > 0) {
+				// Some valid types found - show warnings for invalid ones only
+				for (const invalidType of invalidTypes) {
+					errors.push(
+						createError(
+							'warning',
+							'Invalid Content Type Removed',
+							`"${invalidType}" is not a valid content type and was removed from your selection.`,
+							{ invalidType, availableTypes: metadata.recordTypes }
+						)
+					);
+				}
 				currentRecordTypes = validTypes;
 			} else {
-				// If no valid record types are provided, add validation error but default to all types
+				// No valid types found - show single comprehensive error message
 				errors.push(
 					createValidationError(
 						'recordTypes',
 						recordTypesParam,
-						`Must contain at least one of: ${metadata.recordTypes.join(', ')}`
+						`No valid content types found. Defaulting to all content types: ${metadata.recordTypes.join(', ')}`
 					)
 				);
 				// Default to all record types for better UX
@@ -335,6 +369,59 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		}
 	}
 
+	// Validate period parameter if provided
+	let validatedPeriod: string | null = null;
+
+	if (periodParam && heatmapTimeline) {
+		const availablePeriods = Object.keys(heatmapTimeline.heatmapTimeline || heatmapTimeline);
+		
+		// 1. Format validation
+		if (!isValidPeriodFormat(periodParam)) {
+			errors.push(
+				createValidationError(
+					'period',
+					periodParam,
+					'invalid format. Expected YYYY_YYYY (e.g., 1950_2000). Defaulting to most recent period'
+				)
+			);
+		}
+		// 2. Chronological validation
+		else if (!isChronologicallyValid(periodParam)) {
+			errors.push(
+				createValidationError(
+					'period',
+					periodParam,
+					'invalid range. Start year must be less than end year. Defaulting to most recent period'
+				)
+			);
+		}
+		// 3. Duration validation
+		else if (getPeriodDuration(periodParam) > 50) {
+			const duration = getPeriodDuration(periodParam);
+			errors.push(
+				createValidationError(
+					'period',
+					periodParam,
+					`spans ${duration} years. Maximum 50 years supported. Defaulting to most recent period`
+				)
+			);
+		}
+		// 4. Availability validation
+		else if (!availablePeriods.includes(periodParam)) {
+			const fallbackPeriod = getLastAvailablePeriod(heatmapTimeline.heatmapTimeline || heatmapTimeline);
+			errors.push(
+				createPeriodNotFoundError(periodParam, availablePeriods, fallbackPeriod)
+			);
+		}
+		// 5. Valid period
+		else {
+			validatedPeriod = periodParam;
+		}
+	}
+
+	// Default to last available period if validation fails or no period provided
+	const defaultPeriod = validatedPeriod || getLastAvailablePeriod(heatmapTimeline?.heatmapTimeline || heatmapTimeline);
+
 	// Only validate tag combinations for AND operator (OR allows any combination)
 	if (
 		currentTagOperator === 'AND' &&
@@ -398,6 +485,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		currentTagOperator,
 		validatedCell,
 		cellBounds,
+		validatedPeriod: defaultPeriod,
 		errorData: createPageErrorData(errors)
 	};
 };
