@@ -15,6 +15,9 @@
 
 	let { feature, expanded = false }: Props = $props();
 
+	// Feature flag to disable tags for launch
+	const SHOW_TAGS = false;
+
 	function handleExpand() {
 		featureViewerState.openFeature(feature);
 	}
@@ -57,13 +60,15 @@
 			</div>
 		{/if}
 
-		<!-- Tags -->
-		<TagList
-			tags={feature.tags || []}
-			{expanded}
-			maxVisible={expanded ? undefined : 2}
-			class={expanded ? 'py-2 px-2' : 'pt-2'}
-		/>
+		<!-- Tags - Temporarily disabled for launch -->
+		{#if SHOW_TAGS}
+			<TagList
+				tags={feature.tags || []}
+				{expanded}
+				maxVisible={expanded ? undefined : 2}
+				class={expanded ? 'py-2 px-2' : 'pt-2'}
+			/>
+		{/if}
 	</div>
 	<FeatureCardFooter {feature} onExpand={handleExpand} {expanded} />
 </div>

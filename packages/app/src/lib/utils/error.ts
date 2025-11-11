@@ -1,4 +1,5 @@
 import type { AppError, AppErrorType, PageErrorData } from '$types/error';
+import { translateErrorTitle, translateErrorMessage } from './translations';
 
 let errorIdCounter = 0;
 
@@ -11,8 +12,8 @@ export function createError(
 	return {
 		id: `error_${++errorIdCounter}_${Date.now()}`,
 		type,
-		title,
-		description,
+		title: translateErrorTitle(title),
+		description: translateErrorMessage(description),
 		timestamp: new Date(),
 		context
 	};

@@ -9,6 +9,7 @@ import type {
 import type { AppError } from '$types/error';
 import { createPageErrorData, createError, createValidationError, createPeriodNotFoundError } from '$utils/error';
 import { validateCellId } from '$utils/utils';
+import { translateContentType, translateContentTypes } from '$utils/translations';
 import { loadingState } from '$lib/state/loadingState.svelte';
 
 interface MetadataApiResponse extends VisualizationMetadata {
@@ -119,7 +120,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 							'warning',
 							'Invalid Content Type Removed',
 							`"${invalidType}" is not a valid content type and was removed from your selection.`,
-							{ invalidType, availableTypes: metadata.recordTypes }
+							{ invalidType, availableTypes: translateContentTypes(metadata.recordTypes) }
 						)
 					);
 				}
@@ -130,7 +131,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 					createValidationError(
 						'recordTypes',
 						recordTypesParam,
-						`No valid content types found. Defaulting to all content types: ${metadata.recordTypes.join(', ')}`
+						`No valid content types found. Defaulting to all content types: ${translateContentTypes(metadata.recordTypes).join(', ')}`
 					)
 				);
 				// Default to all record types for better UX

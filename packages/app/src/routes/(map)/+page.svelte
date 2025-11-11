@@ -7,6 +7,7 @@
 	import { createPageErrorData } from '$utils/error';
 	import { mergeHeatmapTimeline, mergeHeatmaps } from '$utils/heatmap';
 	import { mergeHistograms } from '$utils/histogram';
+	import { translateContentTypes, reverseTranslateContentTypes } from '$utils/translations';
 	import { loadingState } from '$lib/state/loadingState.svelte';
 	import { QuestionMark } from 'phosphor-svelte';
 	import Heading from '$components/Heading.svelte';
@@ -46,6 +47,10 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	let validatedCellBounds = $derived(data?.cellBounds);
 	let validatedPeriod = $derived(data?.validatedPeriod);
 	let histograms = $derived((data?.histogram as HistogramApiResponse | null)?.histograms);
+
+	// Translated content types for UI display  
+	let translatedRecordTypes = $derived(recordTypes ? translateContentTypes(recordTypes) : []);
+	let translatedCurrentRecordTypes = $derived(currentRecordTypes ? translateContentTypes(currentRecordTypes) : []);
 
 	const controller = createStateController();
 	let currentPeriod = $derived(controller.currentPeriod);
@@ -204,10 +209,13 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	}
 
 	function handleRecordTypeChange(recordTypes: string[] | string) {
-		const recordTypesArray = Array.isArray(recordTypes) ? recordTypes : [recordTypes];
+		// Translate Dutch labels back to English for API/URL  
+		const dutchArray = Array.isArray(recordTypes) ? recordTypes : [recordTypes];
+		const englishArray = reverseTranslateContentTypes(dutchArray);
+		
 		const url = new URL(window.location.href);
-		if (recordTypesArray.length > 0) {
-			url.searchParams.set('recordTypes', recordTypesArray.join(','));
+		if (englishArray.length > 0) {
+			url.searchParams.set('recordTypes', englishArray.join(','));
 		} else {
 			url.searchParams.delete('recordTypes');
 		}
@@ -289,8 +297,8 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 						<Heading level={3} class="mb-2"> Inhoudstype </Heading>
 
 					<ToggleGroup
-						items={recordTypes}
-						selectedItems={currentRecordTypes}
+						items={translatedRecordTypes}
+						selectedItems={translatedCurrentRecordTypes}
 						onItemSelected={handleRecordTypeChange}
 						requireOneItemSelected={true}>
 						{#snippet children(item, isSelected, isDisabled)}

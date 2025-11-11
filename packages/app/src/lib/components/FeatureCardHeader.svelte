@@ -2,6 +2,7 @@
 	import type { RawFeature } from '@atm/shared/types';
 	import { mergeCss } from '$utils/utils';
 	import { formatTimePeriod } from '$utils/format';
+	import { translateContentType } from '$utils/translations';
 	import Tag from './Tag.svelte';
 
 	type Props = {
@@ -16,7 +17,7 @@
 	<!-- Dataset and Record Type -->
 	<div class="flex w-full justify-between items-center">
 		<Tag variant="outline">
-			{feature.recordType}
+			{translateContentType(feature.recordType)}
 		</Tag>
 		<span class="text-sm text-black">
 			{formatTimePeriod(feature.per)}

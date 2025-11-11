@@ -6,16 +6,14 @@
 	import ToggleGroup from '$components/ToggleGroup.svelte';
 	import Tag from '$components/Tag.svelte';
 
-	// Hardcoded dummy tags for preview purposes
+	// Hardcoded dummy tags for preview purposes (in Dutch)
 	const DUMMY_TAGS = [
-		'Politics', 
-		'Economy', 
-		'Culture', 
-		'Science', 
-		'Sports', 
-		'Weather',
-		'Society',
-		'Technology'
+		'Katten', 
+		'Paarden', 
+		'Auto\'s', 
+		'Wonen', 
+		'Eten',
+		'Wielen'
 	];
 	
 	// Fixed operator for simplicity
@@ -33,18 +31,20 @@
 
 <div class="mb-4">
 	<div class="flex">
-		<Heading level={3} class="pr-2"> Topics </Heading>
-		<Tooltip icon={QuestionMark} text="Thematic categories based on newspaper sections, applied across all data using machine learning. [Preview - Feature coming soon]" placement="bottom" />
+		<Heading level={3} class="pr-2"> Ondwerpen </Heading>
+		<Tooltip icon={QuestionMark} text="Thematische categorieën gebaseerd op krantenrubrieken, toegepast op alle data met behulp van machine learning. [Preview - Functie komt binnenkort beschikbaar]" placement="bottom" />
 	</div>
 	<div class="mt-2 mb-3">
 		<TagOperatorSwitch 
 			operator={currentTagOperator}
 			onOperatorChange={handleTagOperatorChange}
 			disabled={true}
+			anyLabel="Minimaal één"
+			allLabel="Alle"
 			class="block"
 		/>
 		<span class="text-xs text-gray-400">
-			Include content with any selected topics (Preview mode - disabled)
+			Inclusief inhoud met geselecteerde onderwerpen (Preview modus - uitgeschakeld)
 		</span>
 	</div>
 </div>
