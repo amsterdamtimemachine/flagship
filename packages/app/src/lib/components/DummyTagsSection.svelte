@@ -10,10 +10,9 @@
 	const DUMMY_TAGS = [
 		'Katten', 
 		'Paarden', 
-		'Auto\'s', 
 		'Wonen', 
 		'Eten',
-		'Wielen'
+		'Verkeer'
 	];
 	
 	// Fixed operator for simplicity
@@ -31,7 +30,7 @@
 
 <div class="mb-4">
 	<div class="flex">
-		<Heading level={3} class="pr-2"> Ondwerpen </Heading>
+		<Heading level={3} class="pr-2"> Onderwerpen </Heading>
 		<Tooltip icon={QuestionMark} text="Thematische categorieën gebaseerd op krantenrubrieken, toegepast op alle data met behulp van machine learning. [Preview - Functie komt binnenkort beschikbaar]" placement="bottom" />
 	</div>
 	<div class="mt-2 mb-3">

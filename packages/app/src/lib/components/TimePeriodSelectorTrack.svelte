@@ -12,6 +12,36 @@
 	let { bins, currentIndex, onIndexChange, timelineHeight, onKeyDown }: Props = $props();
 
 	let trackElement: HTMLDivElement | undefined = $state();
+	
+	// Hover state for tooltip
+	let hoveredBin = $state<{ bin: HistogramBin; index: number } | null>(null);
+	let mousePosition = $state({ x: 0, y: 0 });
+
+	function handleMouseEnter(event: MouseEvent, bin: HistogramBin, index: number) {
+		hoveredBin = { bin, index };
+		updateMousePosition(event);
+	}
+
+	function handleMouseLeave() {
+		hoveredBin = null;
+	}
+
+	function handleMouseMove(event: MouseEvent) {
+		if (hoveredBin) {
+			updateMousePosition(event);
+		}
+	}
+
+	function updateMousePosition(event: MouseEvent) {
+		mousePosition = { x: event.clientX, y: event.clientY };
+	}
+	
+	// Features text with English pluralization
+	const featuresText = $derived(() => {
+		if (!hoveredBin) return '';
+		const count = hoveredBin.bin.count;
+		return count === 1 ? 'feature' : 'features';
+	});
 
 	function handleTrackClick(event: MouseEvent) {
 		if (!trackElement) return;
@@ -50,8 +80,21 @@
 				e.stopPropagation();
 				onIndexChange(i);
 			}}
+			onmouseenter={(e) => handleMouseEnter(e, bin, i)}
+			onmouseleave={handleMouseLeave}
+			onmousemove={handleMouseMove}
 			aria-label="Select period {bin.timeSlice.label}"
-			title="Period: {bin.timeSlice.label}, Count: {bin.count}"
 		></button>
 	{/each}
 </div>
+
+<!-- Hover tooltip -->
+{#if hoveredBin}
+	<div 
+		class="fixed z-50 bg-black bg-opacity-80 text-white px-2 py-1 rounded text-sm pointer-events-none transform -translate-x-1/2 -translate-y-full"
+		style="left: {mousePosition.x}px; top: {mousePosition.y - 8}px;"
+	>
+		<div class="font-medium">{hoveredBin.bin.count} {featuresText()}</div>
+		<div class="text-xs opacity-75">Periode: {hoveredBin.bin.timeSlice.label}</div>
+	</div>
+{/if}

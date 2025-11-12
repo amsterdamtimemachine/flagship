@@ -12,8 +12,8 @@
 	const showingEnd = $derived(Math.min(currentPage * featuresPerPage, totalFeatures));
 	const isPaginated = $derived(totalPages > 1);
 	
-	// Dutch pluralization: "kenmerk" (singular) vs "kenmerken" (plural)
-	const featuresText = $derived(totalFeatures === 1 ? 'kenmerk' : 'kenmerken');
+	// English pluralization: "feature" (singular) vs "features" (plural)
+	const featuresText = $derived(totalFeatures === 1 ? 'feature' : 'features');
 </script>
 
 <p class="text-sm text-gray-700">

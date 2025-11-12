@@ -475,7 +475,7 @@
 	
 	<!-- Hover tooltip -->
 	{#if hoverTooltip}
-		{@const featuresText = hoverTooltip.count === 1 ? 'kenmerk' : 'kenmerken'}
+		{@const featuresText = hoverTooltip.count === 1 ? 'feature' : 'features'}
 		<div 
 			class="absolute z-50 bg-black bg-opacity-80 text-white px-2 py-1 rounded text-sm pointer-events-none transform -translate-x-1/2 -translate-y-full"
 			style="left: {hoverTooltip.x}px; top: {hoverTooltip.y - 8}px;"

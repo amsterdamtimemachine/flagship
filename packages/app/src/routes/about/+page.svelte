@@ -22,7 +22,7 @@
 <div class="w-full bg-atm-sand-dark min-h-screen">
 	<div class="w-full flex justify-center bg-atm-sand border-b border-atm-sand-border">
 		<Nav class="max-w-4xl border-none">
-			<NavItem href="/" label="Kaart" />
+			<NavItem href="/" label="Data Index" />
 			<NavItem href="/about" label="Over" />
 		</Nav>
 	</div>
