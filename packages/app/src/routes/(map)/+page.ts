@@ -374,9 +374,10 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	// Validate period parameter if provided
 	let validatedPeriod: string | null = null;
 
-	if (periodParam && heatmapTimeline) {
-		const timelineData = (heatmapTimeline as HeatmapTimelineApiResponse).heatmapTimeline;
-		const availablePeriods = Object.keys(timelineData);
+	if (periodParam && metadata) {
+		// Get available periods from metadata (all periods that exist in dataset)
+		const metadataPeriods = metadata.timeSlices.map(slice => slice.key);
+		const timelineData = heatmapTimeline ? (heatmapTimeline as HeatmapTimelineApiResponse).heatmapTimeline : {};
 		
 		// 1. Format validation
 		if (!isValidPeriodFormat(periodParam)) {
@@ -409,14 +410,15 @@ export const load: PageLoad = async ({ fetch, url }) => {
 				)
 			);
 		}
-		// 4. Availability validation
-		else if (!availablePeriods.includes(periodParam)) {
-			const fallbackPeriod = getLastAvailablePeriod(timelineData);
+		// 4. Availability validation - check if period exists in metadata
+		else if (!metadataPeriods.includes(periodParam)) {
+			// Use the same fallback logic as the default period assignment
+			const fallbackPeriod = getLastAvailablePeriod(timelineData) || metadataPeriods[metadataPeriods.length - 1] || '';
 			errors.push(
-				createPeriodNotFoundError(periodParam, availablePeriods, fallbackPeriod)
+				createPeriodNotFoundError(periodParam, metadataPeriods, fallbackPeriod)
 			);
 		}
-		// 5. Valid period
+		// 5. Valid period (exists in metadata, even if no data)
 		else {
 			validatedPeriod = periodParam;
 		}
