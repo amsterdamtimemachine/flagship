@@ -28,6 +28,7 @@
 	import NavItem from '$components/NavItem.svelte';
 	import type { PageData } from './$types';
 import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline } from '@atm/shared/types';
+import { PUBLIC_DEFAULT_CELL } from '$env/static/public';
 
 	let { data }: { data: PageData } = $props();
 
@@ -197,6 +198,19 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 				
 				if (lastPeriod && defaultRecordTypes.length > 0) {
 					controller.syncUrlParameters(lastPeriod, currentTagOperator, defaultRecordTypes);
+					
+					// Set default cell selection
+					if (PUBLIC_DEFAULT_CELL && heatmapBlueprint) {
+						const cell = heatmapBlueprint.find((c) => c.cellId === PUBLIC_DEFAULT_CELL);
+						if (cell?.bounds) {
+							controller.selectCell(PUBLIC_DEFAULT_CELL, {
+								minLat: cell.bounds.minLat,
+								maxLat: cell.bounds.maxLat,
+								minLon: cell.bounds.minLon,
+								maxLon: cell.bounds.maxLon
+							});
+						}
+					}
 				}
 			}
 		});

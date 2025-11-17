@@ -31,9 +31,12 @@
 <div class="mb-4">
 	<div class="flex">
 		<Heading level={3} class="pr-2"> Onderwerpen </Heading>
-		<Tooltip icon={QuestionMark} text="Thematische categorieën gebaseerd op krantenrubrieken, toegepast op alle data met behulp van machine learning. [Preview - Functie komt binnenkort beschikbaar]" placement="bottom" />
+		<Tooltip icon={QuestionMark} text="Thematische categorieën gebaseerd op krantenrubrieken, toegepast op alle data met behulp van machine learning." placement="bottom" />
 	</div>
-	<div class="mt-2 mb-3">
+	<span class="text-xs text-gray-400">
+		Work in progress, momenteel uitgeschakeld	
+	</span>
+	<div class="mt-1 mb-1">
 		<TagOperatorSwitch 
 			operator={currentTagOperator}
 			onOperatorChange={handleTagOperatorChange}
@@ -42,9 +45,6 @@
 			allLabel="Alle"
 			class="block"
 		/>
-		<span class="text-xs text-gray-400">
-			Inclusief inhoud met geselecteerde onderwerpen (Preview modus - uitgeschakeld)
-		</span>
 	</div>
 </div>
 
