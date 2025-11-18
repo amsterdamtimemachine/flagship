@@ -13,16 +13,19 @@ export interface MasonryMemoizedInstance {
 }
 
 /**
- * Extract feature URL from masonry item element (used as unique identifier)
+ * Extract unique identifier from masonry item element
  */
-function getFeatureId(item: HTMLElement): string | null {
-	// Look for data-feature-url attribute on the masonry-item
-	const featureUrl = item.getAttribute('data-feature-url');
-	if (featureUrl) return featureUrl;
-
-	// Fallback: look for feature URL in child FeatureCard
-	const featureCard = item.querySelector('[data-feature-url]');
-	return featureCard?.getAttribute('data-feature-url') || null;
+function getFeatureId(item: HTMLElement, index: number): string | null {
+	// Use combination of feature URL and index to ensure uniqueness
+	const featureUrl = item.getAttribute('data-feature-url') || 
+		item.querySelector('[data-feature-url]')?.getAttribute('data-feature-url');
+	
+	if (featureUrl) {
+		return `${featureUrl}_${index}`;
+	}
+	
+	// Fallback to index-based ID
+	return `item_${index}`;
 }
 
 /**
@@ -62,6 +65,12 @@ function getShortestColumnIndex(columns: HTMLElement[]): number {
 	let shortestIndex = 0;
 	let shortestHeight = getColumnHeight(columns[0]);
 
+	console.log('Column heights:', columns.map((col, i) => ({
+		column: i,
+		height: getColumnHeight(col),
+		childCount: col.children.length
+	})));
+
 	for (let i = 1; i < columns.length; i++) {
 		const height = getColumnHeight(columns[i]);
 		if (height < shortestHeight) {
@@ -70,6 +79,7 @@ function getShortestColumnIndex(columns: HTMLElement[]): number {
 		}
 	}
 
+	console.log(`Shortest column: ${shortestIndex} (height: ${shortestHeight})`);
 	return shortestIndex;
 }
 
@@ -83,11 +93,12 @@ function distributeItemsWithMemory(
 	previousColumnCount: number | null
 ): void {
 	console.log(`Distribution: ${items.length} items, ${columns.length} columns, previous: ${previousColumnCount}`);
+	console.log(`Memory size: ${layoutMemory.size} entries`);
 	let memoryHits = 0;
 	let newPlacements = 0;
 
 	items.forEach((item, index) => {
-		const featureId = getFeatureId(item);
+		const featureId = getFeatureId(item, index);
 
 		// Only use memory if column count hasn't changed
 		const canUseMemory = featureId && 
