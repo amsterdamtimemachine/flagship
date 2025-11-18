@@ -15,11 +15,11 @@
 
 <div class={mergeCss('border-b border-atm-sand-border', className)}>
 	<!-- Dataset and Record Type -->
-	<div class="flex w-full justify-between items-center">
-		<Tag variant="outline">
+	<div class="flex w-full flex-wrap justify-between items-center gap-2">
+		<Tag variant="outline" class="flex-shrink-0">
 			{translateContentType(feature.recordType)}
 		</Tag>
-		<span class="text-sm text-black">
+		<span class="text-sm text-black flex-shrink-0">
 			{formatTimePeriod(feature.per)}
 		</span>
 	</div>

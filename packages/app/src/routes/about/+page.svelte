@@ -1,9 +1,10 @@
 <script lang="ts">
 	import SvelteMarkdown from 'svelte-markdown';
-	import Heading from '$lib/components/Heading.svelte';
-	import Paragraph from '$lib/components/Paragraph.svelte';
-	import Nav from '$lib/components/Nav.svelte';
-	import NavItem from '$lib/components/NavItem.svelte';
+	import Heading from '$components/Heading.svelte';
+	import Paragraph from '$components/Paragraph.svelte';
+	import Nav from '$components/Nav.svelte';
+	import NavItem from '$components/NavItem.svelte';
+	import LogoGrid from '$components/LogoGrid.svelte';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -12,7 +13,6 @@
 
 	let { data }: Props = $props();
 
-	// Create custom renderers - test direct component passing
 	const renderers = {
 		heading: Heading,
 		paragraph: Paragraph
@@ -21,12 +21,14 @@
 
 <div class="w-full bg-atm-sand-dark min-h-screen">
 	<div class="w-full flex justify-center bg-atm-sand border-b border-atm-sand-border">
-		<Nav class="max-w-4xl border-none">
+		<Nav class="max-w-4xl border-none px-4 sm:px-6 lg:px-8">
 			<NavItem href="/" label="Data Index" />
 			<NavItem href="/about" label="Over" />
 		</Nav>
 	</div>
-	<div class="max-w-4xl mx-auto py-8">
+	<div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
 		<SvelteMarkdown source={data.content} {renderers} />
+		<LogoGrid class="mt-8" />
 	</div>
+	
 </div>
