@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import FeatureCard from '$components/FeatureCard.svelte';
 	import { createMasonryMemoized, type MasonryMemoizedInstance } from '$utils/masonry';
+	import debounce from 'lodash.debounce';
 	import type { Feature } from '@atm/shared/types';
 
 	type Props = {
@@ -11,19 +12,45 @@
 	};
 	let { features, columns, layoutMemory }: Props = $props();
 
-	// Use CSS-only responsive columns if no explicit columns prop provided
+	// Use programmatic responsive columns if no explicit columns prop provided
 	const useResponsiveColumns = columns === undefined;
 
 	let masonryContainer = $state<HTMLElement>();
 	let masonry: MasonryMemoizedInstance | null = null;
+	let windowWidth = $state(0);
+
+	// Calculate columns based on window width (updated breakpoints)
+	function calculateColumns(width: number): number {
+		if (width <= 650) return 1;
+		if (width <= 1024) return 2;
+		return 3;
+	}
+
+	// Get current column count
+	let currentColumns = $derived(useResponsiveColumns ? calculateColumns(windowWidth) : columns || 3);
+
+	// Debounced resize handler
+	const debouncedResize = debounce(() => {
+		if (useResponsiveColumns) {
+			windowWidth = window.innerWidth;
+		}
+	}, 150);
 
 	onMount(() => {
+		// Initialize window width
+		if (useResponsiveColumns) {
+			windowWidth = window.innerWidth;
+			window.addEventListener('resize', debouncedResize);
+		}
+
 		if (masonryContainer) {
 			try {
 				masonry = createMasonryMemoized(masonryContainer, {
 					debounceDelay: 150,
 					layoutMemory: layoutMemory || new Map()
 				});
+				// Initial layout
+				masonry.layout(currentColumns, true);
 			} catch (error) {
 				console.error('Failed to initialize memoized masonry layout:', error);
 			}
@@ -31,12 +58,22 @@
 	});
 
 	onDestroy(() => {
+		if (useResponsiveColumns) {
+			window.removeEventListener('resize', debouncedResize);
+		}
 		masonry?.destroy();
 	});
 
+	// Re-layout when features or column count changes
 	$effect(() => {
-		if (masonry && features.length > 0) {
-			setTimeout(() => masonry?.layout(true), 10);
+		if (masonry) {
+			if (features.length > 0) {
+				// Force layout when features change, use timeout for DOM updates
+				setTimeout(() => masonry?.layout(currentColumns, true), 10);
+			} else {
+				// Just column count change, no force needed
+				masonry.layout(currentColumns);
+			}
 		}
 	});
 </script>
@@ -47,11 +84,10 @@
 	{:else}
 		<div
 			class="masonry-layout p-3"
-			class:responsive={useResponsiveColumns}
 			bind:this={masonryContainer}
-			style:--column-count={useResponsiveColumns ? null : columns}
+			style:grid-template-columns={`repeat(${currentColumns}, minmax(0, 1fr))`}
 		>
-			{#each Array(useResponsiveColumns ? 3 : columns || 3) as _, columnIndex}
+			{#each Array(3) as _, columnIndex}
 				<div class="masonry-column"></div>
 			{/each}
 			{#each features as feature, index (index)}
@@ -65,30 +101,12 @@
 
 <style>
 	.masonry-layout {
-		/* --column-count set dynamically via inline style or CSS media queries */
+		/* grid-template-columns set dynamically via inline style */
 		display: grid;
 		gap: 1rem;
-		grid-template-columns: repeat(var(--column-count, 3), minmax(0, 1fr));
 		width: 100%;
 		max-width: 100%;
 		overflow-x: hidden;
-	}
-
-	/* Responsive column behavior - only when not explicitly set via props */
-	.masonry-layout.responsive {
-		--column-count: 3;
-	}
-
-	@media (max-width: 768px) {
-		.masonry-layout.responsive {
-			--column-count: 2;
-		}
-	}
-
-	@media (max-width: 480px) {
-		.masonry-layout.responsive {
-			--column-count: 1;
-		}
 	}
 
 	.masonry-column {

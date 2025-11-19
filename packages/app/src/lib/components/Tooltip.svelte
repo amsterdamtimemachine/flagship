@@ -85,7 +85,7 @@
 		class="tooltip-content z-50 max-w-xs rounded-lg bg-gray-900 border border-gray-700 text-white shadow-lg"
 	>
 		<div use:melt={$arrow} class="tooltip-arrow"></div>
-		<div class="px-3 py-2 text-sm">
+		<div class="px-3 py-2 text-base">
 			{text}
 		</div>
 	</div>

@@ -3,29 +3,33 @@
 
 	interface Props {
 		level?: 1 | 2 | 3 | 4 | 5 | 6;
+		depth?: 1 | 2 | 3 | 4 | 5 | 6; // For svelte-markdown compatibility
 		id?: string;
 		style?: string;
 		class?: string;
 		children?: import('svelte').Snippet;
 	}
 
-	let { level = 1, id, style, class: className, children }: Props = $props();
+	let { level, depth, id, style, class: className, children }: Props = $props();
+	
+	// Use depth from svelte-markdown if available, otherwise fallback to level prop
+	const headingLevel = depth ?? level ?? 1;
 
 	const levelStyles = {
-		1: 'text-lg font-bold',
-		2: 'text-base font-bold',
-		3: 'text-lg font-light',
-		4: 'text-base font-light',
-		5: 'text-base font-light',
-		6: 'text-base font-light'
+		1: 'text-2xl font-bold mb-4',
+		2: 'text-3xl font-light mb-4',
+		3: 'text-2xl font-light mb-3',
+		4: 'text-base font-light mb-3',
+		5: 'text-base font-light mb-2',
+		6: 'text-base font-light mb-2'
 	};
 </script>
 
 <svelte:element
-	this={`h${level}`}
+	this={`h${headingLevel}`}
 	{id}
 	{style}
-	class={mergeCss('block font-sans', levelStyles[level], className)}
+	class={mergeCss('block font-sans', levelStyles[headingLevel], className)}
 >
 	{@render children?.()}
 </svelte:element>

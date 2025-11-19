@@ -11,7 +11,7 @@
 
 	let { class: className, variant = 'default', disabled = false, interactive = false, children }: Props = $props();
 
-	const baseClasses = 'text-sm px-1 py-0.5 rounded transition-colors select-none';
+	const baseClasses = 'text-base px-1 py-0.5 rounded transition-colors select-none';
 
 	const variantClasses = $derived.by(() => {
 		let classes = '';

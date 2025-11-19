@@ -15,7 +15,8 @@ import type {
 import { fetchBatch, createMinimalFeature } from './database';
 
 /**
- * Create basic spatial chunks from bounds
+ * Create non-overlapping spatial chunks from bounds using exact fractional division
+ * This eliminates double counting by ensuring each coordinate falls in exactly one chunk
  */
 export function createSpatialChunks(
   bounds: HeatmapCellBounds,
@@ -23,24 +24,27 @@ export function createSpatialChunks(
 ): SpatialChunk[] {
   const chunks: SpatialChunk[] = [];
   
-  const lonStep = (bounds.maxLon - bounds.minLon) / config.chunkCols;
-  const latStep = (bounds.maxLat - bounds.minLat) / config.chunkRows;
-  const overlap = config.overlap || 0;
+  const totalWidth = bounds.maxLon - bounds.minLon;
+  const totalHeight = bounds.maxLat - bounds.minLat;
   
-  console.log(`📐 Creating ${config.chunkRows}x${config.chunkCols} grid:`, {
-    lonStep: lonStep.toFixed(6),
-    latStep: latStep.toFixed(6),
-    overlap: overlap
+  console.log(`📐 Creating ${config.chunkRows}x${config.chunkCols} non-overlapping grid:`, {
+    totalWidth: totalWidth.toFixed(6),
+    totalHeight: totalHeight.toFixed(6),
+    chunkWidth: (totalWidth / config.chunkCols).toFixed(6),
+    chunkHeight: (totalHeight / config.chunkRows).toFixed(6)
   });
   
   for (let row = 0; row < config.chunkRows; row++) {
     for (let col = 0; col < config.chunkCols; col++) {
+      // Use exact fractional division to prevent overlaps
       const chunkBounds: HeatmapCellBounds = {
-        minLon: Math.max(bounds.minLon + (col * lonStep) - overlap, bounds.minLon),
-        maxLon: Math.min(bounds.minLon + ((col + 1) * lonStep) + overlap, bounds.maxLon),
-        minLat: Math.max(bounds.minLat + (row * latStep) - overlap, bounds.minLat),
-        maxLat: Math.min(bounds.minLat + ((row + 1) * latStep) + overlap, bounds.maxLat)
+        minLon: bounds.minLon + (col * totalWidth / config.chunkCols),
+        maxLon: bounds.minLon + ((col + 1) * totalWidth / config.chunkCols),
+        minLat: bounds.minLat + (row * totalHeight / config.chunkRows),
+        maxLat: bounds.minLat + ((row + 1) * totalHeight / config.chunkRows)
       };
+      
+      console.log(`📍 Chunk ${row}_${col}: lon=[${chunkBounds.minLon.toFixed(6)}, ${chunkBounds.maxLon.toFixed(6)}], lat=[${chunkBounds.minLat.toFixed(6)}, ${chunkBounds.maxLat.toFixed(6)}]`);
       
       chunks.push({
         id: `chunk_${row}_${col}`,
@@ -49,7 +53,7 @@ export function createSpatialChunks(
     }
   }
   
-  console.log(`✅ Created ${chunks.length} spatial chunks`);
+  console.log(`✅ Created ${chunks.length} non-overlapping spatial chunks`);
   return chunks;
 }
 

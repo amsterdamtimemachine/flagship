@@ -17,8 +17,8 @@
 		className
 	)}
 >
-	<a href="/" class="no-underline">
-		<Heading level={1}>Amsterdam Time Machine</Heading>
+	<a href="/" class="no-underline flex items-center">
+		<img src="/logos/atm_logo_big.png" alt="A logo reading Amsterdam Time Machine in black" class="h-[34px]" />
 	</a>
 	<div class="flex items-center gap-2">
 		{@render children?.()}

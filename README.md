@@ -1,6 +1,6 @@
-# Flagship
+# Amsterdam Time Machine Data Index 
 
- Flagship is a web app for exploration of geolocated heritage data.
+Search heritage collections from multiple institutions in one platform with historical data across time and space for research and discovery.
 
 ## Development
 

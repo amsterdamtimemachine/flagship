@@ -7,9 +7,18 @@
 		onOperatorChange: (operator: 'AND' | 'OR') => void;
 		disabled?: boolean;
 		class?: string;
+		anyLabel?: string;
+		allLabel?: string;
 	}
 
-	let { operator, onOperatorChange, disabled = false, class: className }: Props = $props();
+	let { 
+		operator, 
+		onOperatorChange, 
+		disabled = false, 
+		class: className,
+		anyLabel = 'Any',
+		allLabel = 'All'
+	}: Props = $props();
 
 	const {
 		elements: { root, input },
@@ -26,7 +35,7 @@
 </script>
 
 <div class={mergeCss('flex items-center gap-1', className)}>
-	<span class="font-sans text-sm text-black select-none">Any</span>
+	<span class="font-sans text-base text-black select-none">{anyLabel}</span>
 	<button
 		use:melt={$root}
 		class="relative h-5 w-9 cursor-pointer rounded-full bg-atm-sand-darkish hover:bg-atm-sand-dark border border-atm-gold transition-transform duration-200 ease-in-out
@@ -39,7 +48,7 @@
 		></span>
 	</button>
 	<input use:melt={$input} />
-	<span class="font-sans text-sm text-black select-none">All</span>
+	<span class="font-sans text-sm text-black select-none">{allLabel}</span>
 </div>
 
 <style>

@@ -7,6 +7,7 @@
 	import { createPageErrorData } from '$utils/error';
 	import { mergeHeatmapTimeline, mergeHeatmaps } from '$utils/heatmap';
 	import { mergeHistograms } from '$utils/histogram';
+	import { translateContentTypes, reverseTranslateContentTypes } from '$utils/translations';
 	import { loadingState } from '$lib/state/loadingState.svelte';
 	import { QuestionMark } from 'phosphor-svelte';
 	import Heading from '$components/Heading.svelte';
@@ -17,6 +18,7 @@
 	import Tag from '$components/Tag.svelte';
 	import Tooltip from '$components/Tooltip.svelte';
 	import TagOperatorSwitch from '$components/TagOperatorSwitch.svelte';
+	import DummyTagsSection from '$components/DummyTagsSection.svelte';
 	import FeaturesPanel from '$components/FeaturesPanel.svelte';
 	import NavContainer from '$components/NavContainer.svelte';
 	import FiltersStatusPanel from '$components/FiltersStatusPanel.svelte';
@@ -26,6 +28,7 @@
 	import NavItem from '$components/NavItem.svelte';
 	import type { PageData } from './$types';
 import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline } from '@atm/shared/types';
+import { PUBLIC_DEFAULT_CELL } from '$env/static/public';
 
 	let { data }: { data: PageData } = $props();
 
@@ -41,7 +44,14 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	let currentRecordTypes = $derived(data?.currentRecordTypes || []);
 	let currentTags = $derived(data?.currentTags || []);
 	let currentTagOperator = $derived(data?.currentTagOperator || 'OR');
+	let validatedCell = $derived(data?.validatedCell);
+	let validatedCellBounds = $derived(data?.cellBounds);
+	let validatedPeriod = $derived(data?.validatedPeriod);
 	let histograms = $derived((data?.histogram as HistogramApiResponse | null)?.histograms);
+
+	// Translated content types for UI display  
+	let translatedRecordTypes = $derived(recordTypes ? translateContentTypes(recordTypes) : []);
+	let translatedCurrentRecordTypes = $derived(currentRecordTypes ? translateContentTypes(currentRecordTypes) : []);
 
 	const controller = createStateController();
 	let currentPeriod = $derived(controller.currentPeriod);
@@ -51,6 +61,9 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 
 	// Navigation state
 	let navExpanded = $state(true);
+	
+	// Feature flag for tags - set to false until tags data is ready
+	const TAGS_FEATURE_READY = false;
 	
 
 	// Combine server errors with controller errors for ErrorHandler
@@ -164,45 +177,15 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	});
 
 	onMount(() => {
-		// Initialize controller with period from URL or last available time period
-		const urlParams = new URLSearchParams(window.location.search);
-		const periodFromUrl = urlParams.get('period');
-		
-		// Get last period from raw dataset (not filtered data)
-		let lastPeriod = '';
-		if (heatmapTimeline) {
-			const allPeriods = Object.keys(heatmapTimeline);
-			if (allPeriods.length > 0) {
-				lastPeriod = allPeriods[allPeriods.length - 1];
-			}
-		}
-
-		// Use period from URL if valid, otherwise fall back to last period (most recent)
-		let initialPeriod = lastPeriod;
-		if (
-			periodFromUrl &&
-			heatmapTimeline &&
-			Object.keys(heatmapTimeline).includes(periodFromUrl)
-		) {
-			initialPeriod = periodFromUrl;
-		}
+		// Initialize controller with server-validated period
+		const initialPeriod = validatedPeriod || '';
 		controller.initialize(initialPeriod);
 
-		// Handle cell bounds lookup from URL if cell parameter exists
+		// Handle server-validated cell from URL parameter
 		tick().then(() => {
-			const urlParams = new URLSearchParams(window.location.search);
-			const cellParam = urlParams.get('cell');
-			if (cellParam && heatmapBlueprint) {
-				const cell = heatmapBlueprint.find((c) => c.cellId === cellParam);
-				if (cell?.bounds) {
-					// Update controller with bounds for the cell from URL
-					controller.selectCell(cellParam, {
-						minLat: cell.bounds.minLat,
-						maxLat: cell.bounds.maxLat,
-						minLon: cell.bounds.minLon,
-						maxLon: cell.bounds.maxLon
-					});
-				}
+			if (validatedCell && validatedCellBounds) {
+				// Use server-validated cell data
+				controller.selectCell(validatedCell, validatedCellBounds);
 			}
 
 			// Set URL defaults if no parameters exist
@@ -215,6 +198,19 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 				
 				if (lastPeriod && defaultRecordTypes.length > 0) {
 					controller.syncUrlParameters(lastPeriod, currentTagOperator, defaultRecordTypes);
+					
+					// Set default cell selection
+					if (PUBLIC_DEFAULT_CELL && heatmapBlueprint) {
+						const cell = heatmapBlueprint.find((c) => c.cellId === PUBLIC_DEFAULT_CELL);
+						if (cell?.bounds) {
+							controller.selectCell(PUBLIC_DEFAULT_CELL, {
+								minLat: cell.bounds.minLat,
+								maxLat: cell.bounds.maxLat,
+								minLon: cell.bounds.minLon,
+								maxLon: cell.bounds.maxLon
+							});
+						}
+					}
 				}
 			}
 		});
@@ -227,10 +223,13 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 	}
 
 	function handleRecordTypeChange(recordTypes: string[] | string) {
-		const recordTypesArray = Array.isArray(recordTypes) ? recordTypes : [recordTypes];
+		// Translate Dutch labels back to English for API/URL  
+		const dutchArray = Array.isArray(recordTypes) ? recordTypes : [recordTypes];
+		const englishArray = reverseTranslateContentTypes(dutchArray);
+		
 		const url = new URL(window.location.href);
-		if (recordTypesArray.length > 0) {
-			url.searchParams.set('recordTypes', recordTypesArray.join(','));
+		if (englishArray.length > 0) {
+			url.searchParams.set('recordTypes', englishArray.join(','));
 		} else {
 			url.searchParams.delete('recordTypes');
 		}
@@ -303,17 +302,20 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 
 		<NavContainer bind:isExpanded={navExpanded} class="absolute top-0 left-0 z-30">
 			<Nav class="p-3">
-				<NavItem href="/about" label="About" />
+				<NavItem href="/about" label="Over" />
 			</Nav>
 			<div class="p-3">
 					
 				<div class="mb-4">
-						<Heading level={2} class="mb-2"> Filters </Heading>
-						<Heading level={3} class="mb-2"> Content type </Heading>
+						<Heading level={2} class="font-bold text-lg mb-2"> Filters </Heading>
 
+					<div class="flex mb-2">
+						<Heading level={3} class="pr-2"> Inhoudstype </Heading>
+						<Tooltip icon={QuestionMark} text="De data index bevat een selectie van afbeeldingen, persoonsdata en teksten uit Nederlandse kranten." placement="bottom" />
+					</div>
 					<ToggleGroup
-						items={recordTypes}
-						selectedItems={currentRecordTypes}
+						items={translatedRecordTypes}
+						selectedItems={translatedCurrentRecordTypes}
 						onItemSelected={handleRecordTypeChange}
 						requireOneItemSelected={true}>
 						{#snippet children(item, isSelected, isDisabled)}
@@ -324,45 +326,52 @@ import type { HeatmapTimelineApiResponse, HistogramApiResponse, HeatmapTimeline 
 					</ToggleGroup>
 				</div>
 
-				<div class="mb-4">
-					<div class="flex">
-						<Heading level={3} class="pr-2"> Topics </Heading>
-						<Tooltip icon={QuestionMark} text="Thematic categories based on newspaper sections, applied across all data using machine learning." placement="bottom" />
+				<!-- Topics Section - Use dummy version until tags data is ready -->
+				{#if TAGS_FEATURE_READY}
+					<!-- Real tags implementation - disabled for now -->
+					<div class="mb-4">
+						<div class="flex">
+							<Heading level={3} class="pr-2"> Onderwerpen </Heading>
+							<Tooltip icon={QuestionMark} text="Thematic categories based on newspaper sections, applied across all data using machine learning." placement="bottom" />
+						</div>
+						<div class="mt-2 mb-3">
+							<TagOperatorSwitch 
+								operator={currentTagOperator as 'AND' | 'OR'}
+								onOperatorChange={handleTagOperatorChange}
+								class="block"
+							/>
+							<span class="text-xs text-black">
+								{currentTagOperator === 'AND' ? 'Include only content with all selected topics' : 'Include content with any selected topics'}
+							</span>
+						</div>
 					</div>
-					<div class="mt-2 mb-3">
-						<TagOperatorSwitch 
-							operator={currentTagOperator as 'AND' | 'OR'}
-							onOperatorChange={handleTagOperatorChange}
-							class="block"
-						/>
-						<span class="text-xs text-black">
-							{currentTagOperator === 'AND' ? 'Include only content with all selected topics' : 'Include content with any selected topics'}
-						</span>
-					</div>
-				</div>
 
-				{#if currentTagOperator === 'AND'}
-				<!-- use dedicated component for AND op -->
-					<TagsANDSelector
-						recordTypes={currentRecordTypes || []}
-						allRecordTypes={recordTypes}
-						availableTags={availableTagNames}
-						selectedTags={currentTags || []}
-						onTagsSelected={handleTagsChange}
-					/>
+					{#if currentTagOperator === 'AND'}
+					<!-- use dedicated component for AND op -->
+						<TagsANDSelector
+							recordTypes={currentRecordTypes || []}
+							allRecordTypes={recordTypes}
+							availableTags={availableTagNames}
+							selectedTags={currentTags || []}
+							onTagsSelected={handleTagsChange}
+						/>
+					{:else}
+						<!-- OR op uses simple Toggle group -->
+						<ToggleGroup
+							items={availableTagNames}
+							selectedItems={currentTags || []}
+							onItemSelected={handleTagsChange}
+							requireOneItemSelected={false}>
+							{#snippet children(item, isSelected, isDisabled)}
+								<Tag variant={isSelected ? 'selected' : 'default'} disabled={isDisabled} interactive={true}>
+									{item}
+								</Tag>
+							{/snippet}
+						</ToggleGroup>
+					{/if}
 				{:else}
-					<!-- OR op uses simple Toggle group -->
-					<ToggleGroup
-						items={availableTagNames}
-						selectedItems={currentTags || []}
-						onItemSelected={handleTagsChange}
-						requireOneItemSelected={false}>
-						{#snippet children(item, isSelected, isDisabled)}
-							<Tag variant={isSelected ? 'selected' : 'default'} disabled={isDisabled} interactive={true}>
-								{item}
-							</Tag>
-						{/snippet}
-					</ToggleGroup>
+					<!-- Dummy tags section for preview -->
+					<DummyTagsSection />
 				{/if}
 			</div>
 		</NavContainer>

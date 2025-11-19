@@ -50,3 +50,6 @@ env/
 # Turbo
 .turbo/cookies/*
 .turbo
+
+# misc
+issue.md

@@ -7,22 +7,25 @@ export interface MasonryMemoizedOptions {
 }
 
 export interface MasonryMemoizedInstance {
-	layout: (forceLayout?: boolean) => void;
+	layout: (columns: number, forceLayout?: boolean) => void;
 	clearMemory: () => void;
 	destroy: () => void;
 }
 
 /**
- * Extract feature URL from masonry item element (used as unique identifier)
+ * Extract unique identifier from masonry item element
  */
-function getFeatureId(item: HTMLElement): string | null {
-	// Look for data-feature-url attribute on the masonry-item
-	const featureUrl = item.getAttribute('data-feature-url');
-	if (featureUrl) return featureUrl;
-
-	// Fallback: look for feature URL in child FeatureCard
-	const featureCard = item.querySelector('[data-feature-url]');
-	return featureCard?.getAttribute('data-feature-url') || null;
+function getFeatureId(item: HTMLElement, index: number): string | null {
+	// Use combination of feature URL and index to ensure uniqueness
+	const featureUrl = item.getAttribute('data-feature-url') || 
+		item.querySelector('[data-feature-url]')?.getAttribute('data-feature-url');
+	
+	if (featureUrl) {
+		return `${featureUrl}_${index}`;
+	}
+	
+	// Fallback to index-based ID
+	return `item_${index}`;
 }
 
 /**
@@ -62,6 +65,12 @@ function getShortestColumnIndex(columns: HTMLElement[]): number {
 	let shortestIndex = 0;
 	let shortestHeight = getColumnHeight(columns[0]);
 
+	console.log('Column heights:', columns.map((col, i) => ({
+		column: i,
+		height: getColumnHeight(col),
+		childCount: col.children.length
+	})));
+
 	for (let i = 1; i < columns.length; i++) {
 		const height = getColumnHeight(columns[i]);
 		if (height < shortestHeight) {
@@ -70,6 +79,7 @@ function getShortestColumnIndex(columns: HTMLElement[]): number {
 		}
 	}
 
+	console.log(`Shortest column: ${shortestIndex} (height: ${shortestHeight})`);
 	return shortestIndex;
 }
 
@@ -79,32 +89,31 @@ function getShortestColumnIndex(columns: HTMLElement[]): number {
 function distributeItemsWithMemory(
 	items: HTMLElement[],
 	columns: HTMLElement[],
-	layoutMemory: Map<string, number>
+	layoutMemory: Map<string, number>,
+	previousColumnCount: number | null
 ): void {
+	console.log(`Distribution: ${items.length} items, ${columns.length} columns, previous: ${previousColumnCount}`);
+	console.log(`Memory size: ${layoutMemory.size} entries`);
 	let memoryHits = 0;
 	let newPlacements = 0;
 
 	items.forEach((item, index) => {
-		const featureId = getFeatureId(item);
+		const featureId = getFeatureId(item, index);
 
-		if (featureId && layoutMemory.has(featureId)) {
-			// Try to use remembered placement
+		// Only use memory if column count hasn't changed
+		const canUseMemory = featureId && 
+			layoutMemory.has(featureId) && 
+			previousColumnCount === columns.length;
+
+		if (canUseMemory) {
+			// Use remembered placement (same column count as before)
 			const rememberedColumnIndex = layoutMemory.get(featureId)!;
-
-			// Validate remembered column still exists
-			if (rememberedColumnIndex < columns.length) {
-				const rememberedColumn = columns[rememberedColumnIndex];
-				rememberedColumn.appendChild(item);
-				memoryHits++;
-			} else {
-				// Remembered column doesn't exist anymore, use height-based + update memory
-				const shortestColumnIndex = getShortestColumnIndex(columns);
-				columns[shortestColumnIndex].appendChild(item);
-				layoutMemory.set(featureId, shortestColumnIndex);
-				newPlacements++;
-			}
+			const rememberedColumn = columns[rememberedColumnIndex];
+			rememberedColumn.appendChild(item);
+			memoryHits++;
 		} else {
-			// New feature or no ID - use height-based placement + store in memory
+			// Use height-based placement + store in memory
+			// (either new item, or column count changed)
 			const shortestColumnIndex = getShortestColumnIndex(columns);
 			columns[shortestColumnIndex].appendChild(item);
 
@@ -117,15 +126,10 @@ function distributeItemsWithMemory(
 		// Force layout for accurate measurements
 		item.offsetHeight;
 	});
+	
+	console.log(`Distribution complete: ${memoryHits} memory hits, ${newPlacements} new placements`);
 }
 
-/**
- * Get current column count from CSS custom property
- */
-function getColumnCount(container: HTMLElement): number {
-	const count = getComputedStyle(container).getPropertyValue('--column-count').trim();
-	return parseInt(count) || 3; // fallback to 3
-}
 
 /**
  * Create a memory-aware masonry layout
@@ -148,11 +152,18 @@ export function createMasonryMemoized(
 	/**
 	 * Main layout function
 	 */
-	function layout(forceLayout = false): void {
-		const currentColumnCount = getColumnCount(container);
-
+	function layout(currentColumnCount: number, forceLayout = false): void {
+		console.log('Masonry layout called:', { 
+			currentColumnCount, 
+			lastColumnCount, 
+			forceLayout,
+			willRearrange: forceLayout || currentColumnCount !== lastColumnCount
+		});
+		
 		// Only re-layout if column count changed or forced
 		if (forceLayout || currentColumnCount !== lastColumnCount) {
+			console.log(`Masonry: Re-distributing ${currentColumnCount} columns (was ${lastColumnCount})`);
+			
 			// Clear all columns
 			clearColumns(columns);
 
@@ -161,9 +172,11 @@ export function createMasonryMemoized(
 
 			// Distribute items using memory-aware algorithm
 			const targetColumns = columns.slice(0, currentColumnCount);
-			distributeItemsWithMemory(items, targetColumns, layoutMemory);
+			distributeItemsWithMemory(items, targetColumns, layoutMemory, lastColumnCount);
 
 			lastColumnCount = currentColumnCount;
+		} else {
+			console.log('Masonry: No re-layout needed');
 		}
 	}
 
@@ -174,28 +187,10 @@ export function createMasonryMemoized(
 		layoutMemory.clear();
 	}
 
-	// Create debounced resize handler
-	const debouncedLayout = debounce(() => layout(), debounceDelay);
-
-	// Bind resize listener
-	const bindResize = () => {
-		window.addEventListener('resize', debouncedLayout, true);
-	};
-
-	// Unbind resize listener
-	const unbindResize = () => {
-		window.removeEventListener('resize', debouncedLayout, true);
-	};
-
-	// Setup
-	bindResize();
-	layout(true); // Initial layout
-
 	return {
 		layout,
 		clearMemory,
 		destroy: () => {
-			unbindResize();
 			clearColumns(columns);
 		}
 	};

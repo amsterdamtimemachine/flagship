@@ -1,4 +1,5 @@
 import type { AppError, AppErrorType, PageErrorData } from '$types/error';
+import { translateErrorTitle, translateErrorMessage } from './translations';
 
 let errorIdCounter = 0;
 
@@ -11,8 +12,8 @@ export function createError(
 	return {
 		id: `error_${++errorIdCounter}_${Date.now()}`,
 		type,
-		title,
-		description,
+		title: translateErrorTitle(title),
+		description: translateErrorMessage(description),
 		timestamp: new Date(),
 		context
 	};
@@ -34,7 +35,7 @@ export function createPeriodNotFoundError(
 	return createError(
 		'warning',
 		'Period Not Found',
-		`Period "${requestedPeriod}" doesn't exist. Showing default instead.`,
+		`Periode "${requestedPeriod}" doesn't exist in the dataset. Defaulting to most recent period (${fallbackPeriod}).`,
 		{
 			requestedPeriod,
 			fallbackPeriod,

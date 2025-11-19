@@ -10,14 +10,16 @@
 	<!-- Year labels -->
 	{#each displayPeriods as period, i}
 		{@const position = (i / (displayPeriods.length - 1)) * 100}
+		{@const isLastPeriod = i === displayPeriods.length - 1}
+		{@const displayLabel = isLastPeriod ? 'Nu' : period}
 		<text
 			x="{position}%"
 			y={timelineHeight + 18}
 			fill="black"
 			text-anchor={i === 0 ? 'start' : i === displayPeriods.length - 1 ? 'end' : 'middle'}
-			class="font-sans font-medium text-sm"
+			class="font-medium text-base"
 		>
-			{period}
+			{displayLabel}
 		</text>
 	{/each}
 </svg>

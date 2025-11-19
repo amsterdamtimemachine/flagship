@@ -121,7 +121,13 @@
 
 {#if histogram?.bins?.length > 0}
 	<div class={mergeCss('bg-atm-sand border-t border-atm-sand-border w-full px-4 pt-2', className)}>
-		<div class="w-full relative h-[40px]" bind:this={trackElement}>
+		<!-- Horizontal scroll wrapper for mobile -->
+		<div class="w-full overflow-x-auto max-[850px]:overflow-x-auto min-[851px]:overflow-x-visible relative max-[850px]:shadow-[inset_10px_0_10px_-10px_rgba(0,0,0,0.3),inset_-10px_0_10px_-10px_rgba(0,0,0,0.3)]">
+			<div 
+				class="relative h-[40px]"
+				style="min-width: max(800px, {histogram.bins.length * 60}px); width: 100%;"
+				bind:this={trackElement}
+			>
 			<!-- Histogram Layer: Histogram bars and grid -->
 			<TimePeriodSelectorHistogram
 				bins={histogram?.bins || []}
@@ -150,6 +156,7 @@
 				{timelineHeight}
 				bins={histogram.bins}
 			/>
+			</div>
 		</div>
 	</div>
 {/if}

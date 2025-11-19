@@ -4,15 +4,39 @@ import type {
 	VisualizationMetadata,
 	HistogramApiResponse,
 	HeatmapTimelineApiResponse,
+	HeatmapTimeline,
 	RecordType
 } from '@atm/shared/types';
 import type { AppError } from '$types/error';
-import { createPageErrorData, createError, createValidationError } from '$utils/error';
+import { createPageErrorData, createError, createValidationError, createPeriodNotFoundError } from '$utils/error';
+import { validateCellId } from '$utils/utils';
+import { translateContentType, translateContentTypes } from '$utils/translations';
 import { loadingState } from '$lib/state/loadingState.svelte';
 
 interface MetadataApiResponse extends VisualizationMetadata {
 	success: boolean;
 	message?: string;
+}
+
+// Helper functions for period validation
+function isValidPeriodFormat(period: string): boolean {
+	return /^\d{4}_\d{4}$/.test(period);
+}
+
+function getPeriodDuration(period: string): number {
+	const [start, end] = period.split('_').map(Number);
+	return end - start;
+}
+
+function isChronologicallyValid(period: string): boolean {
+	const [start, end] = period.split('_').map(Number);
+	return start < end;
+}
+
+function getLastAvailablePeriod(heatmapTimeline: HeatmapTimeline | null): string {
+	if (!heatmapTimeline) return '';
+	const periods = Object.keys(heatmapTimeline);
+	return periods.length > 0 ? periods[periods.length - 1] : '';
 }
 
 export const load: PageLoad = async ({ fetch, url }) => {
@@ -28,6 +52,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	const recordTypesParam = url.searchParams.get('recordTypes');
 	const tagsParam = url.searchParams.get('tags');
 	const tagOperatorParam = url.searchParams.get('tagOperator');
+	const cellParam = url.searchParams.get('cell');
+	const periodParam = url.searchParams.get('period');
 
 	try {
 		const response = await fetch('/api/metadata');
@@ -85,16 +111,28 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		if (recordTypesParam) {
 			const requestedTypes = recordTypesParam.split(',').map((t) => t.trim()) as RecordType[];
 			const validTypes = requestedTypes.filter((type) => metadata.recordTypes.includes(type));
+			const invalidTypes = requestedTypes.filter((type) => !metadata.recordTypes.includes(type));
 
 			if (validTypes.length > 0) {
+				// Some valid types found - show warnings for invalid ones only
+				for (const invalidType of invalidTypes) {
+					errors.push(
+						createError(
+							'warning',
+							'Invalid Content Type Removed',
+							`"${invalidType}" is not a valid content type and was removed from your selection.`,
+							{ invalidType, availableTypes: translateContentTypes(metadata.recordTypes) }
+						)
+					);
+				}
 				currentRecordTypes = validTypes;
 			} else {
-				// If no valid record types are provided, add validation error but default to all types
+				// No valid types found - show single comprehensive error message
 				errors.push(
 					createValidationError(
 						'recordTypes',
 						recordTypesParam,
-						`Must contain at least one of: ${metadata.recordTypes.join(', ')}`
+						`No valid content types found. Defaulting to all content types: ${translateContentTypes(metadata.recordTypes).join(', ')}`
 					)
 				);
 				// Default to all record types for better UX
@@ -303,6 +341,92 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	// Wait for all data requests to complete
 	await Promise.all([histogramPromise, heatmapPromise, availableTagsPromise]);
 
+	// Validate cell parameter if provided
+	let validatedCell: string | null = null;
+	let cellBounds: { minLat: number; maxLat: number; minLon: number; maxLon: number } | null = null;
+
+	if (cellParam && metadata?.heatmapBlueprint && metadata?.heatmapDimensions) {
+		const validation = validateCellId(cellParam, metadata.heatmapBlueprint.cells, metadata.heatmapDimensions);
+		
+		if (validation.isValid) {
+			validatedCell = cellParam;
+			// Find cell bounds from blueprint
+			const cell = metadata.heatmapBlueprint.cells.find((c) => c.cellId === cellParam);
+			if (cell?.bounds) {
+				cellBounds = {
+					minLat: cell.bounds.minLat,
+					maxLat: cell.bounds.maxLat,
+					minLon: cell.bounds.minLon,
+					maxLon: cell.bounds.maxLon
+				};
+			}
+		} else {
+			errors.push(
+				createValidationError(
+					'cell',
+					cellParam,
+					validation.error || `Cell "${cellParam}" not found. Please select a valid cell from the map.`
+				)
+			);
+		}
+	}
+
+	// Validate period parameter if provided
+	let validatedPeriod: string | null = null;
+
+	if (periodParam && metadata) {
+		// Get available periods from metadata (all periods that exist in dataset)
+		const metadataPeriods = metadata.timeSlices.map(slice => slice.key);
+		const timelineData = heatmapTimeline ? (heatmapTimeline as HeatmapTimelineApiResponse).heatmapTimeline : {};
+		
+		// 1. Format validation
+		if (!isValidPeriodFormat(periodParam)) {
+			errors.push(
+				createValidationError(
+					'period',
+					periodParam,
+					'invalid format. Expected YYYY_YYYY (e.g., 1950_2000). Defaulting to most recent period'
+				)
+			);
+		}
+		// 2. Chronological validation
+		else if (!isChronologicallyValid(periodParam)) {
+			errors.push(
+				createValidationError(
+					'period',
+					periodParam,
+					'invalid range. Start year must be less than end year. Defaulting to most recent period'
+				)
+			);
+		}
+		// 3. Duration validation
+		else if (getPeriodDuration(periodParam) > 50) {
+			const duration = getPeriodDuration(periodParam);
+			errors.push(
+				createValidationError(
+					'period',
+					periodParam,
+					`spans ${duration} years. Maximum 50 years supported. Defaulting to most recent period`
+				)
+			);
+		}
+		// 4. Availability validation - check if period exists in metadata
+		else if (!metadataPeriods.includes(periodParam)) {
+			// Use the same fallback logic as the default period assignment
+			const fallbackPeriod = getLastAvailablePeriod(timelineData) || metadataPeriods[metadataPeriods.length - 1] || '';
+			errors.push(
+				createPeriodNotFoundError(periodParam, metadataPeriods, fallbackPeriod)
+			);
+		}
+		// 5. Valid period (exists in metadata, even if no data)
+		else {
+			validatedPeriod = periodParam;
+		}
+	}
+
+	// Default to last available period if validation fails or no period provided
+	const defaultPeriod = validatedPeriod || getLastAvailablePeriod(heatmapTimeline ? (heatmapTimeline as HeatmapTimelineApiResponse).heatmapTimeline : null);
+
 	// Only validate tag combinations for AND operator (OR allows any combination)
 	if (
 		currentTagOperator === 'AND' &&
@@ -355,6 +479,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	}
 
 	loadingState.stopLoading();
+	console.log(errors);
 	return {
 		metadata,
 		histogram,
@@ -363,6 +488,9 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		currentRecordTypes,
 		currentTags,
 		currentTagOperator,
+		validatedCell,
+		cellBounds,
+		validatedPeriod: defaultPeriod,
 		errorData: createPageErrorData(errors)
 	};
 };

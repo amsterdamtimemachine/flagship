@@ -59,7 +59,7 @@
 			// Build params for API call - only include bounds if available
 			const params: any = {
 				start_year: `${startYear}-01-01`,
-				end_year: `${endYear}-01-01`,
+				end_year: `${endYear}-12-31`,
 				page,
 				recordTypes: recordTypes,
 				tags: tags,
@@ -163,13 +163,9 @@
 </div>
 
 <div class="min-h-full bg-atm-sand-dark">
-	{#if !initialLoading && !loading}
-		{#if allFeatures.length > 0}
-			<FeaturesGrid features={allFeatures} {layoutMemory} />
-		{:else}
-			<div class="text-gray-500 p-4">No features found for this cell and period</div>
-		{/if}
-	{:else if allFeatures.length > 0}
+	{#if allFeatures.length > 0}
 		<FeaturesGrid features={allFeatures} {layoutMemory} />
+	{:else if !initialLoading && !loading}
+		<div class="text-base text-gray-500 p-4">No features found for this cell and period</div>
 	{/if}
 </div>

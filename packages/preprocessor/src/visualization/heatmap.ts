@@ -23,13 +23,23 @@ import {
 
 /**
  * Get cell ID from coordinates
+ * Updated to match API ST_Intersects behavior (inclusive on all boundaries)
  */
 export function getCellIdForCoordinates(
   coordinates: { lon: number; lat: number },
   heatmapDimensions: HeatmapDimensions
 ): string | null {
-  const col = Math.floor((coordinates.lon - heatmapDimensions.minLon) / heatmapDimensions.cellWidth);
-  const row = Math.floor((coordinates.lat - heatmapDimensions.minLat) / heatmapDimensions.cellHeight);
+  let col = Math.floor((coordinates.lon - heatmapDimensions.minLon) / heatmapDimensions.cellWidth);
+  let row = Math.floor((coordinates.lat - heatmapDimensions.minLat) / heatmapDimensions.cellHeight);
+
+  // Handle upper boundary inclusively to match ST_Intersects behavior in API
+  // Features exactly on maxLon/maxLat should be assigned to the last cell
+  if (coordinates.lon === heatmapDimensions.maxLon && col >= heatmapDimensions.colsAmount) {
+    col = heatmapDimensions.colsAmount - 1;
+  }
+  if (coordinates.lat === heatmapDimensions.maxLat && row >= heatmapDimensions.rowsAmount) {
+    row = heatmapDimensions.rowsAmount - 1;
+  }
 
   if (row >= 0 && row < heatmapDimensions.rowsAmount && col >= 0 && col < heatmapDimensions.colsAmount) {
     return `${row}_${col}`;
@@ -76,6 +86,7 @@ export function generateHeatmap(
 
 /**
  * Calculate cell bounds from row/col position
+ * Updated to match inclusive boundary logic in getCellIdForCoordinates
  */
 export function calculateCellBounds(
   row: number, 
@@ -86,9 +97,19 @@ export function calculateCellBounds(
   const cellHeight = (heatmapDimensions.maxLat - heatmapDimensions.minLat) / heatmapDimensions.rowsAmount;
   
   const minlon = heatmapDimensions.minLon + (col * cellWidth);
-  const maxlon = minlon + cellWidth;
   const minlat = heatmapDimensions.minLat + (row * cellHeight);
-  const maxlat = minlat + cellHeight;
+  
+  let maxlon = minlon + cellWidth;
+  let maxlat = minlat + cellHeight;
+  
+  // For the last column/row, use exact boundary to match inclusive assignment logic
+  // This ensures API queries include the same boundary features that were assigned during preprocessing
+  if (col === heatmapDimensions.colsAmount - 1) {
+    maxlon = heatmapDimensions.maxLon;
+  }
+  if (row === heatmapDimensions.rowsAmount - 1) {
+    maxlat = heatmapDimensions.maxLat;
+  }
 
   return { minLon: minlon, maxLon: maxlon, minLat: minlat, maxLat: maxlat };
 }

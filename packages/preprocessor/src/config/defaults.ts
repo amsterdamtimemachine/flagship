@@ -26,7 +26,7 @@ export const DEFAULT_GRID_CONFIG: HeatmapConfig = {
 export const DEFAULT_CHUNKING: ChunkingConfig = {
   chunkRows: parseInt(process.env.CHUNK_ROWS || '') || 4,
   chunkCols: parseInt(process.env.CHUNK_COLS || '') || 4,
-  overlap: parseFloat(process.env.CHUNK_OVERLAP || '') || 0.001, // Small overlap for boundary features
+  overlap: parseFloat(process.env.CHUNK_OVERLAP || '') || 0, // No overlap to prevent double counting
   delayMs: parseInt(process.env.CHUNK_DELAY_MS || '') || 50 // Don't overwhelm the API
 };
 
