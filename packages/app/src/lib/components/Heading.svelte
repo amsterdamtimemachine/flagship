@@ -17,8 +17,8 @@
 
 	const levelStyles = {
 		1: 'text-2xl font-bold mb-4',
-		2: 'text-xl font-bold mb-4',
-		3: 'text-xl font-light mb-3',
+		2: 'text-3xl font-light mb-4',
+		3: 'text-2xl font-light mb-3',
 		4: 'text-base font-light mb-3',
 		5: 'text-base font-light mb-2',
 		6: 'text-base font-light mb-2'

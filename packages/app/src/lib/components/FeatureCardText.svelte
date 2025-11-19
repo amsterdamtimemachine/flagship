@@ -20,13 +20,13 @@
 	</div>
 {:else}
 	<div class="flex-1">
-		<div class="text-sm text-gray-700 leading-relaxed">
+		<div class="text-base text-gray-700 leading-relaxed">
 			{#if needsTruncation && !showFullText}
 				<div>
 					{truncatedText}
 				</div>
 				<button
-					class="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+					class="mt-2 text-base text-blue-600 hover:text-blue-800 underline"
 					onclick={() => (showFullText = true)}
 				>
 					Show more
@@ -37,7 +37,7 @@
 				</div>
 				{#if needsTruncation}
 					<button
-						class="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+						class="mt-2 text-base text-blue-600 hover:text-blue-800 underline"
 						onclick={() => (showFullText = false)}
 					>
 						Show less

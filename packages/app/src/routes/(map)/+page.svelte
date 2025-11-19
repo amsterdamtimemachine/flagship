@@ -307,7 +307,7 @@ import { PUBLIC_DEFAULT_CELL } from '$env/static/public';
 			<div class="p-3">
 					
 				<div class="mb-4">
-						<Heading level={2} class="mb-2"> Filters </Heading>
+						<Heading level={2} class="font-bold text-lg mb-2"> Filters </Heading>
 
 					<div class="flex mb-2">
 						<Heading level={3} class="pr-2"> Inhoudstype </Heading>

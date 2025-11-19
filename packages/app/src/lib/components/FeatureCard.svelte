@@ -39,8 +39,8 @@
 		<Heading
 		level={3}
 			class={expanded
-				? 'font-bold text-xl my-3 px-2'
-				: 'font-bold text-sm line-clamp-2 mb-1'}
+				? 'font-medium text-xl my-3 px-2'
+				: 'font-medium text-lg line-clamp-2 mb-1'}
 		>
 			{commonProps.tit}
 		</Heading>

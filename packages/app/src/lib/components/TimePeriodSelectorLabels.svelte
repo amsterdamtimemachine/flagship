@@ -17,7 +17,7 @@
 			y={timelineHeight + 18}
 			fill="black"
 			text-anchor={i === 0 ? 'start' : i === displayPeriods.length - 1 ? 'end' : 'middle'}
-			class="font-sans font-medium text-sm"
+			class="font-medium text-base"
 		>
 			{displayLabel}
 		</text>
