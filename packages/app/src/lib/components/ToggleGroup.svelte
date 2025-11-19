@@ -23,7 +23,7 @@
 -->
 <script lang="ts">
 	import { createToggleGroup, melt } from '@melt-ui/svelte';
-	import { Check } from 'phosphor-svelte';
+	import Check from 'phosphor-svelte/lib/Check';
 	import { mergeCss } from '$utils/utils';
 	import type { Snippet } from 'svelte';
 	import type { PhosphorIcon } from '@atm/shared/types';

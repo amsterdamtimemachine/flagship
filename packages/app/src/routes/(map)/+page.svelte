@@ -9,7 +9,7 @@
 	import { mergeHistograms } from '$utils/histogram';
 	import { translateContentTypes, reverseTranslateContentTypes } from '$utils/translations';
 	import { loadingState } from '$lib/state/loadingState.svelte';
-	import { QuestionMark } from 'phosphor-svelte';
+	import QuestionMark from 'phosphor-svelte/lib/QuestionMark';
 	import Heading from '$components/Heading.svelte';
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';

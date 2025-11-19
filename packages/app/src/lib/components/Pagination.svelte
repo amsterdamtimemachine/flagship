@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createPagination, melt } from '@melt-ui/svelte';
-	import { CaretLeft, CaretRight } from 'phosphor-svelte';
+	import CaretLeft from 'phosphor-svelte/lib/CaretLeft';
+	import CaretRight from 'phosphor-svelte/lib/CaretRight';
 	import Button from '$components/Button.svelte';
 
 	interface Props {
