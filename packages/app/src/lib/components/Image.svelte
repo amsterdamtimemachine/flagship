@@ -26,13 +26,22 @@
 	// Use text from svelte-markdown if available, otherwise use alt
 	const imageAlt = text ?? alt ?? '';
 
-	const baseClasses = 'max-w-full h-auto rounded-md';
+	const baseClasses = 'h-auto rounded-md shadow-[0_0_20px_0_rgba(0,0,0,0.15)]';
+	const figureClasses = 'mb-6 flex flex-col items-center';
+	const captionClasses = 'text-base text-gray-600 mt-2 text-center italic';
 </script>
 
-<img
-	src={imageSrc}
-	alt={imageAlt}
-	{title}
-	{loading}
-	class={mergeCss(baseClasses, className)}
-/>
+<figure class={mergeCss(figureClasses, className)}>
+	<img
+		src={imageSrc}
+		alt={imageAlt}
+		{title}
+		{loading}
+		class={baseClasses}
+	/>
+	{#if imageAlt}
+		<figcaption class={captionClasses}>
+			{imageAlt}
+		</figcaption>
+	{/if}
+</figure>

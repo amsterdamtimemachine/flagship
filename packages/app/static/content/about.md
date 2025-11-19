@@ -72,7 +72,7 @@ blokje kleurt, hoe meer data er over een bepaald deel van Amsterdam te
 vinden is. Klik op een blokje en je krijgt aan de rechterkant van het
 scherm een overzicht van de beschikbare data.
 
-\[screenshot kaart\]
+![Kaartweergave](/images/map.png "Screenshot van de kaartweergave")
 
 ## Hoe werkt deze data index?
 
@@ -90,7 +90,7 @@ Amsterdam om gegevens uit dat gebied weer te geven. Aan de rechterkant
 van het scherm worden vervolgens de beschikbare afbeeldingen, teksten en
 personen samen weergegeven in een uitklapvenster.
 
-\[screenshot voorbeeld\]
+![Een voorbeeld van de dataweergave](/images/app.png "Screenshot van een voorbeeld van de dataweergave")
 
 Onder aan het scherm is een tijdlijn te vinden die loopt van 1500 tot
 heden, verdeeld in blokken van telkens 50 jaar. Via deze tijdlijn is het
@@ -104,13 +104,13 @@ hoeveelheid data: hoe hoger het blokje, hoe meer data er uit deze
 periode te vinden zijn. Geen blauwe tegel betekent: voor deze locaties
 zijn nog geen data beschikbaar in de Amsterdam Time Machine.
 
-\[screenshot tijdlijn\]
+![De tijdlijn](/images/timeline.png "Screenshot van de tijdlijnweergave")
 
 De data index biedt via een keuzemenu toegang tot 3 typen data: beeld,
 tekst en persoon. Deze categorieën zijn naar wens aan of uit te vinken
 om in de zoekactie mee te nemen of van de zoekactie uit te sluiten.
 
-\[screenshot keuzemenu datatypen\]
+![Keuzemenu datatype](/images/filters.png "Screenshot van het keuzemenu voor datatype")
 
 Daarnaast is een aantal thema's uit het stedelijk leven geïdentificeerd
 op basis waarvan de data gefilterd kan worden. Dit zijn:
@@ -133,8 +133,6 @@ te ontwikkelen. Let op: dit classificatiesysteem is nog experimenteel en
 de nauwkeurigheid ervan is nog niet getoetst en gevalideerd; eventuele
 foute identificaties zijn expres in stand gelaten om zichtbaar te maken
 dat automatisch gegenereerde beschrijvingen ook beperkingen kennen.
-
-\[screenshot thematisch zoeken\]
 
 De data index laat ook zien wat we nog niet weten. De 'onbetegelde'
 gebieden en de gegevensdichtheid (lichter of donkerderblauwe tegels)
