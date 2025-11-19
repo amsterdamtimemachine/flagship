@@ -1,8 +1,9 @@
 // src/routes/api/heatmaps/+server.ts
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import type { RecordType, HeatmapTimelineApiResponse } from '@atm/shared/types';
+import type { RecordType, HeatmapTimelineApiResponse, HeatmapTimeline } from '@atm/shared/types';
 import { getDataService } from '$lib/server/dataServiceSingleton';
+import { mergeHeatmapTimeline } from '$utils/heatmap';
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
@@ -117,6 +118,20 @@ export const GET: RequestHandler = async ({ url }) => {
 			response = await dataService.getHeatmapTimeline(recordTypes, tags);
 		}
 
+		// Auto-merge record types server-side for payload optimization when no tags are used
+		if (response.success && !tags) {
+			console.log(`🔀 Server-side merging ${recordTypes.length} record types (no tags) for optimization`);
+			
+			const mergedTimeline = mergeHeatmapTimeline(
+				response.heatmapTimeline as HeatmapTimeline,
+				recordTypes,
+				undefined, // No tags - using base heatmaps
+				undefined  // No blueprint needed for merging
+			);
+			
+			response.heatmapTimeline = mergedTimeline;
+		}
+
 		// Set appropriate cache headers
 		const headers = {
 			'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
@@ -125,8 +140,25 @@ export const GET: RequestHandler = async ({ url }) => {
 
 		if (response.success) {
 			const timeSliceCount = Object.keys(response.heatmapTimeline).length;
+			
+			// Calculate data size for logging
+			let totalHeatmaps = 0;
+			let totalDataPoints = 0;
+			Object.values(response.heatmapTimeline).forEach(timeSlice => {
+				Object.values(timeSlice).forEach(recordTypeData => {
+					if (recordTypeData.base) {
+						totalHeatmaps++;
+						totalDataPoints += recordTypeData.base.densityArray.length;
+					}
+					Object.values(recordTypeData.tags || {}).forEach(tagHeatmap => {
+						totalHeatmaps++;
+						totalDataPoints += tagHeatmap.densityArray.length;
+					});
+				});
+			});
+			
 			console.log(
-				`✅ Heatmaps API success - ${timeSliceCount} time periods at resolution ${response.resolution}`
+				`✅ Heatmaps API success - ${timeSliceCount} time periods, ${totalHeatmaps} total heatmaps, ${totalDataPoints.toLocaleString()} data points (${Math.round(totalDataPoints * 8 / 1024 / 1024)}MB estimated) at resolution ${response.resolution}`
 			);
 			return json(response, { headers });
 		} else {
