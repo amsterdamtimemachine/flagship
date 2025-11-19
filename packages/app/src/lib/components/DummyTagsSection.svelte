@@ -31,9 +31,9 @@
 <div class="mb-4">
 	<div class="flex">
 		<Heading level={3} class="pr-2"> Onderwerpen </Heading>
-		<Tooltip icon={QuestionMark} text="Thematische categorieën gebaseerd op krantenrubrieken, toegepast op alle data met behulp van machine learning." placement="bottom" />
+		<Tooltip icon={QuestionMark} text="Automatisch gegenereerde onderwerpen zonder handmatige correctie. Dit toont zowel de mogelijkheden als de beperkingen van huidige Machine learning-classificatietechnieken. Minimaal één: resultaten met minstens één onderwerp. Alle: alleen resultaten met alle onderwerpen" placement="bottom" />
 	</div>
-	<span class="text-xs text-gray-400">
+	<span class="text-base text-gray-500">
 		Work in progress, momenteel uitgeschakeld	
 	</span>
 	<div class="mt-1 mb-1">

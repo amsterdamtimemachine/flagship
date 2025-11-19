@@ -152,12 +152,9 @@ Beschikbare databronnen:
 Op dit moment zijn de volgende bronnen doorzoekbaar:
 
 - Een deel van de **beeldbank** van het Stadsarchief Amsterdam
-
-<!-- -->
-
-- Krantenbank** Delpher** (met AI doorzocht op bronnen waarbij een
+- Krantenbank **Delpher** (met AI doorzocht op bronnen waarbij een
   straatnaam en huisnummer genoemd wordt)
-- **Joods monument **uit **Aan het juiste adres**
+- **Joods monument** uit **Aan het juiste adres**
 
 De huidige datasets beslaan de 17de eeuw tot heden en bevatten
 persoonsgegevens, kranten- en tijdschriftartikelen,
@@ -184,21 +181,4 @@ erfgoed.
 
 ## Totstandkoming
 
-De viewer van de Amsterdam Time Machine data index is ontwikkeld door
-Matúš Solčány van de Humanities Labs van de
-[UvA](https://www.uva.nl/profiel/w/i/l.vanwissen/l.van-wissen.html), in
-nauwe samenwerking met Ivan Kisjes (1976-2025) van de Amsterdam Time
-Machine en het CREATE Lab. Dankzij een additionele update door Berit
-Janssen van de Humanities Labs van de UvA zijn de verbinding met
-[Delpher](https://www.delpher.nl/) van de [Koninklijke
-Bibliotheek](https://www.kb.nl/) in Den Haag en met een deel van de
-Beeldbank van het [Stadsarchief
-Amsterdam](https://www.amsterdam.nl/stadsarchief/) gerealiseerd. Leon
-van Wissen (CREATE Lab) heeft met de toevoeging van het Joods Monument
-van het [Joods Historisch Kwartier](https://jck.nl/) een begin gemaakt
-met de implementatie van de bronnen uit [Aan het juiste
-adres](https://aanhetjuisteadres.nl/). De overige bronnen uit deze
-applicatie zullen gaandeweg ook aan de Amsterdam Time Machine data index
-worden toegevoegd. Ingeborg Verheul en Julia Noordegraaf verzorgden de
-projectleiding en de verantwoording.
-
+De viewer van de Amsterdam Time Machine data index is ontwikkeld door Matúš Solčány van de Humanities Labs van de [UvA](https://aihr.uva.nl/humanities-labs/humanities-labs.html), in nauwe samenwerking met Ivan Kisjes (1976-2025) van de Amsterdam Time Machine en het [CREATE Lab](https://www.create.humanities.uva.nl/). Dankzij een additionele update door Berit Janssen van de Humanities Labs van de UvA zijn de verbinding met [Delpher](https://www.delpher.nl/) van de [Koninklijke Bibliotheek](https://www.kb.nl/) in Den Haag en met een deel van de [Beeldbank](https://archief.amsterdam/uitleg/beeldbank/13-zoeken-in-de-beeldbank) van het [Stadsarchief Amsterdam](https://www.amsterdam.nl/stadsarchief/) gerealiseerd. Leon van Wissen (CREATE Lab) heeft met de toevoeging van het Joods Monument van het [Joods Historisch Kwartier](https://jck.nl/) een begin gemaakt met de implementatie van de bronnen uit [Aan het juiste adres](https://aanhetjuisteadres.nl/). De overige bronnen uit deze applicatie zullen gaandeweg ook aan de Amsterdam Time Machine data index worden toegevoegd. Ingeborg Verheul, Boudewijn Koopmans en Julia Noordegraaf (UvA) verzorgden de projectleiding, de verantwoording en de impactdevelopment.  

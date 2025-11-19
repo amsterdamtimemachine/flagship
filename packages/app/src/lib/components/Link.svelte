@@ -13,6 +13,7 @@
 
 	interface Props {
 		href: string;
+		title?: string; // For svelte-markdown compatibility
 		target?: string;
 		rel?: string;
 		class?: string;
@@ -25,6 +26,7 @@
 
 	let {
 		href,
+		title,
 		target,
 		rel,
 		class: className,
@@ -47,7 +49,7 @@
 	const gapClass = Icon && children ? 'gap-1' : '';
 </script>
 
-<a {href} {target} {rel} class={mergeCss(`${baseClasses} ${gapClass}`, className)}>
+<a {href} {title} {target} {rel} class={mergeCss(`${baseClasses} ${gapClass}`, className)}>
 	{#if children}
 		{@render children()}
 	{/if}

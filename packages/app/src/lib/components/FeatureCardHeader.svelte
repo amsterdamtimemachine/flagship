@@ -19,7 +19,7 @@
 		<Tag variant="outline" class="flex-shrink-0">
 			{translateContentType(feature.recordType)}
 		</Tag>
-		<span class="text-sm text-black flex-shrink-0">
+		<span class="text-base text-black flex-shrink-0">
 			{formatTimePeriod(feature.per)}
 		</span>
 	</div>

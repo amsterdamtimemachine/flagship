@@ -166,6 +166,6 @@
 	{#if allFeatures.length > 0}
 		<FeaturesGrid features={allFeatures} {layoutMemory} />
 	{:else if !initialLoading && !loading}
-		<div class="text-gray-500 p-4">No features found for this cell and period</div>
+		<div class="text-base text-gray-500 p-4">No features found for this cell and period</div>
 	{/if}
 </div>

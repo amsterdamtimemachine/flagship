@@ -16,7 +16,7 @@
 	const featuresText = $derived(totalFeatures === 1 ? 'feature' : 'features');
 </script>
 
-<p class="text-sm text-gray-700">
+<p class="text-base text-gray-700">
 		{#if isPaginated}
         Toont {showingStart}-{showingEnd} / {totalFeatures} {featuresText}
     {:else}

@@ -311,7 +311,7 @@ import { PUBLIC_DEFAULT_CELL } from '$env/static/public';
 
 					<div class="flex mb-2">
 						<Heading level={3} class="pr-2"> Inhoudstype </Heading>
-						<Tooltip icon={QuestionMark} text="Thematische categorieën gebaseerd op krantenrubrieken, toegepast op alle data met behulp van machine learning. [Preview - Functie komt binnenkort beschikbaar]" placement="bottom" />
+						<Tooltip icon={QuestionMark} text="De data index bevat een selectie van afbeeldingen, persoonsdata en teksten uit Nederlandse kranten." placement="bottom" />
 					</div>
 					<ToggleGroup
 						items={translatedRecordTypes}

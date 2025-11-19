@@ -35,7 +35,7 @@
 </script>
 
 <div class={mergeCss('flex items-center gap-1', className)}>
-	<span class="font-sans text-sm text-black select-none">{anyLabel}</span>
+	<span class="font-sans text-base text-black select-none">{anyLabel}</span>
 	<button
 		use:melt={$root}
 		class="relative h-5 w-9 cursor-pointer rounded-full bg-atm-sand-darkish hover:bg-atm-sand-dark border border-atm-gold transition-transform duration-200 ease-in-out

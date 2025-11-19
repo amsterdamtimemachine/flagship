@@ -24,7 +24,7 @@
 	)}
 >
 	{#if feature.url}
-		<Link href={feature.url} target="_blank" rel="noopener noreferrer" class="text-xs">
+		<Link href={feature.url} target="_blank" rel="noopener noreferrer" class="text-base">
 			{formatDatasetTitle(feature.ds)} →
 		</Link>
 	{/if}
