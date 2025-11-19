@@ -9,7 +9,7 @@
 	import { mergeHistograms } from '$utils/histogram';
 	import { translateContentTypes, reverseTranslateContentTypes } from '$utils/translations';
 	import { loadingState } from '$lib/state/loadingState.svelte';
-	import { QuestionMark } from 'phosphor-svelte';
+	import QuestionMark from 'phosphor-svelte/lib/QuestionMark';
 	import Heading from '$components/Heading.svelte';
 	import Map from '$components/Map.svelte';
 	import TimePeriodSelector from '$components/TimePeriodSelector.svelte';
@@ -80,35 +80,40 @@ import { PUBLIC_DEFAULT_CELL } from '$env/static/public';
 			const needsMerging =
 				currentRecordTypes.length > 1 || (currentTags && currentTags.length > 0);
 
-			if (needsMerging) {
-				// For OR operations with multiple tags, server already merged - just merge recordTypes if needed
-				if (currentTagOperator === 'OR' && currentTags && currentTags.length > 1) {
-					// OR operations: server already merged tags into base heatmaps, only merge recordTypes if needed
-					if (currentRecordTypes.length > 1) {
-						return mergeHeatmapTimeline(
-							timelineData as unknown as HeatmapTimeline,
-							currentRecordTypes,
-							undefined, // Don't pass tags - use base heatmaps
-							data?.metadata?.heatmapBlueprint
-						);
-					} else {
-						// Single recordType with OR tags - use as-is (server already merged)
-						return timelineData;
-					}
-				} else {
-					// AND operations or single tag - use original client-side merging logic
-					const selectedTags = currentTags && currentTags.length > 0 ? currentTags : undefined;
-					return mergeHeatmapTimeline(
-						timelineData as unknown as HeatmapTimeline,
-						currentRecordTypes,
-						selectedTags,
-						data?.metadata?.heatmapBlueprint
-					);
-				}
-			} else {
-				// Single recordType, no tags - use original timeline
-				return timelineData;
-			}
+			// TODO: Re-enable client-side merging when tags are used again
+			// Server now handles record type merging automatically when recordTypes.length > 1
+			// if (needsMerging) {
+			// 	// For OR operations with multiple tags, server already merged - just merge recordTypes if needed
+			// 	if (currentTagOperator === 'OR' && currentTags && currentTags.length > 1) {
+			// 		// OR operations: server already merged tags into base heatmaps, only merge recordTypes if needed
+			// 		if (currentRecordTypes.length > 1) {
+			// 			return mergeHeatmapTimeline(
+			// 				timelineData as unknown as HeatmapTimeline,
+			// 				currentRecordTypes,
+			// 				undefined, // Don't pass tags - use base heatmaps
+			// 				data?.metadata?.heatmapBlueprint
+			// 			);
+			// 		} else {
+			// 			// Single recordType with OR tags - use as-is (server already merged)
+			// 			return timelineData;
+			// 		}
+			// 	} else {
+			// 		// AND operations or single tag - use original client-side merging logic
+			// 		const selectedTags = currentTags && currentTags.length > 0 ? currentTags : undefined;
+			// 		return mergeHeatmapTimeline(
+			// 			timelineData as unknown as HeatmapTimeline,
+			// 			currentRecordTypes,
+			// 			selectedTags,
+			// 			data?.metadata?.heatmapBlueprint
+			// 		);
+			// 	}
+			// } else {
+			// 	// Single recordType, no tags - use original timeline
+			// 	return timelineData;
+			// }
+			
+			// Use server data directly (server handles merging when needed)
+			return timelineData;
 		}
 		return null;
 	});

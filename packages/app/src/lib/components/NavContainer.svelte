@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Button from '$components/Button.svelte';
-	import { List, X } from 'phosphor-svelte';
+	import List from 'phosphor-svelte/lib/List';
+	import X from 'phosphor-svelte/lib/X';
 	import { cubicOut } from 'svelte/easing';
 	import { tweened } from 'svelte/motion';
 	import { mergeCss } from '$utils/utils';

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { RawFeature, Feature } from '@atm/shared/types';
-	import { ArrowsOut, ArrowSquareOut, X } from 'phosphor-svelte';
+	import ArrowsOut from 'phosphor-svelte/lib/ArrowsOut';
+	import ArrowSquareOut from 'phosphor-svelte/lib/ArrowSquareOut';
+	import X from 'phosphor-svelte/lib/X';
 	import { formatDatasetTitle } from '$utils/format';
 	import { mergeCss } from '$utils/utils';
 	import Button from '$components/Button.svelte';

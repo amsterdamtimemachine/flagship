@@ -6,7 +6,8 @@
 	import FeaturesCount from '$components/FeaturesCount.svelte';
 	import Button from '$components/Button.svelte';
 	import Tooltip from '$components/Tooltip.svelte';
-	import { X, QuestionMark } from 'phosphor-svelte';
+	import X from 'phosphor-svelte/lib/X';
+	import QuestionMark from 'phosphor-svelte/lib/QuestionMark';
 	import { fetchGeodataFromDatabase } from '$utils/externalApi';
 	import { formatDate } from '$utils/utils';
 	import { loadingState } from '$lib/state/loadingState.svelte';

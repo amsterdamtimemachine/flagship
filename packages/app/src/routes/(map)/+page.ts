@@ -182,10 +182,11 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			if (currentRecordTypes.length > 0) {
 				histogramParams.set('recordTypes', currentRecordTypes.join(','));
 			}
-			if (currentTags && currentTags.length > 0) {
-				histogramParams.set('tags', currentTags.join(','));
-				histogramParams.set('tagOperator', currentTagOperator);
-			}
+			// TODO: Re-enable tags when needed
+			// if (currentTags && currentTags.length > 0) {
+			// 	histogramParams.set('tags', currentTags.join(','));
+			// 	histogramParams.set('tagOperator', currentTagOperator);
+			// }
 			if (histogramParams.toString()) {
 				histogramUrl += '?' + histogramParams.toString();
 			}
@@ -241,10 +242,11 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			if (currentRecordTypes.length > 0) {
 				heatmapParams.set('recordTypes', currentRecordTypes.join(','));
 			}
-			if (currentTags && currentTags.length > 0) {
-				heatmapParams.set('tags', currentTags.join(','));
-				heatmapParams.set('tagOperator', currentTagOperator);
-			}
+			// TODO: Re-enable tags when needed
+			// if (currentTags && currentTags.length > 0) {
+			// 	heatmapParams.set('tags', currentTags.join(','));
+			// 	heatmapParams.set('tagOperator', currentTagOperator);
+			// }
 			if (heatmapParams.toString()) {
 				heatmapUrl += '?' + heatmapParams.toString();
 			}

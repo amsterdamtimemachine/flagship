@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { QuestionMark } from 'phosphor-svelte';
+	import QuestionMark from 'phosphor-svelte/lib/QuestionMark';
 	import Heading from '$components/Heading.svelte';
 	import Tooltip from '$components/Tooltip.svelte';
 	import TagOperatorSwitch from '$components/TagOperatorSwitch.svelte';
